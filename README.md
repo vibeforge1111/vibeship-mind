@@ -6,61 +6,45 @@ Mind gives AI coding assistants persistent memory across sessions. Your AI remem
 
 ---
 
-## 5-Minute Setup
+## Install
 
-### Step 1: Install
+**Requires:** [uv](https://docs.astral.sh/uv/) (Python package manager)
 
 ```bash
-# Clone the repo
 git clone https://github.com/vibeforge1111/vibeship-mind.git
 cd vibeship-mind
-
-# Install dependencies (requires uv - https://docs.astral.sh/uv/)
 uv sync
+uv run mind init
+uv run mind daemon start
 ```
 
-### Step 2: Initialize Your Project
+That's it. Mind is now running.
+
+---
+
+## Use in Any Project
 
 ```bash
-# Go to any project you're working on
-cd ~/my-awesome-project
-
-# Run this (use full path to mind)
-uv --directory /path/to/vibeship-mind run mind init
+cd ~/your-other-project
+uv --directory ~/vibeship-mind run mind init
 ```
 
-You'll see:
-```
-[+] Created .mind/MEMORY.md
-[+] Updated CLAUDE.md with MIND:CONTEXT
-[+] Detected stack: python, typescript
-[+] Registered project with Mind
-```
+---
 
-### Step 3: Start the Daemon
+## Connect to Claude Code (Optional)
 
-```bash
-uv --directory /path/to/vibeship-mind run mind daemon start
-```
-
-### Step 4: Connect to Claude Code (Optional)
-
-Add to your MCP config file:
-- **Mac/Linux:** `~/.config/claude/mcp.json`
-- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+Add to MCP config (`~/.config/claude/mcp.json` or `%APPDATA%\Claude\claude_desktop_config.json`):
 
 ```json
 {
   "mcpServers": {
     "mind": {
       "command": "uv",
-      "args": ["--directory", "/path/to/vibeship-mind", "run", "mind", "mcp"]
+      "args": ["--directory", "/full/path/to/vibeship-mind", "run", "mind", "mcp"]
     }
   }
 }
 ```
-
-**Done! Now just work normally.**
 
 ---
 

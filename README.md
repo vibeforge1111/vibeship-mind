@@ -56,7 +56,7 @@ Mind works without this, but connecting via MCP gives Claude extra powers:
 
 **Easy way:** Just tell Claude:
 
-> "Install the Mind MCP server from ~/vibeship-mind"
+> "Add the Mind MCP server to my config. The path is [wherever you cloned vibeship-mind]"
 
 **Manual way:**
 

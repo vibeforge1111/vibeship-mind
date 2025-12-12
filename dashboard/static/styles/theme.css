@@ -1,0 +1,255 @@
+/* Mind Dashboard Theme
+ * "Reunion, not retrieval"
+ * Extends vibeship palette with warm gold accent
+ */
+
+:root {
+  /* ========================================
+   * Color System
+   * ======================================== */
+
+  /* Node Colors (by entity type) */
+  --color-decisions: #E8C547;    /* warm gold - choices made */
+  --color-issues: #F07167;       /* pink-coral - struggles */
+  --color-edges: #FFB020;        /* amber - warnings */
+  --color-episodes: #A78BFA;     /* cool violet - stories */
+  --color-sessions: #00C49A;     /* teal - active/current */
+
+  /* Semantic Colors */
+  --color-success: #00C49A;
+  --color-warning: #FFB020;
+  --color-error: #FF4D4D;
+  --color-info: #3399FF;
+
+  /* Status Colors */
+  --status-active: var(--color-sessions);
+  --status-open: var(--color-issues);
+  --status-resolved: var(--text-tertiary);
+  --status-blocking: var(--color-error);
+
+  /* ========================================
+   * Dark Theme (default)
+   * ======================================== */
+  --bg-primary: #0e1016;
+  --bg-secondary: #151820;
+  --bg-tertiary: #1a1f2a;
+  --bg-hover: #1e2433;
+
+  --text-primary: #e2e4e9;
+  --text-secondary: #9aa3b5;
+  --text-tertiary: #6b7280;
+  --text-accent: #E8C547;
+
+  --border: #2a3042;
+  --border-strong: #3d4558;
+  --border-subtle: #1e2433;
+
+  /* Glow Effects */
+  --glow-gold: rgba(232, 197, 71, 0.3);
+  --glow-teal: rgba(0, 196, 154, 0.3);
+  --glow-center: radial-gradient(circle, rgba(232, 197, 71, 0.15) 0%, transparent 70%);
+
+  /* ========================================
+   * Typography
+   * ======================================== */
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Font Sizes */
+  --text-xs: 0.65rem;
+  --text-sm: 0.75rem;
+  --text-base: 0.85rem;
+  --text-lg: 1rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 2rem;
+
+  /* Line Heights */
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.75;
+
+  /* Letter Spacing */
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.05em;
+
+  /* ========================================
+   * Spacing
+   * ======================================== */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+
+  /* ========================================
+   * Border Radius
+   * ======================================== */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+  --radius-full: 9999px;
+
+  /* ========================================
+   * Shadows
+   * ======================================== */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 20px var(--glow-gold);
+
+  /* ========================================
+   * Transitions
+   * ======================================== */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.2s ease;
+  --transition-slow: 0.3s ease;
+
+  /* ========================================
+   * Z-Index Scale
+   * ======================================== */
+  --z-base: 0;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-nav: 50;
+  --z-modal: 100;
+  --z-toast: 200;
+}
+
+/* ========================================
+ * Light Theme
+ * ======================================== */
+[data-theme="light"] {
+  --bg-primary: #e8e8e8;
+  --bg-secondary: #dedede;
+  --bg-tertiary: #d4d4d4;
+  --bg-hover: #cacaca;
+
+  --text-primary: #1a1a1a;
+  --text-secondary: #3d3d3d;
+  --text-tertiary: #6b6b6b;
+  --text-accent: #b8942a;
+
+  --border: #c0c0c0;
+  --border-strong: #a0a0a0;
+  --border-subtle: #d4d4d4;
+
+  --glow-gold: rgba(184, 148, 42, 0.25);
+  --glow-teal: rgba(0, 156, 123, 0.25);
+  --glow-center: radial-gradient(circle, rgba(184, 148, 42, 0.12) 0%, transparent 60%);
+}
+
+/* ========================================
+ * Animations
+ * ======================================== */
+
+/* Organic drift for nodes */
+@keyframes drift {
+  0%, 100% { transform: translate(0, 0); }
+  33% { transform: translate(3px, -2px); }
+  66% { transform: translate(-2px, 3px); }
+}
+
+/* Connection pulse between related items */
+@keyframes pulse-connection {
+  0%, 100% { opacity: 0.1; }
+  50% { opacity: 0.3; }
+}
+
+/* Center glow breathing */
+@keyframes breathe {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+/* Status indicator pulse */
+@keyframes pulse-status {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* Loading dots */
+@keyframes loading-dots {
+  0%, 80%, 100% { transform: scale(0); opacity: 0.5; }
+  40% { transform: scale(1); opacity: 1; }
+}
+
+/* Fade in */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Slide up */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========================================
+ * Global Styles
+ * ======================================== */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-family: var(--font-mono);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
+  transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+a {
+  color: var(--color-sessions);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--text-accent);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+/* Selection */
+::selection {
+  background-color: var(--color-decisions);
+  color: var(--bg-primary);
+}

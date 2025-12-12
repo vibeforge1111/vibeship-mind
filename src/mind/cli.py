@@ -322,5 +322,12 @@ def remove_project(path: str):
         click.echo(f"Project not registered: {project_path}")
 
 
+@cli.command("mcp")
+def mcp_server():
+    """Run the MCP server for AI assistant integration."""
+    from .mcp import run_server
+    run_server()
+
+
 if __name__ == "__main__":
     cli()

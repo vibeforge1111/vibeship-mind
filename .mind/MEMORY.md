@@ -72,3 +72,29 @@ learned that session summary format `## DATE | summary | mood` compresses histor
 gotcha: session summary lines were being parsed as entities - fixed by skipping lines with `|` in _should_skip
 
 ---
+
+## 2025-12-13 | Fixed daemon bugs: async coroutine awaiting, Windows process detection with ctypes | mood: debugging
+
+fixed: debouncer callbacks were returning unawaited coroutines - pass async functions directly with args instead of lambdas
+fixed: Windows `os.kill(pid, 0)` doesn't work for process detection - use ctypes OpenProcess instead
+gotcha: Windows os.kill returns WinError 87 instead of checking process existence like Unix
+gotcha: Windows file.replace() fails when target file is open - use direct write with retries instead
+
+---
+
+## 2025-12-13 | Migrated to Mind v2: daemon-free, MCP-only architecture | mood: shipped
+
+KEY: decided to remove daemon entirely - MCP handles everything lazily via mind_recall()
+
+**Implemented v2 migration:**
+- Deleted daemon.py and watcher.py
+- Removed all daemon CLI commands (start, stop, status, logs)
+- Added mind_recall() with session gap detection (30 min threshold) and hash checking
+- Added mind_checkpoint() for manual processing trigger
+- Updated mind_search() to read raw MEMORY.md for same-session support
+- Simplified state.json schema (last_activity, memory_hash, schema_version)
+- Updated CLAUDE.md template with new MCP-only protocol
+
+learned: daemons are inherently unstable (crashes, PID issues, platform configs) - stateless MCP is more reliable
+learned: session detection doesn't need real-time - lazy detection at next recall() works just as well
+gotcha: same-session writes aren't indexed yet - search must read raw MEMORY.md too

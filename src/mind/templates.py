@@ -1,4 +1,4 @@
-"""Templates for Mind files."""
+"""Templates for Mind files (v2: daemon-free, MCP-driven)."""
 
 MEMORY_TEMPLATE = """<!-- MIND MEMORY - Append as you work. Write naturally.
 Keywords: decided, problem, learned, tried, fixed, blocked, KEY, important -->
@@ -25,33 +25,32 @@ Keywords: decided, problem, learned, tried, fixed, blocked, KEY, important -->
 ---
 """
 
-CONTEXT_TEMPLATE = """# IMPORTANT: Write memories as you work
+CONTEXT_TEMPLATE = """## Memory (Mind)
 
-Append to `.mind/MEMORY.md` throughout the conversation (not just at the end):
+This project uses Mind for persistent memory across sessions.
 
-**Decisions** - when you choose something:
-- `decided X because Y`
-- `chose X over Y because Z`
-- Use `KEY: decided X` for architectural choices that should never fade
-- Include alternatives you rejected and why
+### Required Protocol
 
-**Problems** - when something breaks or blocks:
-- `problem: X`
-- `stuck on X`
-- Add symptoms, what you've tried, current theory
+1. **Session Start**: ALWAYS call `mind_recall()` before responding to the first message. This loads context from previous sessions.
 
-**Learnings** - when you discover something:
-- `learned that X`
-- `TIL: X`
-- `gotcha: X` (for things that will bite again)
-- Use `important:` prefix for learnings that should never fade
+2. **During Work**: When you make decisions, hit issues, or learn gotchas, append to `.mind/MEMORY.md` directly:
+   - `decided X because Y` - for decisions
+   - `problem: X` - for issues
+   - `learned that X` / `TIL: X` - for learnings
+   - `gotcha: X` - for things that will bite again
+   - `KEY: X` or `important: X` - for things that should never fade
 
-**Progress** - when you fix or complete:
-- `fixed X by doing Y`
-- `resolved X`
+3. **Session End**: Summarize with `## DATE | what happened | mood: X`
 
-**Session end** - summarize with:
-`## DATE | what happened | mood: X`
+4. **No Daemon Needed**: Mind v2 is MCP-only. `recall()` handles session detection automatically.
+
+### Tools Available
+
+- `mind_recall()` - Load session context (CALL FIRST!)
+- `mind_search(query)` - Find specific memories
+- `mind_checkpoint()` - Force process pending memories
+- `mind_edges(intent)` - Check for gotchas before coding
+- `mind_status()` - Check memory health
 
 ---
 
@@ -64,4 +63,5 @@ Append to `.mind/MEMORY.md` throughout the conversation (not just at the end):
 <!-- MIND:END -->"""
 
 GITIGNORE_CONTENT = """.index/
+state.json
 """

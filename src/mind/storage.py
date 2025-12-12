@@ -1,4 +1,4 @@
-"""Storage for Mind - projects registry and global config."""
+"""Storage for Mind - projects registry and global config (v2: daemon-free)."""
 
 import json
 import os
@@ -91,55 +91,3 @@ class ProjectsRegistry:
     def list_all(self) -> list[ProjectInfo]:
         """List all registered projects."""
         return list(self.projects.values())
-
-
-@dataclass
-class DaemonState:
-    pid: Optional[int] = None
-    started_at: Optional[str] = None
-    projects_watching: list[str] = field(default_factory=list)
-
-    @classmethod
-    def load(cls) -> "DaemonState":
-        """Load daemon state from disk."""
-        path = get_mind_home() / "daemon.json"
-        if not path.exists():
-            return cls()
-
-        try:
-            data = json.loads(path.read_text())
-            return cls(**data)
-        except (json.JSONDecodeError, OSError):
-            return cls()
-
-    def save(self) -> None:
-        """Save daemon state to disk."""
-        path = get_mind_home() / "daemon.json"
-        path.write_text(json.dumps(asdict(self), indent=2))
-
-    def clear(self) -> None:
-        """Clear daemon state."""
-        path = get_mind_home() / "daemon.json"
-        if path.exists():
-            path.unlink()
-
-
-def is_daemon_running() -> bool:
-    """Check if daemon is running."""
-    state = DaemonState.load()
-    if not state.pid:
-        return False
-
-    # Check if process is actually running
-    try:
-        os.kill(state.pid, 0)
-        return True
-    except (OSError, ProcessLookupError):
-        # Process not running, clean up stale state
-        state.clear()
-        return False
-
-
-def get_pid_file() -> Path:
-    """Get path to PID file."""
-    return get_mind_home() / "daemon.pid"

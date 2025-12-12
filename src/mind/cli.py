@@ -1,5 +1,4 @@
-"""Mind CLI - File-based memory for AI coding assistants."""
-# MEMORY: decided Click over Typer because simpler API
+"""Mind CLI - File-based memory for AI coding assistants (v2: daemon-free)."""
 
 import json
 from datetime import date
@@ -11,7 +10,7 @@ from . import __version__
 from .context import update_claude_md
 from .detection import detect_stack
 from .parser import InlineScanner, Parser
-from .storage import ProjectsRegistry, is_daemon_running, DaemonState
+from .storage import ProjectsRegistry
 from .templates import GITIGNORE_CONTENT, MEMORY_TEMPLATE
 
 
@@ -70,6 +69,12 @@ def init(path: str):
 
     click.echo()
     click.echo("Mind initialized! Start working - append notes to .mind/MEMORY.md")
+    click.echo()
+    click.echo("MCP tools available:")
+    click.echo("  - mind_recall() : Load session context (call first!)")
+    click.echo("  - mind_search() : Search memories")
+    click.echo("  - mind_checkpoint() : Force process pending memories")
+    click.echo("  - mind_edges() : Check for gotchas")
 
 
 @cli.command()
@@ -155,114 +160,6 @@ def parse(path: str, as_json: bool, inline: bool):
         click.echo(f"Total: {total} entities, {len(result.project_edges)} gotchas")
 
 
-# Daemon commands
-@cli.group()
-def daemon():
-    """Manage the Mind daemon."""
-    pass
-
-
-@daemon.command("start")
-@click.option("--foreground", "-f", is_flag=True, help="Run in foreground (don't daemonize)")
-@click.option("--verbose", "-v", is_flag=True, help="Verbose logging")
-def daemon_start(foreground: bool, verbose: bool):
-    """Start the Mind daemon."""
-    if is_daemon_running():
-        click.echo("Mind daemon is already running.")
-        return
-
-    from .daemon import run_daemon
-
-    if foreground:
-        click.echo("Starting Mind daemon in foreground...")
-        click.echo("Press Ctrl+C to stop.")
-        run_daemon(verbose=verbose)
-    else:
-        # On Windows, we can't easily daemonize, so just run in foreground
-        import sys
-        if sys.platform == "win32":
-            click.echo("Starting Mind daemon...")
-            click.echo("(On Windows, daemon runs in foreground. Use Ctrl+C to stop.)")
-            run_daemon(verbose=verbose)
-        else:
-            # Unix: fork and daemonize
-            import os
-            pid = os.fork()
-            if pid > 0:
-                click.echo(f"[+] Mind daemon started (PID: {pid})")
-                return
-            else:
-                # Child process
-                os.setsid()
-                run_daemon(verbose=verbose)
-
-
-@daemon.command("stop")
-def daemon_stop():
-    """Stop the Mind daemon."""
-    from .daemon import stop_daemon
-
-    if stop_daemon():
-        click.echo("[+] Mind daemon stopped.")
-    else:
-        click.echo("Mind daemon is not running.")
-
-
-@daemon.command("status")
-def daemon_status():
-    """Check Mind daemon status."""
-    state = DaemonState.load()
-
-    if is_daemon_running():
-        click.echo("Mind Daemon Status")
-        click.echo("-" * 40)
-        click.echo(f"Status: Running")
-        click.echo(f"PID: {state.pid}")
-        if state.started_at:
-            click.echo(f"Started: {state.started_at}")
-        click.echo(f"Projects watching: {len(state.projects_watching)}")
-        for p in state.projects_watching:
-            click.echo(f"  - {p}")
-    else:
-        click.echo("Mind Daemon Status")
-        click.echo("-" * 40)
-        click.echo("Status: Not running")
-        click.echo()
-        click.echo("Start with: mind daemon start")
-
-
-@daemon.command("logs")
-@click.option("--follow", "-f", is_flag=True, help="Follow log output")
-@click.option("--lines", "-n", default=20, help="Number of lines to show")
-def daemon_logs(follow: bool, lines: int):
-    """View daemon logs."""
-    from .storage import get_mind_home
-
-    log_file = get_mind_home() / "logs" / "daemon.log"
-    if not log_file.exists():
-        click.echo("No log file found. Daemon may not have been started yet.")
-        return
-
-    if follow:
-        import subprocess
-        import sys
-        # Use tail -f on Unix, or type + loop on Windows
-        if sys.platform == "win32":
-            # Simple approach: just print last lines
-            content = log_file.read_text()
-            log_lines = content.strip().split("\n")
-            for line in log_lines[-lines:]:
-                click.echo(line)
-            click.echo("\n(--follow not fully supported on Windows)")
-        else:
-            subprocess.run(["tail", "-f", "-n", str(lines), str(log_file)])
-    else:
-        content = log_file.read_text()
-        log_lines = content.strip().split("\n")
-        for line in log_lines[-lines:]:
-            click.echo(line)
-
-
 # Project management commands
 @cli.command("list")
 def list_projects():
@@ -290,7 +187,7 @@ def list_projects():
 @cli.command("add")
 @click.argument("path", default=".", type=click.Path(exists=True, file_okay=False))
 def add_project(path: str):
-    """Register a project with Mind daemon."""
+    """Register a project with Mind."""
     project_path = Path(path).resolve()
     mind_dir = project_path / ".mind"
 
@@ -311,7 +208,7 @@ def add_project(path: str):
 @cli.command("remove")
 @click.argument("path", default=".", type=click.Path(exists=True, file_okay=False))
 def remove_project(path: str):
-    """Unregister a project from Mind daemon."""
+    """Unregister a project from Mind."""
     project_path = Path(path).resolve()
 
     registry = ProjectsRegistry.load()
@@ -337,11 +234,11 @@ def doctor():
     issues = []
     warnings = []
 
-    click.echo("Mind Health Check")
+    click.echo("Mind Health Check (v2)")
     click.echo("-" * 40)
 
     # Check Mind home directory
-    from .storage import get_mind_home, get_pid_file
+    from .storage import get_mind_home
 
     mind_home = get_mind_home()
     if mind_home.exists():
@@ -349,14 +246,6 @@ def doctor():
     else:
         click.echo(f"[!] Config directory missing ({mind_home})")
         issues.append("Mind home directory not found")
-
-    # Check daemon status
-    if is_daemon_running():
-        state = DaemonState.load()
-        click.echo(f"[+] Daemon running (PID: {state.pid})")
-    else:
-        click.echo("[.] Daemon not running")
-        warnings.append("Daemon not running - start with 'mind daemon start'")
 
     # Check registered projects
     registry = ProjectsRegistry.load()
@@ -390,11 +279,31 @@ def doctor():
         # Check MEMORY.md is readable
         try:
             content = memory_file.read_text(encoding="utf-8")
-            click.echo(f"[+] {project.name}: MEMORY.md accessible")
+            file_size_kb = memory_file.stat().st_size / 1024
+            if file_size_kb > 100:
+                click.echo(f"[.] {project.name}: MEMORY.md large ({file_size_kb:.0f}KB)")
+                warnings.append(f"{project.name}: MEMORY.md is {file_size_kb:.0f}KB - consider archiving")
+            else:
+                click.echo(f"[+] {project.name}: MEMORY.md accessible ({file_size_kb:.0f}KB)")
         except Exception as e:
             click.echo(f"[!] {project.name}: Cannot read MEMORY.md")
             issues.append(f"Cannot read MEMORY.md in {project.name}: {e}")
             continue
+
+        # Check state.json
+        state_file = mind_dir / "state.json"
+        if state_file.exists():
+            try:
+                import json
+                state = json.loads(state_file.read_text())
+                if state.get("last_activity"):
+                    last = datetime.fromtimestamp(state["last_activity"] / 1000)
+                    age = datetime.now() - last
+                    if age > timedelta(days=7):
+                        click.echo(f"[.] {project.name}: Last activity {age.days}d ago")
+                        warnings.append(f"{project.name}: Last activity {age.days} days ago")
+            except:
+                pass
 
         # Check CLAUDE.md has MIND:CONTEXT
         claude_md = project_path / "CLAUDE.md"
@@ -408,17 +317,6 @@ def doctor():
         else:
             click.echo(f"[.] {project.name}: No CLAUDE.md")
             warnings.append(f"{project.name}: No CLAUDE.md file")
-
-        # Check last activity
-        if project.last_activity:
-            try:
-                last = datetime.fromisoformat(project.last_activity)
-                age = datetime.now() - last
-                if age > timedelta(days=7):
-                    click.echo(f"[.] {project.name}: Stale ({age.days}d old)")
-                    warnings.append(f"{project.name}: Last activity {age.days} days ago")
-            except ValueError:
-                pass
 
     # Check global edges
     from .mcp.server import load_global_edges
@@ -449,6 +347,66 @@ def doctor():
         click.echo(f"Overall: Healthy ({len(warnings)} warnings)")
     else:
         click.echo("Overall: Healthy")
+
+
+@cli.command("status")
+@click.argument("path", default=".", type=click.Path(exists=True, file_okay=False))
+def status(path: str):
+    """Show project status and stats."""
+    project_path = Path(path).resolve()
+    mind_dir = project_path / ".mind"
+
+    if not mind_dir.exists():
+        click.echo(f"Error: {project_path} is not a Mind project.")
+        click.echo("Run 'mind init' first.")
+        raise SystemExit(1)
+
+    memory_file = mind_dir / "MEMORY.md"
+    state_file = mind_dir / "state.json"
+
+    click.echo(f"Project: {project_path.name}")
+    click.echo("-" * 40)
+
+    # Parse MEMORY.md
+    if memory_file.exists():
+        parser = Parser()
+        content = memory_file.read_text(encoding="utf-8")
+        result = parser.parse(content, str(memory_file))
+
+        click.echo(f"Stack: {', '.join(result.project_state.stack) or '(not set)'}")
+        click.echo(f"Goal: {result.project_state.goal or '(not set)'}")
+        click.echo(f"Blocked: {result.project_state.blocked_by or 'None'}")
+        click.echo()
+
+        # Count by type
+        decisions = sum(1 for e in result.entities if e.type.value == "decision")
+        issues_open = sum(1 for e in result.entities if e.type.value == "issue" and (not e.status or e.status.value == "open"))
+        issues_resolved = sum(1 for e in result.entities if e.type.value == "issue" and e.status and e.status.value == "resolved")
+        learnings = sum(1 for e in result.entities if e.type.value == "learning")
+
+        click.echo("Stats:")
+        click.echo(f"  Decisions: {decisions}")
+        click.echo(f"  Issues (open): {issues_open}")
+        click.echo(f"  Issues (resolved): {issues_resolved}")
+        click.echo(f"  Learnings: {learnings}")
+        click.echo(f"  Gotchas: {len(result.project_edges)}")
+        click.echo()
+
+        # File size
+        file_size_kb = memory_file.stat().st_size / 1024
+        click.echo(f"MEMORY.md: {file_size_kb:.1f}KB")
+
+    # Load state
+    if state_file.exists():
+        import json
+        from datetime import datetime
+        try:
+            state = json.loads(state_file.read_text())
+            if state.get("last_activity"):
+                last = datetime.fromtimestamp(state["last_activity"] / 1000)
+                click.echo(f"Last activity: {last.isoformat()}")
+        except:
+            pass
 
 
 if __name__ == "__main__":

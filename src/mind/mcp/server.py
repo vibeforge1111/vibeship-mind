@@ -1,5 +1,6 @@
-"""Mind MCP server - 4 tools for AI memory."""
+"""Mind MCP server - 4 tools for AI memory (v2: daemon-free)."""
 
+import hashlib
 import json
 import os
 from datetime import datetime
@@ -10,8 +11,44 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
+from ..context import ContextGenerator
 from ..parser import Entity, EntityType, Parser
-from ..storage import DaemonState, ProjectsRegistry, get_mind_home, is_daemon_running
+from ..storage import ProjectsRegistry, get_mind_home
+
+
+# Gap threshold for session detection (30 minutes)
+GAP_THRESHOLD_MS = 30 * 60 * 1000
+
+
+# State file management
+def get_state_file(project_path: Path) -> Path:
+    """Get path to project state file."""
+    return project_path / ".mind" / "state.json"
+
+
+def load_state(project_path: Path) -> dict:
+    """Load project state from disk."""
+    path = get_state_file(project_path)
+    if not path.exists():
+        return {"last_activity": 0, "memory_hash": "", "schema_version": 2}
+    try:
+        return json.loads(path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return {"last_activity": 0, "memory_hash": "", "schema_version": 2}
+
+
+def save_state(project_path: Path, state: dict) -> None:
+    """Save project state to disk."""
+    path = get_state_file(project_path)
+    path.write_text(json.dumps(state, indent=2))
+
+
+def hash_file(path: Path) -> str:
+    """Get hash of file content for change detection."""
+    if not path.exists():
+        return ""
+    content = path.read_bytes()
+    return hashlib.md5(content).hexdigest()
 
 
 # Global edges storage
@@ -90,11 +127,43 @@ def search_entities(
                 "source_line": entity.source_line,
                 "confidence": entity.confidence,
                 "relevance": relevance,
+                "source": "indexed",
             })
 
     # Sort by relevance, then confidence
     results.sort(key=lambda r: (r["relevance"], r["confidence"]), reverse=True)
 
+    return results[:limit]
+
+
+def search_raw_content(content: str, query: str, limit: int = 10) -> list[dict]:
+    """Search raw MEMORY.md content for unparsed matches (same-session support)."""
+    query_lower = query.lower()
+    query_words = set(query_lower.split())
+    results = []
+
+    lines = content.split("\n")
+    for i, line in enumerate(lines):
+        line_lower = line.lower()
+        matches = sum(1 for word in query_words if word in line_lower)
+
+        if matches > 0 and line.strip():
+            relevance = matches / len(query_words)
+            results.append({
+                "type": "raw",
+                "title": line.strip()[:100],
+                "content": line.strip(),
+                "reasoning": None,
+                "status": None,
+                "date": None,
+                "source_file": "MEMORY.md",
+                "source_line": i + 1,
+                "confidence": 0.5,
+                "relevance": relevance,
+                "source": "unparsed",
+            })
+
+    results.sort(key=lambda r: r["relevance"], reverse=True)
     return results[:limit]
 
 
@@ -105,11 +174,7 @@ def match_edges(
     global_edges: list[dict],
     project_edges: list[dict],
 ) -> list[dict]:
-    """Match edges against intent, code, and stack.
-
-    Stack-aware matching: edges with stack_tags that match project stack
-    are surfaced even without explicit intent/code matches.
-    """
+    """Match edges against intent, code, and stack."""
     intent_lower = intent.lower()
     code_lower = code.lower() if code else ""
     stack_set = set(s.lower() for s in stack)
@@ -120,38 +185,29 @@ def match_edges(
     for edge in global_edges:
         detection = edge.get("detection", {})
 
-        # Check context match (from detection patterns)
         context_patterns = detection.get("context", [])
         context_match = any(
             p.lower() in stack_set or any(p.lower() in s for s in stack_set)
             for p in context_patterns
         )
 
-        # Check stack_tags match (direct stack matching)
         stack_tags = edge.get("stack_tags", [])
         stack_match = any(
             tag.lower() in stack_set or any(tag.lower() in s for s in stack_set)
             for tag in stack_tags
         )
 
-        # Check intent match
         intent_patterns = detection.get("intent", [])
         intent_match = any(p.lower() in intent_lower for p in intent_patterns)
 
-        # Check code match
         code_patterns = detection.get("code", [])
         code_match = code and any(p.lower() in code_lower for p in code_patterns)
 
-        # Combine context and stack match
         full_context_match = context_match or stack_match
-
-        # Calculate confidence - stack match alone gives lower confidence
         matches = sum([full_context_match, intent_match, code_match])
 
-        # If only stack matches (no intent/code), still include but lower confidence
         if matches >= 1 or stack_match:
             if matches == 0 and stack_match:
-                # Stack-only match - relevant but not urgent
                 confidence = 0.3
                 matched_on = "stack"
             else:
@@ -173,18 +229,16 @@ def match_edges(
                 "confidence": confidence,
             })
 
-    # Check project edges (simpler matching + stack awareness)
+    # Check project edges
     for edge in project_edges:
         title_lower = edge.get("title", "").lower()
         workaround_lower = (edge.get("workaround") or "").lower()
 
-        # Check if any stack term appears in edge title/workaround
         stack_in_edge = any(
             s in title_lower or s in workaround_lower
             for s in stack_set
         )
 
-        # Match on intent words or stack relevance
         intent_words = intent_lower.split()
         intent_match = any(word in title_lower for word in intent_words)
 
@@ -201,14 +255,12 @@ def match_edges(
                 "confidence": confidence,
             })
 
-    # Sort by confidence
     warnings.sort(key=lambda w: w["confidence"], reverse=True)
-
     return warnings
 
 
 def create_server() -> Server:
-    """Create the MCP server with 4 tools."""
+    """Create the MCP server with 4 tools (v2: daemon-free)."""
     server = Server("mind")
 
     @server.list_tools()
@@ -216,8 +268,26 @@ def create_server() -> Server:
         """List available tools."""
         return [
             Tool(
+                name="mind_recall",
+                description="Load session context. ALWAYS call this first before responding to user. Detects session gaps and returns fresh context.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "project_path": {
+                            "type": "string",
+                            "description": "Project path (defaults to cwd)",
+                        },
+                        "force_refresh": {
+                            "type": "boolean",
+                            "default": False,
+                            "description": "Force regenerate context even if no changes",
+                        },
+                    },
+                },
+            ),
+            Tool(
                 name="mind_search",
-                description="Search across memories. Use when CLAUDE.md context isn't enough.",
+                description="Search across memories. Use when CLAUDE.md context isn't enough. Searches both indexed and current session content.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -243,6 +313,19 @@ def create_server() -> Server:
                         },
                     },
                     "required": ["query"],
+                },
+            ),
+            Tool(
+                name="mind_checkpoint",
+                description="Force process pending memories and regenerate context. Use when you want to ensure recent writes are indexed.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "project_path": {
+                            "type": "string",
+                            "description": "Project path (defaults to cwd)",
+                        },
+                    },
                 },
             ),
             Tool(
@@ -306,7 +389,7 @@ def create_server() -> Server:
             ),
             Tool(
                 name="mind_status",
-                description="Check Mind daemon status and project stats.",
+                description="Check Mind status and project stats.",
                 inputSchema={
                     "type": "object",
                     "properties": {},
@@ -318,8 +401,12 @@ def create_server() -> Server:
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         """Handle tool calls."""
 
-        if name == "mind_search":
+        if name == "mind_recall":
+            return await handle_recall(arguments)
+        elif name == "mind_search":
             return await handle_search(arguments)
+        elif name == "mind_checkpoint":
+            return await handle_checkpoint(arguments)
         elif name == "mind_edges":
             return await handle_edges(arguments)
         elif name == "mind_add_global_edge":
@@ -332,8 +419,79 @@ def create_server() -> Server:
     return server
 
 
+async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
+    """Handle mind_recall tool - main session context loader."""
+    project_path_str = args.get("project_path")
+    force_refresh = args.get("force_refresh", False)
+
+    # Get project path
+    if project_path_str:
+        project_path = Path(project_path_str)
+    else:
+        project_path = get_current_project()
+
+    if not project_path:
+        return [TextContent(type="text", text="Error: No Mind project found. Run 'mind init' first.")]
+
+    memory_file = project_path / ".mind" / "MEMORY.md"
+    if not memory_file.exists():
+        return [TextContent(type="text", text="Error: No MEMORY.md found. Run 'mind init' first.")]
+
+    # Load state
+    state = load_state(project_path)
+    current_hash = hash_file(memory_file)
+    now = int(datetime.now().timestamp() * 1000)
+    gap = now - state.get("last_activity", 0)
+
+    # Determine if we need to reprocess
+    gap_detected = gap > GAP_THRESHOLD_MS
+    hash_changed = current_hash != state.get("memory_hash", "")
+    needs_refresh = force_refresh or gap_detected or hash_changed
+
+    # Parse and generate context
+    parser = Parser()
+    content = memory_file.read_text(encoding="utf-8")
+    result = parser.parse(content, str(memory_file))
+
+    entries_processed = len(result.entities)
+
+    # Generate context
+    context_gen = ContextGenerator()
+    last_activity = datetime.fromtimestamp(state.get("last_activity", now) / 1000) if state.get("last_activity") else None
+    context = context_gen.generate(result, last_activity)
+
+    # Update state
+    state["last_activity"] = now
+    state["memory_hash"] = current_hash
+    state["schema_version"] = 2
+    save_state(project_path, state)
+
+    # Health suggestions
+    suggestions = []
+    file_size_kb = memory_file.stat().st_size / 1024
+    if file_size_kb > 100:
+        suggestions.append("MEMORY.md is large (>100KB). Consider running 'mind archive' to move old entries.")
+
+    output = {
+        "context": context,
+        "session_info": {
+            "last_session": datetime.fromtimestamp(state["last_activity"] / 1000).isoformat() if state.get("last_activity") else None,
+            "gap_detected": gap_detected,
+            "entries_processed": entries_processed,
+            "refreshed": needs_refresh,
+        },
+        "health": {
+            "memory_count": entries_processed,
+            "file_size_kb": round(file_size_kb, 1),
+            "suggestions": suggestions,
+        },
+    }
+
+    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+
+
 async def handle_search(args: dict[str, Any]) -> list[TextContent]:
-    """Handle mind_search tool."""
+    """Handle mind_search tool - searches both indexed and raw content."""
     query = args.get("query", "")
     scope = args.get("scope", "project")
     types = args.get("types")
@@ -343,6 +501,7 @@ async def handle_search(args: dict[str, Any]) -> list[TextContent]:
         return [TextContent(type="text", text="Error: query is required")]
 
     all_entities: list[Entity] = []
+    raw_content = ""
     parser = Parser()
 
     if scope == "project":
@@ -352,8 +511,8 @@ async def handle_search(args: dict[str, Any]) -> list[TextContent]:
 
         memory_file = project_path / ".mind" / "MEMORY.md"
         if memory_file.exists():
-            content = memory_file.read_text(encoding="utf-8")
-            result = parser.parse(content, str(memory_file))
+            raw_content = memory_file.read_text(encoding="utf-8")
+            result = parser.parse(raw_content, str(memory_file))
             all_entities.extend(result.entities)
     else:
         # Search all projects
@@ -362,15 +521,68 @@ async def handle_search(args: dict[str, Any]) -> list[TextContent]:
             memory_file = Path(project.path) / ".mind" / "MEMORY.md"
             if memory_file.exists():
                 content = memory_file.read_text(encoding="utf-8")
+                raw_content += content + "\n"
                 result = parser.parse(content, str(memory_file))
                 all_entities.extend(result.entities)
 
-    results = search_entities(query, all_entities, types, limit)
+    # Search indexed entities
+    indexed_results = search_entities(query, all_entities, types, limit)
+
+    # Also search raw content for same-session support
+    raw_results = search_raw_content(raw_content, query, limit // 2)
+
+    # Merge and dedupe (prefer indexed over raw)
+    seen_titles = set(r["title"] for r in indexed_results)
+    merged = indexed_results.copy()
+    for r in raw_results:
+        if r["title"] not in seen_titles:
+            merged.append(r)
+            seen_titles.add(r["title"])
+
+    # Re-sort and limit
+    merged.sort(key=lambda r: (r["relevance"], r.get("confidence", 0)), reverse=True)
+    merged = merged[:limit]
 
     output = {
         "query": query,
-        "total": len(results),
-        "results": results,
+        "total": len(merged),
+        "results": merged,
+    }
+
+    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+
+
+async def handle_checkpoint(args: dict[str, Any]) -> list[TextContent]:
+    """Handle mind_checkpoint tool - force process pending memories."""
+    project_path_str = args.get("project_path")
+
+    if project_path_str:
+        project_path = Path(project_path_str)
+    else:
+        project_path = get_current_project()
+
+    if not project_path:
+        return [TextContent(type="text", text="Error: No Mind project found")]
+
+    memory_file = project_path / ".mind" / "MEMORY.md"
+    if not memory_file.exists():
+        return [TextContent(type="text", text="Error: No MEMORY.md found")]
+
+    # Parse
+    parser = Parser()
+    content = memory_file.read_text(encoding="utf-8")
+    result = parser.parse(content, str(memory_file))
+
+    # Update state
+    state = load_state(project_path)
+    state["last_activity"] = int(datetime.now().timestamp() * 1000)
+    state["memory_hash"] = hash_file(memory_file)
+    save_state(project_path, state)
+
+    output = {
+        "processed": len(result.entities),
+        "context_updated": True,
+        "timestamp": datetime.now().isoformat(),
     }
 
     return [TextContent(type="text", text=json.dumps(output, indent=2))]
@@ -427,8 +639,6 @@ async def handle_add_global_edge(args: dict[str, Any]) -> list[TextContent]:
     if not title or not description or not workaround:
         return [TextContent(type="text", text="Error: title, description, and workaround are required")]
 
-    # Generate ID
-    import hashlib
     edge_id = hashlib.md5(f"{title}{datetime.now().isoformat()}".encode()).hexdigest()[:8]
 
     edge = {
@@ -442,7 +652,6 @@ async def handle_add_global_edge(args: dict[str, Any]) -> list[TextContent]:
         "created_at": datetime.now().isoformat(),
     }
 
-    # Save
     edges = load_global_edges()
     edges.append(edge)
     save_global_edges(edges)
@@ -451,8 +660,7 @@ async def handle_add_global_edge(args: dict[str, Any]) -> list[TextContent]:
 
 
 async def handle_status(args: dict[str, Any]) -> list[TextContent]:
-    """Handle mind_status tool."""
-    daemon_state = DaemonState.load()
+    """Handle mind_status tool (v2: no daemon)."""
     registry = ProjectsRegistry.load()
 
     # Current project info
@@ -461,7 +669,6 @@ async def handle_status(args: dict[str, Any]) -> list[TextContent]:
     if project_path:
         project_info = registry.get(project_path)
         if project_info:
-            # Count entities
             memory_file = project_path / ".mind" / "MEMORY.md"
             entity_counts = {"decisions": 0, "issues_open": 0, "issues_resolved": 0, "learnings": 0}
 
@@ -481,21 +688,19 @@ async def handle_status(args: dict[str, Any]) -> list[TextContent]:
                     elif e.type == EntityType.LEARNING:
                         entity_counts["learnings"] += 1
 
+            # Load state
+            state = load_state(project_path)
+
             current_project = {
                 "path": project_info.path,
                 "name": project_info.name,
                 "stack": project_info.stack,
-                "last_activity": project_info.last_activity,
+                "last_activity": datetime.fromtimestamp(state.get("last_activity", 0) / 1000).isoformat() if state.get("last_activity") else None,
                 "stats": entity_counts,
             }
 
     status = {
-        "daemon": {
-            "running": is_daemon_running(),
-            "pid": daemon_state.pid,
-            "started_at": daemon_state.started_at,
-            "projects_watching": len(daemon_state.projects_watching),
-        },
+        "version": 2,
         "current_project": current_project,
         "global_stats": {
             "projects_registered": len(registry.list_all()),

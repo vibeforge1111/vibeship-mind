@@ -41,10 +41,26 @@ def _inject_context(claude_md: Path, context: str) -> None:
         # Create new CLAUDE.md
         content = context + "\n\n# Project Instructions\n\n(Add your instructions here)\n"
 
-    # Write atomically
-    temp_path = claude_md.with_suffix(".md.tmp")
-    temp_path.write_text(content)
-    temp_path.replace(claude_md)
+    # Write with retry for Windows file locking
+    import sys
+    import time
+
+    if sys.platform == "win32":
+        # On Windows, direct write with retries
+        for attempt in range(3):
+            try:
+                claude_md.write_text(content, encoding="utf-8")
+                break
+            except PermissionError:
+                if attempt < 2:
+                    time.sleep(0.1)
+                else:
+                    raise
+    else:
+        # Unix: atomic write via temp file
+        temp_path = claude_md.with_suffix(".md.tmp")
+        temp_path.write_text(content)
+        temp_path.replace(claude_md)
 
 
 class ContextGenerator:

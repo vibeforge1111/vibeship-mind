@@ -2,132 +2,52 @@
 
 > Memory that accumulates automatically.
 
-Mind gives AI coding assistants persistent memory across sessions. Not through explicit tool calls—through natural file writing.
-
-**The file is the memory. Mind is the lens.**
-
-## The Problem
-
-Every AI conversation starts from zero:
-- What we decided yesterday? Forgotten.
-- What we tried that didn't work? Unknown.
-- The gotchas we've hit before? Re-discovered.
-- Where we left off? Lost.
-
-The obvious approach—explicit tool calls for memory—fails because Claude forgets to call them.
-
-## The the new Solution
-
-```
-project/
-├── .mind/
-│   └── MEMORY.md     ← Claude writes here naturally
-└── CLAUDE.md         ← Mind injects context automatically
-```
-
-**Zero tools during work. Zero commands at session end. Memory just accumulates.**
+Mind gives AI coding assistants persistent memory across sessions. Your AI remembers what you decided, what broke, and where you left off.
 
 ---
 
-## How It Works
+## 5-Minute Setup
 
-### 1. Initialize Once
-
-```bash
-cd your-project        # Any project folder
-mind init
-
-[+] Created .mind/MEMORY.md
-[+] Updated CLAUDE.md with MIND:CONTEXT
-[+] Detected stack: sveltekit, typescript
-[+] Registered project with Mind
-```
-
-Mind automatically uses your folder name as the project name.
-
-### 2. Work Normally
-
-Claude writes to `.mind/MEMORY.md` as you work:
-
-```markdown
-## 2024-12-12
-
-Working on auth flow.
-
-**Decided:** JWT over sessions - stateless, simpler
-**Problem:** Safari cookies - ITP blocking cross-domain
-**Learned:** Safari deletes third-party cookies after 7 days
-
-Next: implement refresh tokens
-```
-
-Or drops inline comments in code:
-
-```typescript
-// MEMORY: decided Zod for validation - runtime type safety
-// MEMORY: problem - TypeScript inference broken with generics
-```
-
-### 3. Mind Handles the Rest
-
-Mind daemon (runs in background):
-- Watches for file changes
-- Parses natural language (loose regex, accepts messy input)
-- Updates search index
-- Detects session end (30 min inactivity)
-- Injects fresh context into CLAUDE.md
-
-### 4. Next Session Starts Informed
-
-Claude reads CLAUDE.md (it does this automatically) and sees:
-
-```markdown
-<!-- MIND:CONTEXT -->
-## Session Context
-Last active: 2 hours ago
-
-## Recent Decisions
-- JWT over sessions (Dec 12) - stateless, simpler
-
-## Open Loops
-⚠️ Safari cookies - mentioned 2 sessions ago, unresolved
-⚠️ "implement refresh tokens" - noted as next, not started
-
-## Gotchas (This Stack)
-- Safari ITP blocks cross-domain cookies after 7 days
-- Vercel Edge can't use Node crypto → use Web Crypto
-
-## Continue From
-Last: Auth flow
-Next: Implement refresh tokens
-<!-- MIND:END -->
-```
-
-**No tool call. No command. Context just appears.**
-
----
-
-## Quick Start
-
-### Install from Source
+### Step 1: Install
 
 ```bash
+# Clone the repo
 git clone https://github.com/vibeforge1111/vibeship-mind.git
 cd vibeship-mind
+
+# Install dependencies (requires uv - https://docs.astral.sh/uv/)
 uv sync
 ```
 
-### Initialize Project
+### Step 2: Initialize Your Project
 
 ```bash
-cd your-project
-uv run mind init
-uv run mind daemon start
+# Go to any project you're working on
+cd ~/my-awesome-project
+
+# Run this (use full path to mind)
+uv --directory /path/to/vibeship-mind run mind init
 ```
 
-### Add to Claude Code
+You'll see:
+```
+[+] Created .mind/MEMORY.md
+[+] Updated CLAUDE.md with MIND:CONTEXT
+[+] Detected stack: python, typescript
+[+] Registered project with Mind
+```
 
-Add to your Claude Code MCP config (`~/.config/claude/mcp.json` on Linux/Mac, or `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
+### Step 3: Start the Daemon
+
+```bash
+uv --directory /path/to/vibeship-mind run mind daemon start
+```
+
+### Step 4: Connect to Claude Code (Optional)
+
+Add to your MCP config file:
+- **Mac/Linux:** `~/.config/claude/mcp.json`
+- **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
@@ -140,228 +60,112 @@ Add to your Claude Code MCP config (`~/.config/claude/mcp.json` on Linux/Mac, or
 }
 ```
 
-That's it. Work normally. Memory accumulates.
+**Done! Now just work normally.**
 
 ---
 
-## Getting Started Guide
+## How It Actually Works
 
-### What Gets Created
+### You write notes as you work
 
-After `mind init`, your project has:
-
-```
-project/
-├── .mind/
-│   └── MEMORY.md     ← Write here as you work
-└── CLAUDE.md         ← Context auto-injected here
-```
-
-### How to Write Memory
-
-Use natural language with these keywords:
-
-| Keyword | What It Captures |
-|---------|------------------|
-| `decided`, `chose`, `going with` | Decisions |
-| `problem`, `issue`, `bug`, `stuck` | Issues |
-| `learned`, `discovered`, `realized` | Learnings |
-| `fixed`, `resolved` | Resolutions |
-
-**Examples:**
+In `.mind/MEMORY.md` (created by `mind init`):
 
 ```markdown
 ## Dec 13
 
-Working on auth.
+Working on auth today.
 
-decided JWT over sessions - stateless, simpler
-problem: Safari cookies not persisting
-learned that ITP blocks third-party cookies after 7 days
-fixed the cookie issue by using same-domain auth
+decided to use JWT instead of sessions - simpler, stateless
+problem: cookies not working in Safari
+learned that Safari blocks third-party cookies after 7 days
+fixed it by using same-domain auth
 
 Next: add refresh tokens
 ```
 
-Or use explicit format:
+**That's it.** Just write naturally. Use words like:
+- `decided`, `chose`, `going with` → captures decisions
+- `problem`, `issue`, `bug` → captures issues
+- `learned`, `realized`, `discovered` → captures learnings
+- `fixed`, `resolved` → marks things as solved
 
-```markdown
-**Decided:** JWT over sessions - stateless, simpler
-**Problem:** Safari cookies not persisting
-**Learned:** ITP blocks third-party cookies after 7 days
-```
+### Mind reads it and remembers
 
-### Verify It's Working
+Next time you open Claude, it automatically knows:
+- What you decided and why
+- What problems you hit
+- What you learned
+- Where you left off
 
-```bash
-# Check daemon is running
-mind daemon status
-
-# Parse and see what Mind extracts
-mind parse
-
-# Health check
-mind doctor
-```
-
-**Success indicators:**
-- `mind daemon status` shows "Running"
-- `mind parse` shows extracted entities
-- CLAUDE.md has `MIND:CONTEXT` section
-
-### Troubleshooting
-
-| Problem | Solution |
-|---------|----------|
-| Daemon not running | `mind daemon start` |
-| No context in CLAUDE.md | Check MEMORY.md has content with keywords |
-| Nothing being captured | Use keywords: decided, problem, learned |
+No commands. No tool calls. It just works.
 
 ---
 
-## Three Ways to Capture
-
-Mind watches all three:
-
-### 1. Direct to MEMORY.md
-
-```markdown
-## Dec 12
-
-decided JWT because simpler. hit Safari cookie issue.
-learned ITP blocks cross-domain after 7 days.
-```
-
-### 2. Inline Comments
-
-```typescript
-// MEMORY: decided Zod for validation
-// MEMORY: problem - generic inference broken
-```
-
-### 3. Git Commits
+## Quick Commands
 
 ```bash
-git commit -m "feat: auth
+# Check if everything is working
+uv --directory /path/to/vibeship-mind run mind doctor
 
-decided: JWT over sessions - stateless
-learned: Safari ITP blocks third-party cookies"
+# See what Mind extracted from your notes
+uv --directory /path/to/vibeship-mind run mind parse
+
+# Check daemon status
+uv --directory /path/to/vibeship-mind run mind daemon status
 ```
-
-Any of these work. Use what's natural.
 
 ---
 
-## MCP Tools (4 Total)
+## The Problem This Solves
 
-Most functionality is automatic. Tools are for explicit queries:
+Every AI conversation starts from zero:
+- "What did we decide yesterday?" → Forgotten
+- "What did we try that didn't work?" → Unknown
+- "What gotchas did we hit?" → Re-discovered every time
+- "Where did we leave off?" → Lost
 
-| Tool | Purpose |
-|------|---------|
-| `mind_search` | Semantic search when CLAUDE.md context isn't enough |
-| `mind_edges` | Check for gotchas before implementing risky code |
-| `mind_add_global_edge` | Add cross-project gotcha |
-| `mind_status` | Check daemon health |
-
-**Typical session: 0-2 tool calls.** Everything else is automatic.
-
----
-
-## CLI Reference
-
-```bash
-# Project setup
-mind init                # Initialize Mind in project
-mind add .               # Register project with daemon
-
-# Daemon
-mind daemon start        # Start background daemon
-mind daemon stop         # Stop daemon
-mind daemon status       # Check status
-
-# Information
-mind list                # List projects
-mind search "query"      # Search memories
-mind context             # Show current MIND:CONTEXT
-mind edges               # List global edges
-
-# Maintenance
-mind index               # Force reindex
-mind doctor              # Health check
-```
+**Mind fixes this.** Your AI remembers everything across sessions.
 
 ---
 
 ## File Structure
 
+After setup, your project has:
+
 ```
-project/
+your-project/
 ├── .mind/
-│   ├── MEMORY.md        # Source of truth (git-tracked)
-│   └── .index/          # Search cache (gitignored)
-└── CLAUDE.md            # Gets MIND:CONTEXT injected
+│   └── MEMORY.md     ← You write here
+└── CLAUDE.md         ← Mind updates this automatically
+```
 
+Global config lives at:
+```
 ~/.mind/
-├── config.toml          # Settings
-├── projects.json        # Registered projects
-└── global_edges.json    # Cross-project gotchas
+├── projects.json     ← Registered projects
+└── global_edges.json ← Cross-project gotchas
 ```
 
 ---
 
-## Configuration
+## Troubleshooting
 
-```toml
-# ~/.mind/config.toml
-
-[daemon]
-inactivity_minutes = 30    # Session end detection
-
-[context]
-max_decisions = 5          # Recent decisions to show
-max_open_loops = 3         # Open loops to show
-max_gotchas = 5            # Gotchas to show
-
-[parser]
-confidence_threshold = 0.3 # Minimum extraction confidence
-```
-
----
-
+| Problem | Fix |
+|---------|-----|
+| "Command not found" | Use full path: `uv --directory /path/to/vibeship-mind run mind ...` |
+| Daemon not running | `uv --directory /path/to/vibeship-mind run mind daemon start` |
+| Nothing being captured | Make sure you use keywords like `decided`, `problem`, `learned` |
+| Need to check health | `uv --directory /path/to/vibeship-mind run mind doctor` |
 
 ---
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md) - System design
-- [MCP Tools](docs/MCP_TOOLS.md) - Tool specifications
-- [Parser](docs/PARSER.md) - Extraction patterns
-- [Daemon](docs/DAEMON.md) - Background process
-- [CLI](docs/CLI.md) - Command reference
-- [Implementation](docs/IMPLEMENTATION.md) - Build plan
-
----
-
-## Philosophy
-
-**The obvious approach:** Explicit tool calls for memory.
-**The problem:** Claude forgets to call them.
-
-**Mind's approach:** Claude writes files anyway. Watch those files.
-**The result:** Memory accumulates naturally.
-
-The shift: From "remember to call memory tools" to "write to files like you already do."
-
----
-
-## Part of VibeShip
-
-Mind is one component of the VibeShip ecosystem:
-
-- **Scanner** - Find what's wrong in your code
-- **Mind** - Remember everything across sessions
-- **Spawner** - AI skills and validation for shipping
-- **Experts** - Connect with humans when stuck
+For deeper details:
+- [Architecture](docs/ARCHITECTURE.md) - How it works internally
+- [Parser](docs/PARSER.md) - What patterns Mind recognizes
+- [CLI Reference](docs/CLI.md) - All commands
+- [MCP Tools](docs/MCP_TOOLS.md) - AI tool specifications
 
 ---
 

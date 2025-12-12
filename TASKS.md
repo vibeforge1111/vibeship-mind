@@ -12,27 +12,40 @@
 - [x] GitHub repo: https://github.com/vibeforge1111/vibeship-mind
 - [x] Added Mind to Claude Code MCP config
 
+## Completed - Phase 2: Intelligence (In Progress)
+
+- [x] Proactive edge detection during coding
+  - Detection at decision points (context queries, decisions, issues)
+  - Intent detection via keyword matching
+  - Code detection via regex patterns
+  - Session-based throttling (same edge won't warn twice per session)
+  - Inline warnings in MCP tool responses
+- [x] Context relevance scoring (semantic + recency + usage)
+  - Semantic similarity from ChromaDB
+  - Recency boost with 7-day exponential decay
+  - Frequency boost from access tracking (logarithmic scaling)
+  - Trigger phrase matching boost
+  - Access recording on context retrieval
+
 ## Current Status
 
-**Mind is ready for testing.** Restart Claude Code to activate.
+**Mind is ready for testing.** 53 tests passing.
 
 After restart, Mind tools will be available:
-- `mind_start_session` - Begin session, get context primer
+- `mind_start_session` - Begin session, get context primer + edge warnings
 - `mind_end_session` - Save session summary
-- `mind_get_context` - Search decisions/issues/edges
+- `mind_get_context` - Search with relevance scoring + edge warnings
 - `mind_check_edges` - Check code for gotchas
-- `mind_add_decision` - Record decision with reasoning
-- `mind_add_issue` - Track a problem
+- `mind_add_decision` - Record decision with reasoning + edge warnings
+- `mind_add_issue` - Track a problem + edge warnings
 - `mind_update_issue` - Add solution attempts
 - `mind_add_edge` - Register sharp edge
 - `mind_update_project` - Update project state
 - `mind_export` - Export all data
 
-## Next Up - Phase 2: Intelligence
+## Next Up - Phase 2: Intelligence (Remaining)
 
-- [ ] Context relevance scoring (TF-IDF + recency + usage)
 - [ ] Primer generation with smart truncation
-- [ ] Proactive edge detection during coding
 - [ ] Session narrative capture
 - [ ] Memory decay for stale entries
 
@@ -52,7 +65,7 @@ After restart, Mind tools will be available:
 
 ## Known Issues
 
-None currently. All 36 tests passing.
+None currently. All 53 tests passing.
 
 ## Tech Stack
 

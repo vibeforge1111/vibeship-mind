@@ -189,6 +189,15 @@ CREATE TABLE IF NOT EXISTS changes (
     synced INTEGER DEFAULT 0
 );
 
+-- Entity Access Tracking (for context relevance scoring)
+CREATE TABLE IF NOT EXISTS entity_access (
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    access_count INTEGER DEFAULT 0,
+    last_accessed TEXT,
+    PRIMARY KEY (entity_type, entity_id)
+);
+
 -- Indexes
 CREATE INDEX IF NOT EXISTS idx_decisions_project ON decisions(project_id);
 CREATE INDEX IF NOT EXISTS idx_issues_project ON issues(project_id);
@@ -199,6 +208,7 @@ CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project_id);
 CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
 CREATE INDEX IF NOT EXISTS idx_changes_synced ON changes(synced);
 CREATE INDEX IF NOT EXISTS idx_changes_timestamp ON changes(timestamp);
+CREATE INDEX IF NOT EXISTS idx_access_entity ON entity_access(entity_type, access_count DESC);
 """
 
 
@@ -1095,3 +1105,121 @@ class SQLiteStorage:
             results["episodes"] = [self._row_to_episode(row) for row in rows]
 
         return results
+
+    # ============ Entity Access Tracking ============
+
+    async def record_access(
+        self,
+        entity_type: str,
+        entity_id: str,
+    ) -> None:
+        """Record an access to an entity for relevance scoring.
+
+        Increments access_count and updates last_accessed timestamp.
+        """
+        await self.db.execute(
+            """INSERT INTO entity_access (entity_type, entity_id, access_count, last_accessed)
+               VALUES (?, ?, 1, ?)
+               ON CONFLICT(entity_type, entity_id) DO UPDATE SET
+                   access_count = access_count + 1,
+                   last_accessed = ?""",
+            (entity_type, entity_id, _datetime_str(datetime.utcnow()), _datetime_str(datetime.utcnow())),
+        )
+        await self.db.commit()
+
+    async def record_accesses(
+        self,
+        accesses: list[tuple[str, str]],
+    ) -> None:
+        """Record multiple accesses in a batch.
+
+        Args:
+            accesses: List of (entity_type, entity_id) tuples
+        """
+        now = _datetime_str(datetime.utcnow())
+        for entity_type, entity_id in accesses:
+            await self.db.execute(
+                """INSERT INTO entity_access (entity_type, entity_id, access_count, last_accessed)
+                   VALUES (?, ?, 1, ?)
+                   ON CONFLICT(entity_type, entity_id) DO UPDATE SET
+                       access_count = access_count + 1,
+                       last_accessed = ?""",
+                (entity_type, entity_id, now, now),
+            )
+        await self.db.commit()
+
+    async def get_access_stats(
+        self,
+        entity_ids: list[str],
+    ) -> dict[str, dict[str, any]]:
+        """Get access statistics for multiple entities.
+
+        Args:
+            entity_ids: List of entity IDs to get stats for
+
+        Returns:
+            Dict mapping entity_id to {access_count, last_accessed}
+        """
+        if not entity_ids:
+            return {}
+
+        placeholders = ",".join("?" * len(entity_ids))
+        async with self.db.execute(
+            f"""SELECT entity_id, access_count, last_accessed
+                FROM entity_access
+                WHERE entity_id IN ({placeholders})""",
+            entity_ids,
+        ) as cursor:
+            rows = await cursor.fetchall()
+
+        return {
+            row["entity_id"]: {
+                "access_count": row["access_count"],
+                "last_accessed": _parse_datetime(row["last_accessed"]),
+            }
+            for row in rows
+        }
+
+    async def get_entity_timestamps(
+        self,
+        entity_type: str,
+        entity_ids: list[str],
+    ) -> dict[str, datetime]:
+        """Get creation/update timestamps for entities.
+
+        Used for recency scoring.
+
+        Args:
+            entity_type: Type of entity (decision, issue, sharp_edge, episode)
+            entity_ids: List of entity IDs
+
+        Returns:
+            Dict mapping entity_id to timestamp
+        """
+        if not entity_ids:
+            return {}
+
+        # Map entity type to table and timestamp column
+        table_map = {
+            "decision": ("decisions", "decided_at"),
+            "issue": ("issues", "updated_at"),
+            "sharp_edge": ("sharp_edges", "discovered_at"),
+            "episode": ("episodes", "ended_at"),
+        }
+
+        if entity_type not in table_map:
+            return {}
+
+        table, timestamp_col = table_map[entity_type]
+        placeholders = ",".join("?" * len(entity_ids))
+
+        async with self.db.execute(
+            f"SELECT id, {timestamp_col} FROM {table} WHERE id IN ({placeholders})",
+            entity_ids,
+        ) as cursor:
+            rows = await cursor.fetchall()
+
+        return {
+            row["id"]: _parse_datetime(row[timestamp_col]) or datetime.utcnow()
+            for row in rows
+        }

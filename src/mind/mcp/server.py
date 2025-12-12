@@ -55,7 +55,7 @@ class MindServer:
         # Initialize engines
         self.session_manager = SessionManager(self.storage)
         self.edge_detector = EdgeDetector()
-        self.context_engine = ContextEngine(self.embeddings)
+        self.context_engine = ContextEngine(self.embeddings, self.storage)
 
         logger.info("Mind server initialized with data dir: %s", self.data_dir)
 
@@ -160,6 +160,11 @@ class MindServer:
             project_id=project_id,
             entity_types=entity_types,
         )
+
+        # Record accesses for relevance scoring
+        if results:
+            accesses = [(r["entity_type"], r["entity_id"]) for r in results]
+            await self.storage.record_accesses(accesses)
 
         # Also do text search in SQLite
         text_results = await self.storage.search_all(project_id, query)

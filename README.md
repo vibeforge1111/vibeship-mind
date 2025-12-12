@@ -8,6 +8,20 @@ Mind fixes this. It gives Claude persistent memory so your next session picks up
 
 ---
 
+## Why Mind?
+
+Other memory tools require Claude to call specific tools to save/retrieve memories. Problem: Claude forgets to call them.
+
+**Mind is different:**
+- Claude just writes to a file (`.mind/MEMORY.md`) - something it already does naturally
+- No special commands to remember
+- No tool calls during your session
+- Memory accumulates automatically as you work
+
+The file is the memory. Mind just watches it.
+
+---
+
 ## Install
 
 **Requires:** [uv](https://docs.astral.sh/uv/) (Claude Code installs uv automatically)

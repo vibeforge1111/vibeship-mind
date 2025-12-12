@@ -1,53 +1,58 @@
 /* Mind Dashboard Theme
- * "Reunion, not retrieval"
- * Extends vibeship palette with warm gold accent
+ * Vibeship design language - clean, minimal, sharp
  */
 
 :root {
   /* ========================================
-   * Color System
+   * Color System - Vibeship Palette
    * ======================================== */
 
+  /* Primary Accents */
+  --green: #2ECC71;       /* Terminal Green - success */
+  --green-dim: #00C49A;   /* Vibe Teal - primary accent */
+
   /* Node Colors (by entity type) */
-  --color-decisions: #E8C547;    /* warm gold - choices made */
-  --color-issues: #F07167;       /* pink-coral - struggles */
+  --color-decisions: #00C49A;    /* teal - choices made */
+  --color-issues: #FF4D4D;       /* red - struggles/bugs */
   --color-edges: #FFB020;        /* amber - warnings */
-  --color-episodes: #A78BFA;     /* cool violet - stories */
+  --color-episodes: #9D8CFF;     /* violet - stories */
   --color-sessions: #00C49A;     /* teal - active/current */
 
   /* Semantic Colors */
-  --color-success: #00C49A;
+  --color-success: #2ECC71;
   --color-warning: #FFB020;
   --color-error: #FF4D4D;
   --color-info: #3399FF;
 
   /* Status Colors */
-  --status-active: var(--color-sessions);
+  --status-active: var(--green-dim);
   --status-open: var(--color-issues);
   --status-resolved: var(--text-tertiary);
   --status-blocking: var(--color-error);
 
   /* ========================================
-   * Dark Theme (default)
+   * Dark Theme (default) - Bluish Black
    * ======================================== */
   --bg-primary: #0e1016;
   --bg-secondary: #151820;
-  --bg-tertiary: #1a1f2a;
-  --bg-hover: #1e2433;
+  --bg-tertiary: #1c202a;
+  --bg-hover: #242936;
+  --bg-inverse: #ffffff;
 
   --text-primary: #e2e4e9;
   --text-secondary: #9aa3b5;
-  --text-tertiary: #6b7280;
-  --text-accent: #E8C547;
+  --text-tertiary: #6b7489;
+  --text-accent: #00C49A;
+  --text-inverse: #0e1016;
 
   --border: #2a3042;
   --border-strong: #3d4558;
   --border-subtle: #1e2433;
 
   /* Glow Effects */
-  --glow-gold: rgba(232, 197, 71, 0.3);
   --glow-teal: rgba(0, 196, 154, 0.3);
-  --glow-center: radial-gradient(circle, rgba(232, 197, 71, 0.15) 0%, transparent 70%);
+  --glow-green: rgba(46, 204, 113, 0.3);
+  --glow-center: radial-gradient(circle, rgba(0, 196, 154, 0.12) 0%, transparent 70%);
 
   /* ========================================
    * Typography
@@ -57,9 +62,9 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Font Sizes */
-  --text-xs: 0.65rem;
-  --text-sm: 0.75rem;
-  --text-base: 0.85rem;
+  --text-xs: 0.7rem;
+  --text-sm: 0.8rem;
+  --text-base: 0.9rem;
   --text-lg: 1rem;
   --text-xl: 1.25rem;
   --text-2xl: 1.5rem;
@@ -74,6 +79,7 @@
   --tracking-tight: -0.02em;
   --tracking-normal: 0;
   --tracking-wide: 0.05em;
+  --tracking-wider: 0.1em;
 
   /* ========================================
    * Spacing
@@ -90,12 +96,13 @@
   --space-16: 4rem;
 
   /* ========================================
-   * Border Radius
+   * Border Radius - Sharp by default
    * ======================================== */
-  --radius-sm: 2px;
-  --radius-md: 4px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
+  --radius-none: 0;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
   --radius-full: 9999px;
 
   /* ========================================
@@ -104,7 +111,7 @@
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
   --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
   --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.4);
-  --shadow-glow: 0 0 20px var(--glow-gold);
+  --shadow-glow: 0 0 20px var(--glow-teal);
 
   /* ========================================
    * Transitions
@@ -128,52 +135,35 @@
  * Light Theme
  * ======================================== */
 [data-theme="light"] {
-  --bg-primary: #e8e8e8;
-  --bg-secondary: #dedede;
-  --bg-tertiary: #d4d4d4;
-  --bg-hover: #cacaca;
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f8f8;
+  --bg-tertiary: #f0f0f0;
+  --bg-hover: #e8e8e8;
+  --bg-inverse: #0e1016;
 
-  --text-primary: #1a1a1a;
-  --text-secondary: #3d3d3d;
+  --text-primary: #000000;
+  --text-secondary: #4a4a4a;
   --text-tertiary: #6b6b6b;
-  --text-accent: #b8942a;
+  --text-accent: #00A080;
+  --text-inverse: #ffffff;
 
-  --border: #c0c0c0;
-  --border-strong: #a0a0a0;
-  --border-subtle: #d4d4d4;
+  --border: #e0e0e0;
+  --border-strong: #c0c0c0;
+  --border-subtle: #f0f0f0;
 
-  --glow-gold: rgba(184, 148, 42, 0.25);
-  --glow-teal: rgba(0, 156, 123, 0.25);
-  --glow-center: radial-gradient(circle, rgba(184, 148, 42, 0.12) 0%, transparent 60%);
+  --glow-teal: rgba(0, 160, 128, 0.25);
+  --glow-green: rgba(46, 204, 113, 0.25);
+  --glow-center: radial-gradient(circle, rgba(0, 160, 128, 0.1) 0%, transparent 60%);
 }
 
 /* ========================================
  * Animations
  * ======================================== */
 
-/* Organic drift for nodes */
-@keyframes drift {
-  0%, 100% { transform: translate(0, 0); }
-  33% { transform: translate(3px, -2px); }
-  66% { transform: translate(-2px, 3px); }
-}
-
-/* Connection pulse between related items */
-@keyframes pulse-connection {
-  0%, 100% { opacity: 0.1; }
-  50% { opacity: 0.3; }
-}
-
-/* Center glow breathing */
-@keyframes breathe {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.05); }
-}
-
 /* Status indicator pulse */
-@keyframes pulse-status {
+@keyframes pulse {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  50% { opacity: 0.4; }
 }
 
 /* Loading dots */
@@ -194,6 +184,18 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* Typing indicator */
+@keyframes typing {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
 /* ========================================
  * Global Styles
  * ======================================== */
@@ -205,9 +207,10 @@
 }
 
 html {
-  font-size: 16px;
+  font-size: 14px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -219,20 +222,32 @@ body {
   transition: background-color var(--transition-base), color var(--transition-base);
 }
 
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+}
+
 a {
-  color: var(--color-sessions);
+  color: var(--green-dim);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
 
 a:hover {
-  color: var(--text-accent);
+  color: var(--text-primary);
+}
+
+code {
+  font-family: var(--font-mono);
+  background: var(--bg-tertiary);
+  padding: 0.1rem 0.3rem;
+  font-size: 0.85em;
 }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -241,7 +256,7 @@ a:hover {
 
 ::-webkit-scrollbar-thumb {
   background: var(--border-strong);
-  border-radius: var(--radius-full);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -250,6 +265,6 @@ a:hover {
 
 /* Selection */
 ::selection {
-  background-color: var(--color-decisions);
+  background-color: var(--text-primary);
   color: var(--bg-primary);
 }

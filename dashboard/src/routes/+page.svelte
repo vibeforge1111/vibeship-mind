@@ -23,7 +23,7 @@
 		const parts: string[] = [];
 		if (user.total_sessions > 0) parts.push(`${user.total_sessions} sessions`);
 		if (stats.decisions > 0) parts.push(`${stats.decisions} decisions`);
-		return parts.join(' · ') || 'Ready to start building context.';
+		return parts.join(' / ') || 'Ready to start building context.';
 	}
 
 	function formatProjectRecency(project: Project): string {
@@ -71,11 +71,10 @@
 	</div>
 {:else}
 	<section class="hero">
-		<div class="mind-glow"></div>
 		<div class="hero-content">
 			<h1 class="hero-primary">{recencyText}</h1>
 			<p class="hero-secondary">{depthText}</p>
-			<button class="btn btn-primary btn-lg hero-cta">{ctaText}</button>
+			<button class="btn btn-primary btn-lg">{ctaText}</button>
 		</div>
 	</section>
 
@@ -87,7 +86,7 @@
 				<p>No projects yet. Mind learns as you work.</p>
 			</div>
 		{:else}
-			<div class="projects-list">
+			<div class="projects-grid">
 				{#each projects as project}
 					<a href="/projects/{project.id}" class="project-card card card-interactive">
 						<div class="project-header">
@@ -107,11 +106,22 @@
 		{/if}
 	</section>
 
-	<section class="utility-row">
-		<a href="/edges" class="utility-item">
-			Global Edges ({globalEdges.length})
-		</a>
-	</section>
+	{#if globalEdges.length > 0}
+		<section class="edges-section">
+			<h2 class="section-title">Global Edges</h2>
+			<div class="edges-list">
+				{#each globalEdges.slice(0, 3) as edge}
+					<div class="edge-item">
+						<span class="edge-icon">!</span>
+						<span class="edge-title">{edge.title}</span>
+					</div>
+				{/each}
+				{#if globalEdges.length > 3}
+					<a href="/edges" class="edges-more">View all {globalEdges.length} edges</a>
+				{/if}
+			</div>
+		</section>
+	{/if}
 {/if}
 
 <style>
@@ -120,51 +130,26 @@
 		padding: 4rem 2rem;
 	}
 
-	.loading-text {
-		color: var(--text-secondary, #888);
-	}
-
 	.error-message {
-		color: var(--color-error, #e53935);
-		font-size: 1.25rem;
+		color: var(--color-error);
+		font-size: var(--text-xl);
 		margin-bottom: 0.5rem;
 	}
 
 	.error-detail {
-		color: var(--text-tertiary, #666);
-		font-size: 0.875rem;
+		color: var(--text-tertiary);
+		font-size: var(--text-sm);
 		margin-bottom: 1rem;
 	}
 
 	.error-hint code {
-		background: var(--bg-tertiary, #f5f5f5);
+		background: var(--bg-tertiary);
 		padding: 0.25rem 0.5rem;
-		border-radius: 4px;
 	}
 
 	.hero {
 		text-align: center;
-		padding: 3rem 0;
-		position: relative;
-	}
-
-	.mind-glow {
-		position: absolute;
-		top: 50%;
-		left: 50%;
-		transform: translate(-50%, -50%);
-		width: 200px;
-		height: 200px;
-		border-radius: 50%;
-		background: radial-gradient(circle, rgba(99, 102, 241, 0.3) 0%, transparent 70%);
-		animation: breathe 4s ease-in-out infinite;
-		pointer-events: none;
-		z-index: 0;
-	}
-
-	@keyframes breathe {
-		0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
-		50% { transform: translate(-50%, -50%) scale(1.2); opacity: 0.8; }
+		padding: 4rem 0;
 	}
 
 	.hero-content {
@@ -173,57 +158,32 @@
 	}
 
 	.hero-primary {
-		font-size: 1.75rem;
-		font-style: italic;
-		margin-bottom: 0.5rem;
+		font-size: 2rem;
+		font-weight: 400;
+		margin-bottom: 0.75rem;
+		color: var(--text-primary);
 	}
 
 	.hero-secondary {
-		color: var(--text-secondary, #888);
-		margin-bottom: 1.5rem;
-	}
-
-	.hero-cta {
-		padding: 0.75rem 2rem;
-		background: var(--color-primary, #6366f1);
-		color: white;
-		border: none;
-		border-radius: 8px;
-		cursor: pointer;
-		font-size: 1rem;
+		color: var(--text-secondary);
+		margin-bottom: 2rem;
+		font-size: var(--text-base);
 	}
 
 	.projects-section {
 		margin-top: 2rem;
 	}
 
-	.section-title {
-		font-size: 0.75rem;
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
-		color: var(--text-tertiary, #666);
-		margin-bottom: 1rem;
-	}
-
-	.projects-list {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
+	.projects-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+		gap: 1rem;
 	}
 
 	.project-card {
 		display: block;
-		padding: 1rem;
-		background: var(--bg-secondary, #1a1a1a);
-		border: 1px solid var(--border, #333);
-		border-radius: 8px;
 		text-decoration: none;
 		color: inherit;
-		transition: border-color 0.2s;
-	}
-
-	.project-card:hover {
-		border-color: var(--border-strong, #555);
 	}
 
 	.project-header {
@@ -234,52 +194,60 @@
 	}
 
 	.project-name {
-		font-size: 1.125rem;
-		font-weight: 500;
+		font-family: var(--font-serif);
+		font-size: var(--text-lg);
+		font-weight: 400;
 	}
 
 	.project-recency {
-		font-size: 0.875rem;
-		color: var(--text-tertiary, #666);
+		font-size: var(--text-xs);
+		color: var(--text-tertiary);
 	}
 
 	.project-summary {
-		font-size: 0.875rem;
-		color: var(--text-secondary, #888);
+		font-size: var(--text-sm);
+		color: var(--text-secondary);
 		font-style: italic;
 	}
 
-	.badge-active {
-		background: var(--color-sessions, #10b981);
-		color: white;
-		padding: 0.125rem 0.5rem;
-		border-radius: 4px;
-		font-size: 0.75rem;
-		font-weight: 500;
-	}
-
-	.empty-state {
-		text-align: center;
-		padding: 2rem;
-		color: var(--text-tertiary, #666);
-	}
-
-	.utility-row {
-		display: flex;
-		justify-content: center;
-		gap: 1.5rem;
+	.edges-section {
 		margin-top: 3rem;
-		padding-top: 1.5rem;
-		border-top: 1px solid var(--border-subtle, #222);
+		padding-top: 2rem;
+		border-top: 1px solid var(--border);
 	}
 
-	.utility-item {
-		font-size: 0.875rem;
-		color: var(--text-tertiary, #666);
-		text-decoration: none;
+	.edges-list {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
 	}
 
-	.utility-item:hover {
-		color: var(--text-secondary, #888);
+	.edge-item {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		padding: 0.75rem 1rem;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border);
+	}
+
+	.edge-icon {
+		color: var(--color-edges);
+		font-weight: 600;
+	}
+
+	.edge-title {
+		font-size: var(--text-sm);
+		color: var(--text-secondary);
+	}
+
+	.edges-more {
+		font-size: var(--text-sm);
+		color: var(--text-tertiary);
+		margin-top: 0.5rem;
+	}
+
+	.edges-more:hover {
+		color: var(--text-primary);
 	}
 </style>

@@ -15,17 +15,22 @@
 </svelte:head>
 
 <div class="app" data-theme={theme}>
-	<nav class="nav">
-		<a href="/" class="nav-logo">
-			<span class="logo-icon">◉</span>
-			<span class="logo-text">mind</span>
+	<nav class="navbar">
+		<a href="/" class="navbar-logo-link">
+			<span class="navbar-logo-text">mind</span>
 		</a>
-		<div class="nav-actions">
+		<div class="nav-links">
+			<a href="/edges">Edges</a>
 			<button class="theme-toggle" onclick={toggleTheme} aria-label="Toggle theme">
 				{#if theme === 'dark'}
-					<span>☀</span>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<circle cx="12" cy="12" r="5"/>
+						<path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+					</svg>
 				{:else}
-					<span>☾</span>
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+					</svg>
 				{/if}
 			</button>
 		</div>
@@ -34,6 +39,13 @@
 	<main class="main">
 		{@render children()}
 	</main>
+
+	<footer class="footer">
+		<div class="footer-left">Mind v0.1</div>
+		<div class="footer-links">
+			<a href="https://github.com/vibeforge1111/vibeship-mind">GitHub</a>
+		</div>
+	</footer>
 </div>
 
 <style>
@@ -43,55 +55,63 @@
 		flex-direction: column;
 	}
 
-	.nav {
+	.navbar {
 		position: sticky;
 		top: 0;
 		z-index: var(--z-nav);
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: var(--space-4) var(--space-6);
+		padding: 1.5rem 3rem;
 		background: var(--bg-primary);
-		border-bottom: 1px solid var(--border-subtle);
+		border-bottom: 1px solid var(--border);
 	}
 
-	.nav-logo {
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-		font-size: var(--text-lg);
-		font-weight: 500;
-		color: var(--text-primary);
+	.navbar-logo-link {
 		text-decoration: none;
 	}
 
-	.logo-icon {
-		color: var(--color-decisions);
-	}
-
-	.logo-text {
+	.navbar-logo-text {
 		font-family: var(--font-serif);
-		font-style: italic;
+		font-size: 1.35rem;
+		font-weight: 400;
+		color: var(--text-primary);
+		line-height: 1;
+		letter-spacing: -0.02em;
 	}
 
-	.nav-actions {
+	.nav-links {
 		display: flex;
+		gap: 2rem;
 		align-items: center;
-		gap: var(--space-4);
 	}
 
-	.theme-toggle {
-		padding: var(--space-2);
-		font-size: var(--text-lg);
-		background: none;
-		border: none;
+	.nav-links a:not(.theme-toggle) {
+		font-size: var(--text-sm);
+		text-decoration: none;
 		color: var(--text-secondary);
-		cursor: pointer;
 		transition: color var(--transition-fast);
 	}
 
-	.theme-toggle:hover {
+	.nav-links a:not(.theme-toggle):hover {
 		color: var(--text-primary);
+	}
+
+	.theme-toggle {
+		width: 36px;
+		height: 36px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background: transparent;
+		border: 1px solid var(--border);
+		color: var(--text-primary);
+		cursor: pointer;
+		transition: all var(--transition-fast);
+	}
+
+	.theme-toggle:hover {
+		border-color: var(--text-primary);
 	}
 
 	.main {
@@ -99,6 +119,35 @@
 		width: 100%;
 		max-width: 1200px;
 		margin: 0 auto;
-		padding: var(--space-8) var(--space-6);
+		padding: var(--space-8) 3rem;
+	}
+
+	.footer {
+		padding: 2rem 3rem;
+		border-top: 1px solid var(--border);
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.footer-left {
+		font-size: var(--text-xs);
+		color: var(--text-secondary);
+	}
+
+	.footer-links {
+		display: flex;
+		gap: 2rem;
+	}
+
+	.footer-links a {
+		font-size: var(--text-sm);
+		color: var(--text-secondary);
+		text-decoration: none;
+		transition: color var(--transition-fast);
+	}
+
+	.footer-links a:hover {
+		color: var(--text-primary);
 	}
 </style>

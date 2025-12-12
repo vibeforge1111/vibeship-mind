@@ -59,9 +59,9 @@ Restart Claude Code after saving.
 
 ## How It Actually Works
 
-### You write notes as you work
+### Notes get written to `.mind/MEMORY.md`
 
-In `.mind/MEMORY.md` (created by `mind init`):
+Either you write them, or Claude writes them as you work together. Example:
 
 ```markdown
 ## Dec 13
@@ -76,21 +76,21 @@ fixed it by using same-domain auth
 Next: add refresh tokens
 ```
 
-**That's it.** Just write naturally. Use words like:
-- `decided`, `chose`, `going with` → captures decisions
-- `problem`, `issue`, `bug` → captures issues
-- `learned`, `realized`, `discovered` → captures learnings
-- `fixed`, `resolved` → marks things as solved
+Mind watches for these keywords:
+- `decided`, `chose`, `going with` → decisions
+- `problem`, `issue`, `bug` → issues
+- `learned`, `realized`, `discovered` → learnings
+- `fixed`, `resolved` → resolutions
 
-### Mind reads it and remembers
+### Next session, Claude remembers
 
-Next time you open Claude, it automatically knows:
-- What you decided and why
-- What problems you hit
-- What you learned
+When you start a new conversation, Claude automatically knows:
+- What was decided and why
+- What problems came up
+- What was learned
 - Where you left off
 
-No commands. No tool calls. It just works.
+No extra commands needed.
 
 ---
 

@@ -34,14 +34,16 @@ project/
 ### 1. Initialize Once
 
 ```bash
-cd my-project
+cd your-project        # Any project folder
 mind init
 
-✓ Created .mind/MEMORY.md
-✓ Added MIND:CONTEXT to CLAUDE.md
-✓ Detected stack: sveltekit, typescript
-✓ Watching for changes
+[+] Created .mind/MEMORY.md
+[+] Updated CLAUDE.md with MIND:CONTEXT
+[+] Detected stack: sveltekit, typescript
+[+] Registered project with Mind
 ```
+
+Mind automatically uses your folder name as the project name.
 
 ### 2. Work Normally
 

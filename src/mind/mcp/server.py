@@ -82,10 +82,23 @@ class MindServer:
             detect_from_path=detect_from_path,
         )
 
-        # Load edges for detection
+        # Load edges for detection and reset session state
+        warnings = []
         if self.storage and self.edge_detector:
             edges = await self.storage.list_sharp_edges(result.project.id)
-            self.edge_detector.load_edges(edges)
+            # Also load global edges
+            global_edges = await self.storage.list_sharp_edges(None)
+            all_edges = edges + [e for e in global_edges if e.id not in {ed.id for ed in edges}]
+            self.edge_detector.load_edges(all_edges)
+            self.edge_detector.reset_session()
+
+            # Proactive: Check stack + goal for relevant edges
+            if result.project.stack or result.project.current_goal:
+                stack_warnings = self.edge_detector.check_stack(
+                    stack=result.project.stack,
+                    current_goal=result.project.current_goal,
+                )
+                warnings = [w.model_dump() for w in stack_warnings]
 
         return {
             "session_id": result.session_id,
@@ -94,6 +107,7 @@ class MindServer:
             "open_issues": [i.model_dump() for i in result.open_issues],
             "pending_decisions": [d.model_dump() for d in result.pending_decisions],
             "relevant_edges": [e.model_dump() for e in result.relevant_edges],
+            "warnings": warnings,
         }
 
     async def mind_end_session(
@@ -119,6 +133,7 @@ class MindServer:
     async def mind_get_context(
         self,
         query: str,
+        code: Optional[str] = None,
         types: Optional[list[str]] = None,
         project_id: Optional[str] = None,
         include_global: bool = True,
@@ -149,12 +164,28 @@ class MindServer:
         # Also do text search in SQLite
         text_results = await self.storage.search_all(project_id, query)
 
+        # Proactive: Check query intent + code for edge warnings
+        warnings = []
+        if self.edge_detector:
+            # Get project stack for context
+            project = await self.storage.get_project(project_id)
+            stack = project.stack if project else []
+
+            # Check intent (always) and code (if provided)
+            edge_warnings = self.edge_detector.check_all(
+                query=query,
+                code=code,
+                stack=stack,
+            )
+            warnings = [w.model_dump() for w in edge_warnings]
+
         return {
             "semantic_results": results,
             "decisions": [d.model_dump() for d in text_results["decisions"]],
             "issues": [i.model_dump() for i in text_results["issues"]],
             "edges": [e.model_dump() for e in text_results["edges"]],
             "episodes": [ep.model_dump() for ep in text_results["episodes"]],
+            "warnings": warnings,
         }
 
     async def mind_check_edges(
@@ -163,22 +194,30 @@ class MindServer:
         intent: Optional[str] = None,
         context: Optional[dict[str, Any]] = None,
     ) -> dict[str, Any]:
-        """Check for sharp edges."""
-        if not self.edge_detector:
+        """Check for sharp edges (manual check - also runs automatically in other tools)."""
+        if not self.edge_detector or not self.storage:
             raise RuntimeError("Server not initialized")
 
-        warnings = self.edge_detector.check(code=code, intent=intent, context=context)
+        # Get project stack for context
+        stack: list[str] = []
+        if self.session_manager and self.session_manager.current_session:
+            project = await self.storage.get_project(
+                self.session_manager.current_session.project_id
+            )
+            if project:
+                stack = project.stack
+
+        # Use the new check_all API
+        file_path = context.get("file_path") if context else None
+        warnings = self.edge_detector.check_all(
+            query=intent,
+            code=code,
+            stack=stack,
+            file_path=file_path,
+        )
 
         return {
-            "warnings": [
-                {
-                    "edge": w.edge.model_dump(),
-                    "matched_pattern": w.matched_pattern.model_dump(),
-                    "severity": w.severity,
-                    "recommendation": w.recommendation,
-                }
-                for w in warnings
-            ]
+            "warnings": [w.model_dump() for w in warnings]
         }
 
     async def mind_add_decision(
@@ -238,7 +277,15 @@ class MindServer:
         if session_id:
             await self.storage.add_session_artifact(session_id, "decision", decision.id)
 
-        return {"decision": decision.model_dump()}
+        # Proactive: Check reasoning text for edge warnings
+        warnings = []
+        if self.edge_detector:
+            # Combine reasoning and context for intent check
+            reasoning_text = f"{title} {description} {context} {reasoning}"
+            edge_warnings = self.edge_detector.check_intent(reasoning_text)
+            warnings = [w.model_dump() for w in edge_warnings]
+
+        return {"decision": decision.model_dump(), "warnings": warnings}
 
     async def mind_add_issue(
         self,
@@ -284,7 +331,15 @@ class MindServer:
         if session_id:
             await self.storage.add_session_artifact(session_id, "issue_opened", issue.id)
 
-        return {"issue": issue.model_dump()}
+        # Proactive: Check symptoms for matching edges
+        warnings = []
+        if self.edge_detector:
+            # Check symptoms text against known edge symptoms
+            symptoms_text = f"{title} {description} {' '.join(symptoms or [])}"
+            edge_warnings = self.edge_detector.check_symptoms(symptoms_text)
+            warnings = [w.model_dump() for w in edge_warnings]
+
+        return {"issue": issue.model_dump(), "warnings": warnings}
 
     async def mind_update_issue(
         self,
@@ -523,11 +578,12 @@ def create_server(data_dir: Optional[Path] = None) -> Server:
             ),
             Tool(
                 name="mind_get_context",
-                description="Search for relevant context across decisions, issues, edges, and episodes.",
+                description="Search for relevant context across decisions, issues, edges, and episodes. Also checks for edge warnings based on query intent.",
                 inputSchema={
                     "type": "object",
                     "properties": {
                         "query": {"type": "string", "description": "Natural language query"},
+                        "code": {"type": "string", "description": "Optional code snippet to check for edge patterns"},
                         "types": {"type": "array", "items": {"type": "string"}, "description": "Filter to specific entity types"},
                         "project_id": {"type": "string", "description": "Scope to specific project"},
                         "include_global": {"type": "boolean", "description": "Include global edges", "default": True},

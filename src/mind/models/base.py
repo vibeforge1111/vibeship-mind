@@ -2,9 +2,9 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Any
+from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from ulid import ULID
 
 
@@ -67,3 +67,19 @@ class MindBaseModel(BaseModel):
         populate_by_name=True,
         use_enum_values=True,
     )
+
+
+class EdgeWarning(MindBaseModel):
+    """Warning about a potential sharp edge.
+
+    Returned inline with tool responses when detection triggers.
+    """
+    edge_id: str
+    title: str
+    severity: Literal["info", "medium", "high"]
+    matched: str  # What triggered this warning (e.g., "query: 'token generation'")
+    workaround: str  # Quick solution
+
+    # Optional details
+    symptoms: list[str] = Field(default_factory=list)
+    link: Optional[str] = None  # Link to full edge details

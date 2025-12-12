@@ -1,10 +1,18 @@
 """Dependency injection for the HTTP API."""
 
-from functools import lru_cache
-from typing import AsyncGenerator
+import os
+from pathlib import Path
 
 from mind.storage.sqlite import SQLiteStorage
 from mind.storage.embeddings import EmbeddingStore
+
+
+def get_data_dir() -> Path:
+    """Get the Mind data directory."""
+    env_dir = os.environ.get("MIND_DATA_DIR")
+    if env_dir:
+        return Path(env_dir)
+    return Path.home() / ".mind"
 
 
 # Global storage instances (initialized on first request)
@@ -19,7 +27,9 @@ async def get_storage() -> SQLiteStorage:
     """
     global _storage
     if _storage is None:
-        _storage = SQLiteStorage()
+        data_dir = get_data_dir()
+        data_dir.mkdir(parents=True, exist_ok=True)
+        _storage = SQLiteStorage(data_dir / "mind.db")
         await _storage.initialize()
     return _storage
 

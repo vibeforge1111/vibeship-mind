@@ -40,9 +40,28 @@
   - Entities below 10% relevance filtered from results
   - Access recorded for primer, search, and edge warnings
 
+## Completed - Phase 3: HTTP API
+
+- [x] FastAPI server with uvicorn (`uv run mind serve`)
+- [x] Core endpoints:
+  - `/status` - Health check with stats
+  - `/projects` - Full CRUD with cascade delete
+  - `/decisions/{project_id}` - CRUD operations
+  - `/issues/{project_id}` - CRUD with open filter
+  - `/edges` - CRUD with global_only filter
+  - `/episodes/{project_id}` - Read-only list/get
+  - `/sessions/{project_id}` - List with /active shortcut
+  - `/user` - Get/update user model
+  - `/search` - Cross-entity text search
+  - `/export` - JSON export with project filter
+- [x] Consistent response shapes (`{items, count, has_more}`)
+- [x] Error handling (NOT_FOUND, VALIDATION_ERROR)
+- [x] CORS enabled for local development
+- [x] 148 tests passing (42 API tests)
+
 ## Current Status
 
-**Mind is connected to Claude Code.** 86 tests passing. Restart Claude Code to activate.
+**Mind is connected to Claude Code.** 148 tests passing. Restart Claude Code to activate.
 
 After restart, Mind tools will be available:
 - `mind_start_session` - Begin session, get context primer + edge warnings
@@ -67,13 +86,13 @@ After restart, Mind tools will be available:
 
 ## Future Phases
 
-### Phase 3: Polish
-- [ ] HTTP API for web dashboard
-- [ ] Export/import in multiple formats
-- [ ] Backup and restore
-- [ ] Settings management
+### Phase 4: Dashboard UI
+- [ ] Simple web dashboard for viewing Mind data
+- [ ] Project overview with stats
+- [ ] Decision/Issue/Edge browsers
+- [ ] Session history viewer
 
-### Phase 4: Cloud Sync (Optional)
+### Phase 5: Cloud Sync (Optional)
 - [ ] Cloudflare D1 for SQLite sync
 - [ ] Cloudflare Vectorize for embeddings
 - [ ] End-to-end encryption
@@ -81,7 +100,7 @@ After restart, Mind tools will be available:
 
 ## Known Issues
 
-None currently. All 106 tests passing.
+None currently. All 148 tests passing.
 
 ## Tech Stack
 

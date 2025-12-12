@@ -35,13 +35,13 @@ async def get_status(
     episode_count = 0
 
     for project in projects:
-        decisions = await storage.list_decisions(project.id, limit=1000)
+        decisions = await storage.list_decisions(project.id)
         decision_count += len(decisions)
 
-        issues = await storage.list_issues(project.id, limit=1000)
+        issues = await storage.list_issues(project.id)
         issue_count += len(issues)
 
-        episodes = await storage.list_episodes(project.id, limit=1000)
+        episodes = await storage.list_episodes(project.id)
         episode_count += len(episodes)
 
     # Global edges

@@ -10,6 +10,7 @@ from rich.console import Console
 from rich.table import Table
 
 console = Console()
+stderr_console = Console(stderr=True)
 
 
 def get_data_dir() -> Path:
@@ -41,7 +42,7 @@ def mcp():
     """Run Mind as an MCP server (for Claude Code)."""
     from mind.mcp.server import run_server
 
-    console.print("[dim]Starting Mind MCP server...[/dim]", err=True)
+    stderr_console.print("[dim]Starting Mind MCP server...[/dim]")
 
     data_dir = get_data_dir()
     asyncio.run(run_server(data_dir))

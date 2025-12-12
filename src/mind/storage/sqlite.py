@@ -969,6 +969,20 @@ class SQLiteStorage:
                 return None
             return self._row_to_session(row)
 
+    async def get_last_ended_session(self, project_id: str) -> Optional[Session]:
+        """Get the most recent ended session for a project.
+
+        Used for continuity context in primer generation.
+        """
+        async with self.db.execute(
+            "SELECT * FROM sessions WHERE project_id = ? AND status = 'ended' ORDER BY ended_at DESC LIMIT 1",
+            (project_id,),
+        ) as cursor:
+            row = await cursor.fetchone()
+            if not row:
+                return None
+            return self._row_to_session(row)
+
     async def end_session(self, session_id: str, data: SessionEnd) -> Optional[Session]:
         """End a session with summary."""
         session = await self.get_session(session_id)

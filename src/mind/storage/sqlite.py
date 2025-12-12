@@ -332,14 +332,18 @@ class SQLiteStorage:
                 return None
             return self._row_to_project(row)
 
-    async def list_projects(self, status: Optional[str] = None) -> list[Project]:
+    async def list_projects(
+        self,
+        status: Optional[str] = None,
+        limit: int = 1000,
+    ) -> list[Project]:
         """List all projects, optionally filtered by status."""
         if status:
-            query = "SELECT * FROM projects WHERE status = ? ORDER BY updated_at DESC"
-            params = (status,)
+            query = "SELECT * FROM projects WHERE status = ? ORDER BY updated_at DESC LIMIT ?"
+            params = (status, limit)
         else:
-            query = "SELECT * FROM projects ORDER BY updated_at DESC"
-            params = ()
+            query = "SELECT * FROM projects ORDER BY updated_at DESC LIMIT ?"
+            params = (limit,)
 
         async with self.db.execute(query, params) as cursor:
             rows = await cursor.fetchall()
@@ -406,6 +410,45 @@ class SQLiteStorage:
             ),
         )
         await self.db.commit()
+
+    async def delete_project(self, project_id: str, cascade: bool = True) -> bool:
+        """Delete a project.
+
+        Args:
+            project_id: Project ID to delete
+            cascade: If True, delete all related data (decisions, issues, etc.)
+
+        Returns:
+            True if project was deleted, False if not found
+        """
+        project = await self.get_project(project_id)
+        if not project:
+            return False
+
+        if cascade:
+            # Delete all related entities
+            await self.db.execute(
+                "DELETE FROM decisions WHERE project_id = ?", (project_id,)
+            )
+            await self.db.execute(
+                "DELETE FROM issues WHERE project_id = ?", (project_id,)
+            )
+            await self.db.execute(
+                "DELETE FROM sharp_edges WHERE project_id = ?", (project_id,)
+            )
+            await self.db.execute(
+                "DELETE FROM episodes WHERE project_id = ?", (project_id,)
+            )
+            await self.db.execute(
+                "DELETE FROM sessions WHERE project_id = ?", (project_id,)
+            )
+
+        # Delete the project itself
+        await self.db.execute(
+            "DELETE FROM projects WHERE id = ?", (project_id,)
+        )
+        await self.db.commit()
+        return True
 
     def _row_to_project(self, row: aiosqlite.Row) -> Project:
         """Convert database row to Project."""

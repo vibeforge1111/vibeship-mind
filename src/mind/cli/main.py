@@ -29,12 +29,18 @@ def cli():
 
 
 @cli.command()
-@click.option("--host", default="localhost", help="Host to bind to")
+@click.option("--host", default="127.0.0.1", help="Host to bind to")
 @click.option("--port", default=8765, help="Port to bind to")
 def serve(host: str, port: int):
-    """Run Mind as an HTTP server (optional mode)."""
-    console.print(f"[yellow]HTTP server mode not yet implemented[/yellow]")
-    console.print(f"Use [green]mind mcp[/green] for MCP mode with Claude Code")
+    """Run Mind as an HTTP server for dashboard and integrations."""
+    from mind.api.server import run_server
+
+    console.print(f"[bold]Mind HTTP API[/bold]")
+    console.print(f"Starting server at [green]http://{host}:{port}[/green]")
+    console.print(f"API docs at [blue]http://{host}:{port}/docs[/blue]")
+    console.print("[dim]Press Ctrl+C to stop[/dim]\n")
+
+    run_server(host=host, port=port)
 
 
 @cli.command()

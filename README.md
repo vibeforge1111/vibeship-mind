@@ -54,7 +54,11 @@ Mind works without this, but connecting via MCP gives Claude extra powers:
 | `mind_edges` | Check for gotchas before writing risky code |
 | `mind_status` | See what's being tracked |
 
-**To enable:**
+**Easy way:** Just tell Claude:
+
+> "Install the Mind MCP server from ~/vibeship-mind"
+
+**Manual way:**
 
 1. Open your MCP config file:
    - Mac/Linux: `~/.config/claude/mcp.json`
@@ -73,7 +77,7 @@ Mind works without this, but connecting via MCP gives Claude extra powers:
 }
 ```
 
-3. Restart Claude Code
+3. Restart Claude Code (Cmd/Ctrl+Shift+P → "Reload Window" or just close and reopen)
 
 ---
 

@@ -8,7 +8,7 @@ Mind gives AI coding assistants persistent memory across sessions. Your AI remem
 
 ## Install
 
-**Requires:** [uv](https://docs.astral.sh/uv/) (Python package manager)
+**Requires:** [uv](https://docs.astral.sh/uv/) (Python package manager - Claude Code installs this automatically)
 
 ```bash
 git clone https://github.com/vibeforge1111/vibeship-mind.git

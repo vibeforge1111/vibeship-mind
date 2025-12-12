@@ -109,16 +109,6 @@ See you next time."
 
 Your data stays local unless you choose to sync. Export anytime.
 
-## Pricing
-
-| Tier | Price | What You Get |
-|------|-------|--------------|
-| **Free** | $0 | Full features, local storage, unlimited projects |
-| **Pro** | $12/mo | Cloud sync, backup, cross-device, full sharp edge registry |
-| **Team** | $25/user/mo | Shared memory, team edges, org patterns |
-
-Free tier is complete. Pro is for convenience and safety.
-
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md) - Technical deep dive

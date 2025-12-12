@@ -312,8 +312,18 @@ Mind adds value through:
 - Extraction (structure from prose)
 - Injection (context into CLAUDE.md)
 - Detection (edges before mistakes)
+- **Intelligence (relationships, staleness)**
 
 But Memory works without Mind.
+
+### 3. Zero-Friction Intelligence
+
+Mind detects patterns automatically:
+
+- **Implicit relationships** - Links entities that reference each other
+- **Temporal markers** - Flags "for MVP", "quick fix" decisions for review
+
+No special syntax required. See [Intelligence Features](INTELLIGENCE.md).
 
 ### 3. Multiple Capture Points
 

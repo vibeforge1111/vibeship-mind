@@ -77,7 +77,7 @@ Mind works without this, but connecting via MCP gives Claude extra powers:
 }
 ```
 
-3. Restart Claude Code (Cmd/Ctrl+Shift+P → "Reload Window" or just close and reopen)
+3. Restart Claude Code
 
 ---
 

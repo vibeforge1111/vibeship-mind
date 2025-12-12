@@ -10,15 +10,11 @@ Mind fixes this. It gives Claude persistent memory so your next session picks up
 
 ## Why Mind?
 
-| | Other Memory Tools | Mind |
-|---|---|---|
-| How it saves | Claude must call tools | Claude writes to a file |
-| Problem | Claude forgets to call them | Nothing to forget |
-| During session | Explicit save commands | Just work normally |
-| Memory | Stored in database | Stored in readable `.md` file |
-| Setup | Complex | 5 commands |
-
-**The file is the memory. Mind just watches it.**
+- **Automatic** - memories save as you work, no extra steps
+- **Simple** - 5 commands to install, then forget about it
+- **Zero friction** - Claude writes to a file, Mind watches it
+- **Readable** - memories stored in plain `.md` files you can open anytime
+- **Open source** - see exactly how it works, modify if you want
 
 ---
 

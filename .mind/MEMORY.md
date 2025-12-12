@@ -30,3 +30,21 @@ TIL: uv sync removes packages not in dependencies
 Going with loose regex parsing over strict schemas because lower friction
 
 ---
+
+## 2025-12-13 (continued)
+
+Built all 5 phases of Mind - CLI, Parser, Daemon, MCP Server, Polish
+
+decided to rewrite README for vibe coders - simpler language, less jargon
+decided on 5-command install instead of multi-step guides
+decided to remove competitive comparison chart - felt too aggressive
+learned that users get confused by technical paths like `uv --directory`
+learned that "note taking" framing is wrong - it's about memory, not notes
+
+problem: README was too confusing for beginners
+fixed by simplifying to copy-paste commands and plain English
+
+Added MCP tools explanation with easy install prompt:
+> Add Mind MCP server from github.com/vibeforge1111/vibeship-mind to my config
+
+---

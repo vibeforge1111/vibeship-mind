@@ -11,7 +11,7 @@ from .context import update_claude_md
 from .detection import detect_stack
 from .parser import InlineScanner, Parser
 from .storage import ProjectsRegistry
-from .templates import GITIGNORE_CONTENT, MEMORY_TEMPLATE
+from .templates import GITIGNORE_CONTENT, MEMORY_TEMPLATE, SESSION_TEMPLATE
 
 
 @click.group()
@@ -52,6 +52,15 @@ def init(path: str):
     else:
         click.echo("[.] .mind/MEMORY.md already exists (preserved)")
 
+    # Create SESSION.md (don't overwrite if exists)
+    session_file = mind_dir / "SESSION.md"
+    if not session_file.exists():
+        session_content = SESSION_TEMPLATE.format(date=date.today().isoformat())
+        session_file.write_text(session_content)
+        click.echo("[+] Created .mind/SESSION.md")
+    else:
+        click.echo("[.] .mind/SESSION.md already exists (preserved)")
+
     # Update CLAUDE.md
     update_claude_md(project_path, stack)
     click.echo("[+] Updated CLAUDE.md with MIND:CONTEXT")
@@ -72,6 +81,7 @@ def init(path: str):
     click.echo()
     click.echo("MCP tools available:")
     click.echo("  - mind_recall() : Load session context (call first!)")
+    click.echo("  - mind_session() : Get current session state")
     click.echo("  - mind_search() : Search memories")
     click.echo("  - mind_checkpoint() : Force process pending memories")
     click.echo("  - mind_edges() : Check for gotchas")

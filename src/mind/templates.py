@@ -1,5 +1,26 @@
 """Templates for Mind files (v2: daemon-free, MCP-driven)."""
 
+SESSION_TEMPLATE = """# Session: {date}
+
+## Focus
+<!-- What you're working on right now. The anchor to prevent drift. -->
+
+## Constraints
+<!-- Hard limits for this task. Check before going deep. -->
+
+## Tried (didn't work)
+<!-- Things attempted that failed. CHECK THIS BEFORE SUGGESTING FIXES. -->
+
+## Discovered
+<!-- Useful findings during this session. Context that matters. -->
+
+## Open Questions
+<!-- Unresolved items to address or ask user about. -->
+
+## Out of Scope
+<!-- Things we're explicitly NOT doing. Rabbit hole prevention. -->
+"""
+
 MEMORY_TEMPLATE = """<!-- MIND MEMORY - Append as you work. Write naturally.
 Keywords: decided, problem, learned, tried, fixed, blocked, KEY, important -->
 
@@ -33,7 +54,7 @@ This project uses Mind for persistent memory across sessions.
 
 1. **Session Start**: ALWAYS call `mind_recall()` before responding to the first message. This loads context from previous sessions.
 
-2. **During Work**: When you make decisions, hit issues, or learn gotchas, append to `.mind/MEMORY.md` directly:
+2. **Long-Term Memory** (`.mind/MEMORY.md`): When you make decisions, hit issues, or learn gotchas, append directly:
    - `decided X because Y` - for decisions
    - `problem: X` - for issues
    - `learned that X` / `TIL: X` - for learnings
@@ -42,11 +63,28 @@ This project uses Mind for persistent memory across sessions.
 
 3. **Session End**: Summarize with `## DATE | what happened | mood: X`
 
-4. **No Daemon Needed**: Mind v2 is MCP-only. `recall()` handles session detection automatically.
+### Session Memory Protocol (`.mind/SESSION.md`)
+
+Maintain `.mind/SESSION.md` during work to prevent loops and drift.
+
+**Writing (do these as you work):**
+- When starting a task: Set "Focus" and "Constraints"
+- When something fails: Add to "Tried (didn't work)" with WHY it failed
+- When you discover something useful: Add to "Discovered"
+- When questions arise: Add to "Open Questions"
+- When user says "not now" or "out of scope": Add to "Out of Scope"
+
+**Reading (check before acting):**
+- Before suggesting a fix: Check "Tried" - don't repeat failures
+- Before going deep on something: Check "Focus" and "Out of Scope"
+- When you feel stuck: Review "Discovered" for missed context
+
+Keep entries brief. One line each. This file is for you, not documentation.
 
 ### Tools Available
 
 - `mind_recall()` - Load session context (CALL FIRST!)
+- `mind_session()` - Get current session state
 - `mind_search(query)` - Find specific memories
 - `mind_checkpoint()` - Force process pending memories
 - `mind_edges(intent)` - Check for gotchas before coding

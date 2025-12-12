@@ -98,3 +98,19 @@ KEY: decided to remove daemon entirely - MCP handles everything lazily via mind_
 learned: daemons are inherently unstable (crashes, PID issues, platform configs) - stateless MCP is more reliable
 learned: session detection doesn't need real-time - lazy detection at next recall() works just as well
 gotcha: same-session writes aren't indexed yet - search must read raw MEMORY.md too
+
+---
+
+## 2025-12-13 | Added within-session memory (SESSION.md) | mood: productive
+
+KEY: decided to add SESSION.md for within-session memory - prevents loops and drift during long conversations
+
+**Implemented:**
+- SESSION.md template with 6 sections: Focus, Constraints, Tried, Discovered, Open Questions, Out of Scope
+- `mind_session()` MCP tool to check current session state
+- Promotion logic: extracts tech-specific gotchas and path-based learnings on session end
+- recall() now processes old SESSION.md on gap detection and returns current session state
+
+learned: within-session memory is different from cross-session - it's about preventing repeating failures and rabbit holes
+learned: promotion rules use regex to detect tech patterns (Safari, bcrypt, JWT) and file paths (/lib/file.ts)
+gotcha: SESSION.md gets cleared on new session - important learnings must be promoted to MEMORY.md first

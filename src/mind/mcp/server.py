@@ -1,9 +1,10 @@
-"""Mind MCP server - 4 tools for AI memory (v2: daemon-free)."""
+"""Mind MCP server - 6 tools for AI memory (v2: daemon-free, with session memory)."""
 
 import hashlib
 import json
 import os
-from datetime import datetime
+import re
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Optional
 
@@ -14,10 +15,120 @@ from mcp.types import TextContent, Tool
 from ..context import ContextGenerator
 from ..parser import Entity, EntityType, Parser
 from ..storage import ProjectsRegistry, get_mind_home
+from ..templates import SESSION_TEMPLATE
 
 
 # Gap threshold for session detection (30 minutes)
 GAP_THRESHOLD_MS = 30 * 60 * 1000
+
+
+# SESSION.md management
+def get_session_file(project_path: Path) -> Path:
+    """Get path to session file."""
+    return project_path / ".mind" / "SESSION.md"
+
+
+def read_session_file(project_path: Path) -> Optional[str]:
+    """Read SESSION.md content."""
+    path = get_session_file(project_path)
+    if path.exists():
+        return path.read_text(encoding="utf-8")
+    return None
+
+
+def clear_session_file(project_path: Path) -> None:
+    """Clear SESSION.md for new session."""
+    path = get_session_file(project_path)
+    content = SESSION_TEMPLATE.format(date=date.today().isoformat())
+    path.write_text(content, encoding="utf-8")
+
+
+def parse_session_section(content: str, section_name: str) -> list[str]:
+    """Extract items from a SESSION.md section."""
+    pattern = rf"## {re.escape(section_name)}\s*\n(.*?)(?=\n## |\Z)"
+    match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+    if not match:
+        return []
+
+    section_content = match.group(1)
+    items = []
+    for line in section_content.split("\n"):
+        line = line.strip()
+        # Skip empty lines, comments, and placeholders
+        if line and not line.startswith("<!--") and not line.startswith("#"):
+            # Remove leading dashes or bullets
+            if line.startswith("- "):
+                line = line[2:]
+            items.append(line)
+    return items
+
+
+def extract_promotable_learnings(session_content: str) -> list[dict]:
+    """Extract items from SESSION.md worth promoting to MEMORY.md.
+
+    Promotion rules:
+    - "Tried" items with specific tech/environment details -> gotcha
+    - "Discovered" items with file paths or project structure -> learning
+    """
+    learnings = []
+
+    # "Tried" items that mention specific tech become gotchas
+    tried_items = parse_session_section(session_content, "Tried (didn't work)")
+    for item in tried_items:
+        # Check for tech-specific patterns
+        has_tech = bool(re.search(
+            r'\b(Safari|Chrome|Firefox|Windows|Linux|macOS|iOS|Android|'
+            r'npm|yarn|pip|cargo|apt|brew|docker|kubernetes|'
+            r'React|Vue|Angular|Node|Python|Rust|Go|Java|'
+            r'httpOnly|cookie|localStorage|JWT|OAuth|CORS|'
+            r'bcrypt|hash|SSL|TLS|HTTP|HTTPS)\b',
+            item, re.IGNORECASE
+        ))
+        has_arrow = '->' in item or '=>' in item
+
+        if has_tech or has_arrow:
+            learnings.append({
+                "type": "gotcha",
+                "content": f"gotcha: {item}",
+            })
+
+    # "Discovered" items with file paths persist
+    discovered_items = parse_session_section(session_content, "Discovered")
+    for item in discovered_items:
+        has_path = bool(re.search(r'[/\\][\w.-]+\.\w+|`[^`]+`', item))
+        has_structure = bool(re.search(
+            r'\b(table|column|field|endpoint|middleware|component|'
+            r'function|class|module|directory|file|config)\b',
+            item, re.IGNORECASE
+        ))
+
+        if has_path or has_structure:
+            learnings.append({
+                "type": "learning",
+                "content": f"learned: {item}",
+            })
+
+    return learnings
+
+
+def append_to_memory(project_path: Path, learnings: list[dict]) -> int:
+    """Append promoted learnings to MEMORY.md."""
+    if not learnings:
+        return 0
+
+    memory_file = project_path / ".mind" / "MEMORY.md"
+    if not memory_file.exists():
+        return 0
+
+    content = memory_file.read_text(encoding="utf-8")
+
+    # Add learnings at the end
+    additions = f"\n\n<!-- Promoted from SESSION.md on {date.today().isoformat()} -->\n"
+    for learning in learnings:
+        additions += f"{learning['content']}\n"
+
+    memory_file.write_text(content + additions, encoding="utf-8")
+    return len(learnings)
 
 
 # State file management
@@ -388,6 +499,19 @@ def create_server() -> Server:
                 },
             ),
             Tool(
+                name="mind_session",
+                description="Get current session state from SESSION.md. Use this to check what's been tried, discovered, and what's out of scope.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "project_path": {
+                            "type": "string",
+                            "description": "Project path (defaults to cwd)",
+                        },
+                    },
+                },
+            ),
+            Tool(
                 name="mind_status",
                 description="Check Mind status and project stats.",
                 inputSchema={
@@ -411,6 +535,8 @@ def create_server() -> Server:
             return await handle_edges(arguments)
         elif name == "mind_add_global_edge":
             return await handle_add_global_edge(arguments)
+        elif name == "mind_session":
+            return await handle_session(arguments)
         elif name == "mind_status":
             return await handle_status(arguments)
         else:
@@ -420,7 +546,7 @@ def create_server() -> Server:
 
 
 async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
-    """Handle mind_recall tool - main session context loader."""
+    """Handle mind_recall tool - main session context loader with SESSION.md support."""
     project_path_str = args.get("project_path")
     force_refresh = args.get("force_refresh", False)
 
@@ -448,6 +574,22 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
     hash_changed = current_hash != state.get("memory_hash", "")
     needs_refresh = force_refresh or gap_detected or hash_changed
 
+    # SESSION.md handling - process old session if gap detected
+    promoted_count = 0
+    session_content = None
+    if gap_detected:
+        old_session = read_session_file(project_path)
+        if old_session:
+            # Extract learnings worth keeping and promote to MEMORY.md
+            learnings = extract_promotable_learnings(old_session)
+            promoted_count = append_to_memory(project_path, learnings)
+
+            # Clear SESSION.md for new session
+            clear_session_file(project_path)
+
+    # Read current session state
+    session_content = read_session_file(project_path)
+
     # Parse and generate context
     parser = Parser()
     content = memory_file.read_text(encoding="utf-8")
@@ -472,11 +614,26 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
     if file_size_kb > 100:
         suggestions.append("MEMORY.md is large (>100KB). Consider running 'mind archive' to move old entries.")
 
+    # Parse session sections for quick access
+    session_state = None
+    if session_content:
+        session_state = {
+            "focus": parse_session_section(session_content, "Focus"),
+            "constraints": parse_session_section(session_content, "Constraints"),
+            "tried": parse_session_section(session_content, "Tried (didn't work)"),
+            "discovered": parse_session_section(session_content, "Discovered"),
+            "open_questions": parse_session_section(session_content, "Open Questions"),
+            "out_of_scope": parse_session_section(session_content, "Out of Scope"),
+        }
+
     output = {
         "context": context,
+        "session": session_state,
         "session_info": {
             "last_session": datetime.fromtimestamp(state["last_activity"] / 1000).isoformat() if state.get("last_activity") else None,
             "gap_detected": gap_detected,
+            "new_session_started": gap_detected,
+            "promoted_to_memory": promoted_count,
             "entries_processed": entries_processed,
             "refreshed": needs_refresh,
         },
@@ -657,6 +814,51 @@ async def handle_add_global_edge(args: dict[str, Any]) -> list[TextContent]:
     save_global_edges(edges)
 
     return [TextContent(type="text", text=json.dumps(edge, indent=2))]
+
+
+async def handle_session(args: dict[str, Any]) -> list[TextContent]:
+    """Handle mind_session tool - get current session state."""
+    project_path_str = args.get("project_path")
+
+    if project_path_str:
+        project_path = Path(project_path_str)
+    else:
+        project_path = get_current_project()
+
+    if not project_path:
+        return [TextContent(type="text", text="Error: No Mind project found")]
+
+    session_content = read_session_file(project_path)
+    if not session_content:
+        return [TextContent(type="text", text=json.dumps({
+            "error": "No SESSION.md found. Run 'mind init' or create .mind/SESSION.md",
+            "session": None,
+        }, indent=2))]
+
+    # Parse all sections
+    session_state = {
+        "focus": parse_session_section(session_content, "Focus"),
+        "constraints": parse_session_section(session_content, "Constraints"),
+        "tried": parse_session_section(session_content, "Tried (didn't work)"),
+        "discovered": parse_session_section(session_content, "Discovered"),
+        "open_questions": parse_session_section(session_content, "Open Questions"),
+        "out_of_scope": parse_session_section(session_content, "Out of Scope"),
+    }
+
+    # Count items
+    total_items = sum(len(v) for v in session_state.values())
+
+    output = {
+        "session": session_state,
+        "stats": {
+            "total_items": total_items,
+            "tried_count": len(session_state["tried"]),
+            "discovered_count": len(session_state["discovered"]),
+        },
+        "reminder": "Before suggesting a fix, check 'tried'. Before going deep, check 'focus' and 'out_of_scope'.",
+    }
+
+    return [TextContent(type="text", text=json.dumps(output, indent=2))]
 
 
 async def handle_status(args: dict[str, Any]) -> list[TextContent]:

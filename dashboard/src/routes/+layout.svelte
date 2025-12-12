@@ -17,7 +17,9 @@
 <div class="app" data-theme={theme}>
 	<nav class="navbar">
 		<a href="/" class="navbar-logo-link">
-			<span class="navbar-logo-text">mind</span>
+			<img src="/assets/images/logo.png" alt="vibeship" class="navbar-logo-img" />
+			<span class="navbar-logo-text">vibeship</span>
+			<span class="navbar-logo-text" style="color: var(--green-dim); margin-left: 0.25rem;">mind</span>
 		</a>
 		<div class="nav-links">
 			<a href="/edges">Edges</a>
@@ -68,10 +70,20 @@
 	}
 
 	.navbar-logo-link {
+		display: flex;
+		align-items: center;
+		gap: 0.25rem;
 		text-decoration: none;
 	}
 
+	.navbar-logo-img {
+		height: 28px;
+		width: auto;
+	}
+
 	.navbar-logo-text {
+		position: relative;
+		top: 1px;
 		font-family: var(--font-serif);
 		font-size: 1.35rem;
 		font-weight: 400;

@@ -178,6 +178,6 @@ Apache 2.0 - See [LICENSE](LICENSE) for details.
 
 ---
 
-Built by [vibeship.co](https://vibeship.co)
+Built by [@meta_alchemist](https://x.com/meta_alchemist)
 
-*Memory should be automatic, not another task.*
+A [vibeship.co](https://vibeship.co) ecosystem project

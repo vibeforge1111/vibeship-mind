@@ -365,7 +365,7 @@ Mind is one component of the VibeShip ecosystem:
 
 ## License
 
-MIT - do whatever you want.
+Apache 2.0 - See [LICENSE](LICENSE) for details.
 
 ---
 

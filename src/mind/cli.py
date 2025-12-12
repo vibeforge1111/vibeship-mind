@@ -11,6 +11,7 @@ from . import __version__
 from .context import update_claude_md
 from .detection import detect_stack
 from .parser import InlineScanner, Parser
+from .storage import ProjectsRegistry, is_daemon_running, DaemonState
 from .templates import GITIGNORE_CONTENT, MEMORY_TEMPLATE
 
 
@@ -61,6 +62,11 @@ def init(path: str):
         click.echo(f"[+] Detected stack: {', '.join(stack)}")
     else:
         click.echo("[.] No stack detected (update .mind/MEMORY.md manually)")
+
+    # Register project
+    registry = ProjectsRegistry.load()
+    registry.register(project_path, stack)
+    click.echo("[+] Registered project with Mind")
 
     click.echo()
     click.echo("Mind initialized! Start working - append notes to .mind/MEMORY.md")
@@ -147,6 +153,173 @@ def parse(path: str, as_json: bool, inline: bool):
         click.echo()
         total = len(result.entities) + len(inline_entities)
         click.echo(f"Total: {total} entities, {len(result.project_edges)} gotchas")
+
+
+# Daemon commands
+@cli.group()
+def daemon():
+    """Manage the Mind daemon."""
+    pass
+
+
+@daemon.command("start")
+@click.option("--foreground", "-f", is_flag=True, help="Run in foreground (don't daemonize)")
+@click.option("--verbose", "-v", is_flag=True, help="Verbose logging")
+def daemon_start(foreground: bool, verbose: bool):
+    """Start the Mind daemon."""
+    if is_daemon_running():
+        click.echo("Mind daemon is already running.")
+        return
+
+    from .daemon import run_daemon
+
+    if foreground:
+        click.echo("Starting Mind daemon in foreground...")
+        click.echo("Press Ctrl+C to stop.")
+        run_daemon(verbose=verbose)
+    else:
+        # On Windows, we can't easily daemonize, so just run in foreground
+        import sys
+        if sys.platform == "win32":
+            click.echo("Starting Mind daemon...")
+            click.echo("(On Windows, daemon runs in foreground. Use Ctrl+C to stop.)")
+            run_daemon(verbose=verbose)
+        else:
+            # Unix: fork and daemonize
+            import os
+            pid = os.fork()
+            if pid > 0:
+                click.echo(f"[+] Mind daemon started (PID: {pid})")
+                return
+            else:
+                # Child process
+                os.setsid()
+                run_daemon(verbose=verbose)
+
+
+@daemon.command("stop")
+def daemon_stop():
+    """Stop the Mind daemon."""
+    from .daemon import stop_daemon
+
+    if stop_daemon():
+        click.echo("[+] Mind daemon stopped.")
+    else:
+        click.echo("Mind daemon is not running.")
+
+
+@daemon.command("status")
+def daemon_status():
+    """Check Mind daemon status."""
+    state = DaemonState.load()
+
+    if is_daemon_running():
+        click.echo("Mind Daemon Status")
+        click.echo("-" * 40)
+        click.echo(f"Status: Running")
+        click.echo(f"PID: {state.pid}")
+        if state.started_at:
+            click.echo(f"Started: {state.started_at}")
+        click.echo(f"Projects watching: {len(state.projects_watching)}")
+        for p in state.projects_watching:
+            click.echo(f"  - {p}")
+    else:
+        click.echo("Mind Daemon Status")
+        click.echo("-" * 40)
+        click.echo("Status: Not running")
+        click.echo()
+        click.echo("Start with: mind daemon start")
+
+
+@daemon.command("logs")
+@click.option("--follow", "-f", is_flag=True, help="Follow log output")
+@click.option("--lines", "-n", default=20, help="Number of lines to show")
+def daemon_logs(follow: bool, lines: int):
+    """View daemon logs."""
+    from .storage import get_mind_home
+
+    log_file = get_mind_home() / "logs" / "daemon.log"
+    if not log_file.exists():
+        click.echo("No log file found. Daemon may not have been started yet.")
+        return
+
+    if follow:
+        import subprocess
+        import sys
+        # Use tail -f on Unix, or type + loop on Windows
+        if sys.platform == "win32":
+            # Simple approach: just print last lines
+            content = log_file.read_text()
+            log_lines = content.strip().split("\n")
+            for line in log_lines[-lines:]:
+                click.echo(line)
+            click.echo("\n(--follow not fully supported on Windows)")
+        else:
+            subprocess.run(["tail", "-f", "-n", str(lines), str(log_file)])
+    else:
+        content = log_file.read_text()
+        log_lines = content.strip().split("\n")
+        for line in log_lines[-lines:]:
+            click.echo(line)
+
+
+# Project management commands
+@cli.command("list")
+def list_projects():
+    """List registered projects."""
+    registry = ProjectsRegistry.load()
+    projects = registry.list_all()
+
+    if not projects:
+        click.echo("No projects registered.")
+        click.echo("Run 'mind init' in a project directory to register it.")
+        return
+
+    click.echo("Registered Projects")
+    click.echo("-" * 40)
+
+    for i, project in enumerate(projects, 1):
+        click.echo(f"\n{i}. {project.name}")
+        click.echo(f"   Path: {project.path}")
+        if project.stack:
+            click.echo(f"   Stack: {', '.join(project.stack)}")
+        if project.last_activity:
+            click.echo(f"   Last activity: {project.last_activity}")
+
+
+@cli.command("add")
+@click.argument("path", default=".", type=click.Path(exists=True, file_okay=False))
+def add_project(path: str):
+    """Register a project with Mind daemon."""
+    project_path = Path(path).resolve()
+    mind_dir = project_path / ".mind"
+
+    if not mind_dir.exists():
+        click.echo(f"Error: {project_path} is not a Mind project.")
+        click.echo("Run 'mind init' first.")
+        raise SystemExit(1)
+
+    from .detection import detect_stack
+
+    stack = detect_stack(project_path)
+    registry = ProjectsRegistry.load()
+    registry.register(project_path, stack)
+
+    click.echo(f"[+] Registered: {project_path}")
+
+
+@cli.command("remove")
+@click.argument("path", default=".", type=click.Path(exists=True, file_okay=False))
+def remove_project(path: str):
+    """Unregister a project from Mind daemon."""
+    project_path = Path(path).resolve()
+
+    registry = ProjectsRegistry.load()
+    if registry.unregister(project_path):
+        click.echo(f"[+] Unregistered: {project_path}")
+        click.echo("    (Files in .mind/ preserved)")
+    else:
+        click.echo(f"Project not registered: {project_path}")
 
 
 if __name__ == "__main__":

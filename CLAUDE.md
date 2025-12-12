@@ -1,12 +1,30 @@
 # IMPORTANT: Write memories as you work
 
-As you work on this project, append to `.mind/MEMORY.md` whenever you:
-- Make a decision → `decided X because Y`
-- Hit a problem → `problem: X`
-- Learn something → `learned that X`
-- Fix something → `fixed X by doing Y`
+Append to `.mind/MEMORY.md` throughout the conversation (not just at the end):
 
-Do this throughout the conversation, not just at the end.
+**Decisions** - when you choose something:
+- `decided X because Y`
+- `chose X over Y because Z`
+- Include alternatives you rejected and why
+
+**Problems** - when something breaks or blocks:
+- `problem: X`
+- `stuck on X`
+- Add symptoms, what you've tried, current theory
+
+**Learnings** - when you discover something:
+- `learned that X`
+- `TIL: X`
+- `gotcha: X` (for things that will bite again)
+
+**Progress** - when you fix or complete:
+- `fixed X by doing Y`
+- `resolved X`
+
+**Session end** - before ending, note:
+- What's still open
+- What to do next
+- Mood (frustrated/stuck/breakthrough/accomplished)
 
 ---
 

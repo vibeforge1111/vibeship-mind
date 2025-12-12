@@ -47,4 +47,8 @@ fixed by simplifying to copy-paste commands and plain English
 Added MCP tools explanation with easy install prompt:
 > Add Mind MCP server from github.com/vibeforge1111/vibeship-mind to my config
 
+decided to enhance capture instructions with ideas from archived version - alternatives rejected, symptoms/theories, mood tracking, session end notes
+learned that the archived version had rich session management (Episodes, mood tracking, primer generation) that we can borrow concepts from
+fixed memory capture gap by adding explicit instructions to CLAUDE.md template - Claude needs to be told to write memories
+
 ---

@@ -66,16 +66,27 @@ def parse_session_section(content: str, section_name: str) -> list[str]:
 def extract_promotable_learnings(session_content: str) -> list[dict]:
     """Extract items from SESSION.md worth promoting to MEMORY.md.
 
-    Promotion rules:
-    - "Tried" items with specific tech/environment details -> gotcha
-    - "Discovered" items with file paths or project structure -> learning
+    Promotion rules (v2 goal-oriented structure):
+    - "Rejected Approaches" with strategic reasoning -> decision
+    - "Discoveries" with tech patterns or file paths -> learning
+    - "Blockers" that were resolved -> gotcha (if tech-specific)
     """
     learnings = []
 
-    # "Tried" items that mention specific tech become gotchas
-    tried_items = parse_session_section(session_content, "Tried (didn't work)")
-    for item in tried_items:
-        # Check for tech-specific patterns
+    # "Rejected Approaches" become decisions (strategic, not tactical)
+    rejected_items = parse_session_section(session_content, "Rejected Approaches")
+    for item in rejected_items:
+        # Only promote if it has reasoning (contains " - " separator)
+        if " - " in item:
+            learnings.append({
+                "type": "decision",
+                "content": f"decided against: {item}",
+            })
+
+    # "Discoveries" items with tech patterns or file paths persist
+    discovered_items = parse_session_section(session_content, "Discoveries")
+    for item in discovered_items:
+        has_path = bool(re.search(r'[/\\][\w.-]+\.\w+|`[^`]+`', item))
         has_tech = bool(re.search(
             r'\b(Safari|Chrome|Firefox|Windows|Linux|macOS|iOS|Android|'
             r'npm|yarn|pip|cargo|apt|brew|docker|kubernetes|'
@@ -84,25 +95,14 @@ def extract_promotable_learnings(session_content: str) -> list[dict]:
             r'bcrypt|hash|SSL|TLS|HTTP|HTTPS)\b',
             item, re.IGNORECASE
         ))
-        has_arrow = '->' in item or '=>' in item
-
-        if has_tech or has_arrow:
-            learnings.append({
-                "type": "gotcha",
-                "content": f"gotcha: {item}",
-            })
-
-    # "Discovered" items with file paths persist
-    discovered_items = parse_session_section(session_content, "Discovered")
-    for item in discovered_items:
-        has_path = bool(re.search(r'[/\\][\w.-]+\.\w+|`[^`]+`', item))
         has_structure = bool(re.search(
             r'\b(table|column|field|endpoint|middleware|component|'
             r'function|class|module|directory|file|config)\b',
             item, re.IGNORECASE
         ))
+        has_arrow = '->' in item or '=>' in item
 
-        if has_path or has_structure:
+        if has_path or has_tech or has_structure or has_arrow:
             learnings.append({
                 "type": "learning",
                 "content": f"learned: {item}",
@@ -500,7 +500,7 @@ def create_server() -> Server:
             ),
             Tool(
                 name="mind_session",
-                description="Get current session state from SESSION.md. Use this to check what's been tried, discovered, and what's out of scope.",
+                description="Get current session state from SESSION.md. Use this to check goal, approach, blockers, rejected approaches, assumptions, and discoveries.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -509,6 +509,25 @@ def create_server() -> Server:
                             "description": "Project path (defaults to cwd)",
                         },
                     },
+                },
+            ),
+            Tool(
+                name="mind_blocker",
+                description="Log a blocker and auto-search memory for solutions. Call this when stuck - it adds to SESSION.md Blockers and searches MEMORY.md for relevant past solutions.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "description": {
+                            "type": "string",
+                            "description": "What's blocking you",
+                        },
+                        "keywords": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Optional: specific keywords to search for",
+                        },
+                    },
+                    "required": ["description"],
                 },
             ),
             Tool(
@@ -537,6 +556,8 @@ def create_server() -> Server:
             return await handle_add_global_edge(arguments)
         elif name == "mind_session":
             return await handle_session(arguments)
+        elif name == "mind_blocker":
+            return await handle_blocker(arguments)
         elif name == "mind_status":
             return await handle_status(arguments)
         else:
@@ -614,16 +635,16 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
     if file_size_kb > 100:
         suggestions.append("MEMORY.md is large (>100KB). Consider running 'mind archive' to move old entries.")
 
-    # Parse session sections for quick access
+    # Parse session sections for quick access (v2 goal-oriented structure)
     session_state = None
     if session_content:
         session_state = {
-            "focus": parse_session_section(session_content, "Focus"),
-            "constraints": parse_session_section(session_content, "Constraints"),
-            "tried": parse_session_section(session_content, "Tried (didn't work)"),
-            "discovered": parse_session_section(session_content, "Discovered"),
-            "open_questions": parse_session_section(session_content, "Open Questions"),
-            "out_of_scope": parse_session_section(session_content, "Out of Scope"),
+            "goal": parse_session_section(session_content, "The Goal"),
+            "current_approach": parse_session_section(session_content, "Current Approach"),
+            "blockers": parse_session_section(session_content, "Blockers"),
+            "rejected_approaches": parse_session_section(session_content, "Rejected Approaches"),
+            "working_assumptions": parse_session_section(session_content, "Working Assumptions"),
+            "discoveries": parse_session_section(session_content, "Discoveries"),
         }
 
     output = {
@@ -817,7 +838,7 @@ async def handle_add_global_edge(args: dict[str, Any]) -> list[TextContent]:
 
 
 async def handle_session(args: dict[str, Any]) -> list[TextContent]:
-    """Handle mind_session tool - get current session state."""
+    """Handle mind_session tool - get current session state (v2 goal-oriented)."""
     project_path_str = args.get("project_path")
 
     if project_path_str:
@@ -835,14 +856,14 @@ async def handle_session(args: dict[str, Any]) -> list[TextContent]:
             "session": None,
         }, indent=2))]
 
-    # Parse all sections
+    # Parse all sections (v2 goal-oriented structure)
     session_state = {
-        "focus": parse_session_section(session_content, "Focus"),
-        "constraints": parse_session_section(session_content, "Constraints"),
-        "tried": parse_session_section(session_content, "Tried (didn't work)"),
-        "discovered": parse_session_section(session_content, "Discovered"),
-        "open_questions": parse_session_section(session_content, "Open Questions"),
-        "out_of_scope": parse_session_section(session_content, "Out of Scope"),
+        "goal": parse_session_section(session_content, "The Goal"),
+        "current_approach": parse_session_section(session_content, "Current Approach"),
+        "blockers": parse_session_section(session_content, "Blockers"),
+        "rejected_approaches": parse_session_section(session_content, "Rejected Approaches"),
+        "working_assumptions": parse_session_section(session_content, "Working Assumptions"),
+        "discoveries": parse_session_section(session_content, "Discoveries"),
     }
 
     # Count items
@@ -852,11 +873,100 @@ async def handle_session(args: dict[str, Any]) -> list[TextContent]:
         "session": session_state,
         "stats": {
             "total_items": total_items,
-            "tried_count": len(session_state["tried"]),
-            "discovered_count": len(session_state["discovered"]),
+            "blockers_count": len(session_state["blockers"]),
+            "discoveries_count": len(session_state["discoveries"]),
         },
-        "reminder": "Before suggesting a fix, check 'tried'. Before going deep, check 'focus' and 'out_of_scope'.",
+        "workflow": {
+            "stuck": "Add to Blockers (triggers memory search), check Working Assumptions, check pivot condition",
+            "before_proposing": "Check Rejected Approaches - don't re-propose strategic rejects",
+            "lost": "Check The Goal - are you still working toward user outcome?",
+        },
     }
+
+    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+
+
+async def handle_blocker(args: dict[str, Any]) -> list[TextContent]:
+    """Handle mind_blocker tool - log blocker and auto-search memory."""
+    description = args.get("description", "")
+    keywords = args.get("keywords", [])
+
+    if not description:
+        return [TextContent(type="text", text="Error: description is required")]
+
+    project_path = get_current_project()
+    if not project_path:
+        return [TextContent(type="text", text="Error: No Mind project found")]
+
+    # 1. Add blocker to SESSION.md
+    session_file = get_session_file(project_path)
+    if session_file.exists():
+        session_content = session_file.read_text(encoding="utf-8")
+
+        # Find Blockers section and add entry
+        blockers_pattern = r"(## Blockers\s*\n(?:<!--[^>]*-->\s*\n)?)"
+        match = re.search(blockers_pattern, session_content)
+        if match:
+            insert_pos = match.end()
+            # Check if there's already content after the section (no blank line before next section)
+            rest = session_content[insert_pos:]
+            if rest and not rest.startswith("\n") and not rest.startswith("-"):
+                new_entry = f"- {description}\n\n"  # Add extra newline before next section
+            else:
+                new_entry = f"- {description}\n"
+            new_content = session_content[:insert_pos] + new_entry + session_content[insert_pos:]
+            session_file.write_text(new_content, encoding="utf-8")
+
+    # 2. Extract keywords from description if not provided
+    if not keywords:
+        # Extract meaningful words (3+ chars, not common words)
+        stop_words = {"the", "and", "for", "with", "that", "this", "from", "have", "not", "but", "are", "was", "been"}
+        words = re.findall(r'\b[a-zA-Z]{3,}\b', description.lower())
+        keywords = [w for w in words if w not in stop_words][:5]  # Top 5 keywords
+
+    # 3. Search memory for solutions
+    query = " ".join(keywords) if keywords else description
+
+    parser = Parser()
+    memory_file = project_path / ".mind" / "MEMORY.md"
+    all_entities: list[Entity] = []
+    raw_content = ""
+
+    if memory_file.exists():
+        raw_content = memory_file.read_text(encoding="utf-8")
+        result = parser.parse(raw_content, str(memory_file))
+        all_entities.extend(result.entities)
+
+    # Search indexed entities
+    indexed_results = search_entities(query, all_entities, None, 5)
+
+    # Also search raw content
+    raw_results = search_raw_content(raw_content, query, 3)
+
+    # Merge results
+    seen_titles = set(r["title"] for r in indexed_results)
+    merged = indexed_results.copy()
+    for r in raw_results:
+        if r["title"] not in seen_titles:
+            merged.append(r)
+            seen_titles.add(r["title"])
+
+    output = {
+        "blocker_logged": True,
+        "description": description,
+        "keywords_searched": keywords,
+        "memory_search_results": merged[:5],
+        "suggestions": [],
+    }
+
+    # Add suggestions based on results
+    if merged:
+        output["suggestions"].append(f"Found {len(merged)} potentially relevant memories - review them")
+    else:
+        output["suggestions"].append("No direct matches in memory - consider:")
+        output["suggestions"].append("1. Check Working Assumptions - is one wrong?")
+        output["suggestions"].append("2. Check pivot condition in Current Approach")
+        output["suggestions"].append("3. Zoom out and ask user for guidance")
 
     return [TextContent(type="text", text=json.dumps(output, indent=2))]
 

@@ -71,7 +71,8 @@ Add Mind as an MCP server to give Claude memory tools:
 | Tool | What it does |
 |------|--------------|
 | `mind_recall()` | Load session context - CALL FIRST every session |
-| `mind_session()` | Check current session state (tried, discovered, focus) |
+| `mind_session()` | Check current session state (goal, approach, blockers) |
+| `mind_blocker(desc)` | Log blocker + auto-search memory for solutions |
 | `mind_search(query)` | Search past memories |
 | `mind_edges(intent)` | Check for gotchas before risky code |
 | `mind_checkpoint()` | Force process pending memories |
@@ -83,11 +84,13 @@ Add Mind as an MCP server to give Claude memory tools:
 
 **Long-term (MEMORY.md):** Claude writes decisions, problems, learnings. Next session, `mind_recall()` loads context so Claude knows what happened before.
 
-**Short-term (SESSION.md):** During a session, Claude tracks:
-- What it's working on (Focus)
-- What it tried that didn't work (Tried)
-- What it discovered (Discovered)
-- What's out of scope (Out of Scope)
+**Short-term (SESSION.md):** Goal-oriented session tracking:
+- **The Goal** - User outcome (not technical task)
+- **Current Approach** - What you're trying + when to pivot
+- **Blockers** - When stuck, triggers memory search
+- **Rejected Approaches** - Strategic decisions with WHY
+- **Working Assumptions** - Question these when stuck
+- **Discoveries** - Gets promoted to MEMORY.md on session end
 
 When a new session starts (30 min gap), important learnings get promoted from SESSION.md to MEMORY.md automatically.
 
@@ -159,7 +162,7 @@ your-project/
 |---------|-----|
 | "Command not found" | Use full path: `uv --directory /path/to/vibeship-mind run mind ...` |
 | Nothing being captured | Use keywords: `decided`, `problem`, `learned`, `gotcha` |
-| Claude repeating mistakes | Tell Claude: "Check SESSION.md" or "Add that to tried" |
+| Claude repeating mistakes | Tell Claude: "Check SESSION.md" or "Add to Rejected Approaches" |
 | Need to check health | `uv --directory /path/to/vibeship-mind run mind doctor` |
 
 ---

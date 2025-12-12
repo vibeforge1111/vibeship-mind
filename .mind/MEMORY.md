@@ -114,3 +114,26 @@ KEY: decided to add SESSION.md for within-session memory - prevents loops and dr
 learned: within-session memory is different from cross-session - it's about preventing repeating failures and rabbit holes
 learned: promotion rules use regex to detect tech patterns (Safari, bcrypt, JWT) and file paths (/lib/file.ts)
 gotcha: SESSION.md gets cleared on new session - important learnings must be promoted to MEMORY.md first
+
+---
+
+## 2025-12-13 | Upgraded SESSION.md to goal-oriented structure | mood: shipped
+
+KEY: decided to restructure SESSION.md around goals, not tasks - prevents rabbit holes by keeping user outcomes visible
+
+**Implemented:**
+- Goal-oriented SESSION.md with 6 sections: The Goal, Current Approach, Blockers, Rejected Approaches, Working Assumptions, Discoveries
+- `mind_blocker(description)` MCP tool - logs blocker AND auto-searches memory for solutions
+- Updated CONTEXT_TEMPLATE with workflow guidance (stuck? check assumptions, check pivot condition)
+- Promotion logic now promotes Rejected Approaches (with reasoning) as decisions, Discoveries with tech patterns as learnings
+
+**Key Design Decisions:**
+- "The Goal" = user outcome not technical task ("User can X" not "Implement Y")
+- "Current Approach" includes pivot condition ("Pivot if: X")
+- "Rejected Approaches" = strategic with WHY (to prevent circles)
+- "Working Assumptions" = things to question when stuck
+- "Blockers" triggers memory search via mind_blocker tool
+
+learned: goal-oriented session structure keeps Claude focused on user outcomes, not implementation details
+learned: mind_blocker auto-extracts keywords and searches memory - found relevant Windows encoding gotcha immediately
+gotcha: SESSION.md blocker insertion needs extra newline before next section to preserve formatting

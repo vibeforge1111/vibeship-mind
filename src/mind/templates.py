@@ -2,23 +2,31 @@
 
 SESSION_TEMPLATE = """# Session: {date}
 
-## Focus
-<!-- What you're working on right now. The anchor to prevent drift. -->
+## The Goal
+<!-- USER OUTCOME, not technical task. What does success look like for the user? -->
+<!-- Example: "User can upload images and see them in their gallery" -->
+<!-- NOT: "Implement image upload endpoint" -->
 
-## Constraints
-<!-- Hard limits for this task. Check before going deep. -->
+## Current Approach
+<!-- What you're trying RIGHT NOW. Include pivot condition. -->
+<!-- Format: "Doing X. Pivot if: Y" -->
+<!-- Example: "Using multer for uploads. Pivot if: memory issues with large files" -->
 
-## Tried (didn't work)
-<!-- Things attempted that failed. CHECK THIS BEFORE SUGGESTING FIXES. -->
+## Blockers
+<!-- Things stopping progress. When you add here, SEARCH MEMORY for solutions. -->
+<!-- Each blocker triggers: mind_search(blocker_keywords) -->
 
-## Discovered
-<!-- Useful findings during this session. Context that matters. -->
+## Rejected Approaches
+<!-- Strategic decisions, not tactical failures. Include WHY to prevent circles. -->
+<!-- Format: "Approach - Why rejected" -->
+<!-- Example: "Client-side resize - Quality loss unacceptable for photography app" -->
 
-## Open Questions
-<!-- Unresolved items to address or ask user about. -->
+## Working Assumptions
+<!-- Things you're assuming true. Question these when stuck. -->
+<!-- Example: "User has stable internet" / "Files under 10MB" -->
 
-## Out of Scope
-<!-- Things we're explicitly NOT doing. Rabbit hole prevention. -->
+## Discoveries
+<!-- Findings that matter. Tech patterns get promoted to MEMORY.md on session end. -->
 """
 
 MEMORY_TEMPLATE = """<!-- MIND MEMORY - Append as you work. Write naturally.
@@ -65,26 +73,54 @@ This project uses Mind for persistent memory across sessions.
 
 ### Session Memory Protocol (`.mind/SESSION.md`)
 
-Maintain `.mind/SESSION.md` during work to prevent loops and drift.
+Maintain `.mind/SESSION.md` during work to stay focused and avoid loops.
 
-**Writing (do these as you work):**
-- When starting a task: Set "Focus" and "Constraints"
-- When something fails: Add to "Tried (didn't work)" with WHY it failed
-- When you discover something useful: Add to "Discovered"
-- When questions arise: Add to "Open Questions"
-- When user says "not now" or "out of scope": Add to "Out of Scope"
+**The Goal** (set first, check often):
+- Write the USER OUTCOME, not the technical task
+- "User can X" not "Implement Y endpoint"
+- Check this when you feel lost - are you still working toward it?
 
-**Reading (check before acting):**
-- Before suggesting a fix: Check "Tried" - don't repeat failures
-- Before going deep on something: Check "Focus" and "Out of Scope"
-- When you feel stuck: Review "Discovered" for missed context
+**Current Approach** (update as you pivot):
+- What you're trying NOW + when to pivot
+- Format: "Doing X. Pivot if: Y"
+- When pivot condition hits, update approach, don't just keep trying
 
-Keep entries brief. One line each. This file is for you, not documentation.
+**Blockers** (triggers memory search):
+- When you add a blocker, call `mind_blocker(description)`
+- This auto-searches memory for solutions you might have forgotten
+- If no solutions found, this is where you zoom out and ask user
+
+**Rejected Approaches** (strategic, with WHY):
+- Not "X didn't work" - that's tactical, it goes in memory
+- This is "We're not doing X because [fundamental reason]"
+- Check before proposing - don't re-propose rejected strategies
+
+**Working Assumptions** (question when stuck):
+- Things you're assuming true
+- When stuck, review these - one might be wrong
+- Invalidating an assumption = progress, not failure
+
+**Discoveries** (promoted on session end):
+- Useful findings during this session
+- Tech patterns and file paths get promoted to MEMORY.md automatically
+
+### Workflow
+
+1. Start: Set The Goal (user outcome)
+2. Plan: Set Current Approach with pivot condition
+3. Work: Add discoveries as you go
+4. Stuck?
+   - Add to Blockers (triggers memory search)
+   - Check Working Assumptions (one might be wrong)
+   - Check Current Approach pivot condition (time to pivot?)
+5. Pivot: Update Current Approach, add to Rejected if strategic
+6. Done: Discoveries get promoted to MEMORY.md
 
 ### Tools Available
 
 - `mind_recall()` - Load session context (CALL FIRST!)
 - `mind_session()` - Get current session state
+- `mind_blocker(description)` - Log blocker + auto-search memory for solutions
 - `mind_search(query)` - Find specific memories
 - `mind_checkpoint()` - Force process pending memories
 - `mind_edges(intent)` - Check for gotchas before coding

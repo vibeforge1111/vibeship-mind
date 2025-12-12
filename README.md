@@ -10,15 +10,15 @@ Mind fixes this. It gives Claude persistent memory so your next session picks up
 
 ## Why Mind?
 
-Other memory tools require Claude to call specific tools to save/retrieve memories. Problem: Claude forgets to call them.
+| | Other Memory Tools | Mind |
+|---|---|---|
+| How it saves | Claude must call tools | Claude writes to a file |
+| Problem | Claude forgets to call them | Nothing to forget |
+| During session | Explicit save commands | Just work normally |
+| Memory | Stored in database | Stored in readable `.md` file |
+| Setup | Complex | 5 commands |
 
-**Mind is different:**
-- Claude just writes to a file (`.mind/MEMORY.md`) - something it already does naturally
-- No special commands to remember
-- No tool calls during your session
-- Memory accumulates automatically as you work
-
-The file is the memory. Mind just watches it.
+**The file is the memory. Mind just watches it.**
 
 ---
 

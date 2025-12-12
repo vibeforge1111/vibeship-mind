@@ -329,5 +329,127 @@ def mcp_server():
     run_server()
 
 
+@cli.command("doctor")
+def doctor():
+    """Run health checks on Mind installation."""
+    from datetime import datetime, timedelta
+
+    issues = []
+    warnings = []
+
+    click.echo("Mind Health Check")
+    click.echo("-" * 40)
+
+    # Check Mind home directory
+    from .storage import get_mind_home, get_pid_file
+
+    mind_home = get_mind_home()
+    if mind_home.exists():
+        click.echo(f"[+] Config directory exists ({mind_home})")
+    else:
+        click.echo(f"[!] Config directory missing ({mind_home})")
+        issues.append("Mind home directory not found")
+
+    # Check daemon status
+    if is_daemon_running():
+        state = DaemonState.load()
+        click.echo(f"[+] Daemon running (PID: {state.pid})")
+    else:
+        click.echo("[.] Daemon not running")
+        warnings.append("Daemon not running - start with 'mind daemon start'")
+
+    # Check registered projects
+    registry = ProjectsRegistry.load()
+    projects = registry.list_all()
+    click.echo(f"[+] Projects registered: {len(projects)}")
+
+    # Check each project
+    for project in projects:
+        project_path = Path(project.path)
+
+        # Check project exists
+        if not project_path.exists():
+            click.echo(f"[!] Project missing: {project.path}")
+            issues.append(f"Project directory not found: {project.path}")
+            continue
+
+        # Check .mind directory
+        mind_dir = project_path / ".mind"
+        if not mind_dir.exists():
+            click.echo(f"[!] No .mind/ in: {project.name}")
+            issues.append(f"No .mind/ directory in {project.name}")
+            continue
+
+        # Check MEMORY.md
+        memory_file = mind_dir / "MEMORY.md"
+        if not memory_file.exists():
+            click.echo(f"[!] No MEMORY.md in: {project.name}")
+            issues.append(f"No MEMORY.md in {project.name}")
+            continue
+
+        # Check MEMORY.md is readable
+        try:
+            content = memory_file.read_text(encoding="utf-8")
+            click.echo(f"[+] {project.name}: MEMORY.md accessible")
+        except Exception as e:
+            click.echo(f"[!] {project.name}: Cannot read MEMORY.md")
+            issues.append(f"Cannot read MEMORY.md in {project.name}: {e}")
+            continue
+
+        # Check CLAUDE.md has MIND:CONTEXT
+        claude_md = project_path / "CLAUDE.md"
+        if claude_md.exists():
+            claude_content = claude_md.read_text(encoding="utf-8")
+            if "MIND:CONTEXT" in claude_content:
+                click.echo(f"[+] {project.name}: MIND:CONTEXT present")
+            else:
+                click.echo(f"[.] {project.name}: No MIND:CONTEXT in CLAUDE.md")
+                warnings.append(f"{project.name}: Run 'mind init' to add MIND:CONTEXT")
+        else:
+            click.echo(f"[.] {project.name}: No CLAUDE.md")
+            warnings.append(f"{project.name}: No CLAUDE.md file")
+
+        # Check last activity
+        if project.last_activity:
+            try:
+                last = datetime.fromisoformat(project.last_activity)
+                age = datetime.now() - last
+                if age > timedelta(days=7):
+                    click.echo(f"[.] {project.name}: Stale ({age.days}d old)")
+                    warnings.append(f"{project.name}: Last activity {age.days} days ago")
+            except ValueError:
+                pass
+
+    # Check global edges
+    from .mcp.server import load_global_edges
+
+    global_edges = load_global_edges()
+    click.echo(f"[+] Global edges loaded: {len(global_edges)}")
+
+    # Summary
+    click.echo()
+    click.echo("-" * 40)
+
+    if issues:
+        click.echo(f"Issues ({len(issues)}):")
+        for issue in issues:
+            click.echo(f"  - {issue}")
+        click.echo()
+
+    if warnings:
+        click.echo(f"Warnings ({len(warnings)}):")
+        for warning in warnings:
+            click.echo(f"  - {warning}")
+        click.echo()
+
+    if issues:
+        click.echo("Overall: UNHEALTHY")
+        raise SystemExit(1)
+    elif warnings:
+        click.echo(f"Overall: Healthy ({len(warnings)} warnings)")
+    else:
+        click.echo("Overall: Healthy")
+
+
 if __name__ == "__main__":
     cli()

@@ -107,40 +107,38 @@ Next: Implement refresh tokens
 
 ## Quick Start
 
-### One-Line Install
+### Install from Source
 
 ```bash
-curl -sSL https://mind.vibeship.dev/install | sh
+git clone https://github.com/vibeforge1111/vibeship-mind.git
+cd vibeship-mind
+uv sync
 ```
 
-Does everything: installs, initializes, starts daemon, configures Claude Code.
-
-### Or Manual (3 Commands)
+### Initialize Project
 
 ```bash
-pip install mind-memory
-mind init
-mind daemon start
+cd your-project
+uv run mind init
+uv run mind daemon start
 ```
 
 ### Add to Claude Code
 
-Add to `~/.config/claude/mcp.json`:
+Add to your Claude Code MCP config (`~/.config/claude/mcp.json` on Linux/Mac, or `%APPDATA%\Claude\claude_desktop_config.json` on Windows):
 
 ```json
 {
   "mcpServers": {
     "mind": {
-      "command": "mind",
-      "args": ["mcp"]
+      "command": "uv",
+      "args": ["--directory", "/path/to/vibeship-mind", "run", "mind", "mcp"]
     }
   }
 }
 ```
 
 That's it. Work normally. Memory accumulates.
-
-See [Onboarding Guide](docs/ONBOARDING.md) for detailed setup.
 
 ---
 

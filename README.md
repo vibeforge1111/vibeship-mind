@@ -1,20 +1,22 @@
 # Mind
 
-> Memory for vibe coding.
+> Mind gives Claude a mind - not just memory across sessions, but focus within them. It remembers what worked, what didn't, and what it's supposed to be building.
 
-When you're vibe coding with Claude, it forgets everything between sessions. What you decided, what broke, what worked - gone. You end up re-explaining the same things over and over.
+When you're vibe coding with Claude, it forgets everything between sessions. What you decided, what broke, what worked - gone. Even worse, in long sessions it starts suggesting the same failed fixes over and over.
 
-Mind fixes this. It gives Claude persistent memory so your next session picks up where you left off.
+Mind fixes both problems with two-layer memory:
+- **MEMORY.md** - Long-term memory across sessions
+- **SESSION.md** - Short-term focus within a session
 
 ---
 
 ## Why Mind?
 
-- **Automatic** - memories save as you work, no extra steps
-- **Simple** - 5 commands to install, then forget about it
-- **Zero friction** - Claude writes to a file, Mind watches it
-- **Readable** - memories stored in plain `.md` files you can open anytime
-- **Open source** - see exactly how it works, modify if you want
+- **Two-layer memory** - Cross-session recall + within-session focus
+- **Zero friction** - Claude writes to files, MCP reads them lazily
+- **No daemon** - Stateless MCP-only architecture (v2)
+- **Readable** - Plain `.md` files you can open anytime
+- **Open source** - See exactly how it works
 
 ---
 
@@ -27,32 +29,15 @@ git clone https://github.com/vibeforge1111/vibeship-mind.git
 cd vibeship-mind
 uv sync
 uv run mind init
-uv run mind daemon start
 ```
 
-That's it. Mind is now running.
+That's it. No daemon to start - Mind v2 is MCP-only.
 
 ---
 
-## Initialize Mind in Any Project
+## Connect to Claude Code
 
-After installing once, run this in any project folder:
-
-```bash
-mind init
-```
-
----
-
-## Connect to Claude Code (Optional)
-
-Mind works without this, but connecting via MCP gives Claude extra powers:
-
-| Tool | What it does |
-|------|--------------|
-| `mind_search` | Search past memories ("what did we decide about auth?") |
-| `mind_edges` | Check for gotchas before writing risky code |
-| `mind_status` | See what's being tracked |
+Add Mind as an MCP server to give Claude memory tools:
 
 **Easy way:** Just paste this to Claude:
 
@@ -71,7 +56,7 @@ Mind works without this, but connecting via MCP gives Claude extra powers:
   "mcpServers": {
     "mind": {
       "command": "uv",
-      "args": ["--directory", "/Users/you/vibeship-mind", "run", "mind", "mcp"]
+      "args": ["--directory", "/path/to/vibeship-mind", "run", "mind", "mcp"]
     }
   }
 }
@@ -81,17 +66,41 @@ Mind works without this, but connecting via MCP gives Claude extra powers:
 
 ---
 
+## MCP Tools
+
+| Tool | What it does |
+|------|--------------|
+| `mind_recall()` | Load session context - CALL FIRST every session |
+| `mind_session()` | Check current session state (tried, discovered, focus) |
+| `mind_search(query)` | Search past memories |
+| `mind_edges(intent)` | Check for gotchas before risky code |
+| `mind_checkpoint()` | Force process pending memories |
+| `mind_status()` | Check memory health |
+
+---
+
 ## How It Works
 
-As you vibe code, Claude writes memories to `.mind/MEMORY.md` - decisions, problems, learnings, fixes.
+**Long-term (MEMORY.md):** Claude writes decisions, problems, learnings. Next session, `mind_recall()` loads context so Claude knows what happened before.
 
-Next session, Claude reads the file and knows:
-- What you decided and why
-- What problems came up
-- What you learned
-- Where you left off
+**Short-term (SESSION.md):** During a session, Claude tracks:
+- What it's working on (Focus)
+- What it tried that didn't work (Tried)
+- What it discovered (Discovered)
+- What's out of scope (Out of Scope)
 
-Just keep vibe coding. Mind handles the rest.
+When a new session starts (30 min gap), important learnings get promoted from SESSION.md to MEMORY.md automatically.
+
+---
+
+## Initialize Mind in Any Project
+
+```bash
+cd your-project
+uv --directory /path/to/vibeship-mind run mind init
+```
+
+This creates `.mind/MEMORY.md` and `.mind/SESSION.md`.
 
 ---
 
@@ -104,40 +113,35 @@ uv --directory /path/to/vibeship-mind run mind doctor
 # See what Mind extracted from your notes
 uv --directory /path/to/vibeship-mind run mind parse
 
-# Check daemon status
-uv --directory /path/to/vibeship-mind run mind daemon status
+# Check project status
+uv --directory /path/to/vibeship-mind run mind status
 ```
 
 ---
 
 ## The Problem This Solves
 
-Every AI conversation starts from zero:
+**Across sessions:**
 - "What did we decide yesterday?" → Forgotten
-- "What did we try that didn't work?" → Unknown
 - "What gotchas did we hit?" → Re-discovered every time
-- "Where did we leave off?" → Lost
 
-**Mind fixes this.** Your AI remembers everything across sessions.
+**Within sessions:**
+- "Didn't we already try that?" → Suggests same failed fix 3 times
+- "What are we building again?" → Drifts into rabbit holes
+
+**Mind fixes both.** Two layers of memory, zero friction.
 
 ---
 
 ## File Structure
 
-After setup, your project has:
-
 ```
 your-project/
 ├── .mind/
-│   └── MEMORY.md     ← You write here
-└── CLAUDE.md         ← Mind updates this automatically
-```
-
-Global config lives at:
-```
-~/.mind/
-├── projects.json     ← Registered projects
-└── global_edges.json ← Cross-project gotchas
+│   ├── MEMORY.md     ← Long-term memory (persists)
+│   ├── SESSION.md    ← Short-term focus (cleared each session)
+│   └── state.json    ← Timestamps for session detection
+└── CLAUDE.md         ← Mind injects context here
 ```
 
 ---
@@ -147,19 +151,17 @@ Global config lives at:
 | Problem | Fix |
 |---------|-----|
 | "Command not found" | Use full path: `uv --directory /path/to/vibeship-mind run mind ...` |
-| Daemon not running | `uv --directory /path/to/vibeship-mind run mind daemon start` |
-| Nothing being captured | Make sure you use keywords like `decided`, `problem`, `learned` |
+| Nothing being captured | Use keywords: `decided`, `problem`, `learned`, `gotcha` |
+| Claude repeating mistakes | Tell Claude: "Check SESSION.md" or "Add that to tried" |
 | Need to check health | `uv --directory /path/to/vibeship-mind run mind doctor` |
 
 ---
 
 ## Documentation
 
-For deeper details:
 - [Architecture](docs/ARCHITECTURE.md) - How it works internally
-- [Parser](docs/PARSER.md) - What patterns Mind recognizes
-- [CLI Reference](docs/CLI.md) - All commands
-- [MCP Tools](docs/MCP_TOOLS.md) - AI tool specifications
+- [v2 Migration](docs/mind-v2-architecture-migration.md) - Daemon-free architecture
+- [Session Memory](docs/mind-v2-session-memory.md) - Within-session focus
 
 ---
 

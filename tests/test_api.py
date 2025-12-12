@@ -664,3 +664,176 @@ class TestSessionRoutes:
 
         assert response.status_code == 200
         assert response.json()["project_id"] == project.id
+
+
+class TestUserRoutes:
+    """Test user model routes."""
+
+    @pytest.mark.asyncio
+    async def test_get_user(self, client):
+        """GET /user returns the user model."""
+        response = await client.get("/user")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "id" in data
+        assert "total_sessions" in data
+
+    @pytest.mark.asyncio
+    async def test_update_user(self, client):
+        """PATCH /user updates the user model."""
+        response = await client.patch(
+            "/user",
+            json={
+                "name": "Test User",
+                "current_energy": "high",
+                "current_focus": "API development",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["name"] == "Test User"
+        assert data["current_energy"] == "high"
+        assert data["current_focus"] == "API development"
+
+    @pytest.mark.asyncio
+    async def test_update_user_add_win(self, client):
+        """PATCH /user can add a win."""
+        response = await client.patch(
+            "/user",
+            json={"add_win": "Completed the HTTP API"},
+        )
+
+        assert response.status_code == 200
+        assert "Completed the HTTP API" in response.json()["recent_wins"]
+
+
+class TestSearchRoutes:
+    """Test search routes."""
+
+    @pytest.mark.asyncio
+    async def test_search(self, client, storage):
+        """GET /search returns matching entities."""
+        from mind.models import ProjectCreate, DecisionCreate, IssueCreate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+        await storage.create_decision(DecisionCreate(
+            project_id=project.id,
+            title="Use FastAPI for HTTP",
+            description="FastAPI is our choice",
+            context="Need HTTP API",
+            reasoning="Good docs",
+        ))
+        await storage.create_issue(IssueCreate(
+            project_id=project.id,
+            title="FastAPI installation issue",
+            description="Pip install failed",
+        ))
+
+        response = await client.get(f"/search?q=FastAPI&project_id={project.id}")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["query"] == "FastAPI"
+        assert data["total"] == 2
+        assert len(data["decisions"]) == 1
+        assert len(data["issues"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_search_no_results(self, client, storage):
+        """GET /search returns empty when no matches."""
+        from mind.models import ProjectCreate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+
+        response = await client.get(f"/search?q=nonexistent&project_id={project.id}")
+
+        assert response.status_code == 200
+        assert response.json()["total"] == 0
+
+    @pytest.mark.asyncio
+    async def test_search_project_not_found(self, client):
+        """GET /search returns 404 for unknown project."""
+        response = await client.get("/search?q=test&project_id=unknown")
+
+        assert response.status_code == 404
+
+
+class TestExportRoutes:
+    """Test export routes."""
+
+    @pytest.mark.asyncio
+    async def test_export_all(self, client, storage):
+        """GET /export exports all data."""
+        from mind.models import ProjectCreate, DecisionCreate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+        await storage.create_decision(DecisionCreate(
+            project_id=project.id,
+            title="A Decision",
+            description="Details",
+            context="Context",
+            reasoning="Why",
+        ))
+
+        response = await client.get("/export")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "exported_at" in data
+        assert len(data["projects"]) == 1
+        assert len(data["decisions"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_export_single_project(self, client, storage):
+        """GET /export?project_id=X exports only that project."""
+        from mind.models import ProjectCreate, DecisionCreate
+
+        project1 = await storage.create_project(ProjectCreate(name="Project 1"))
+        project2 = await storage.create_project(ProjectCreate(name="Project 2"))
+        await storage.create_decision(DecisionCreate(
+            project_id=project1.id,
+            title="Decision 1",
+            description="D1",
+            context="C",
+            reasoning="R",
+        ))
+        await storage.create_decision(DecisionCreate(
+            project_id=project2.id,
+            title="Decision 2",
+            description="D2",
+            context="C",
+            reasoning="R",
+        ))
+
+        response = await client.get(f"/export?project_id={project1.id}")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["projects"]) == 1
+        assert data["projects"][0]["name"] == "Project 1"
+        assert len(data["decisions"]) == 1
+        assert data["decisions"][0]["title"] == "Decision 1"
+
+    @pytest.mark.asyncio
+    async def test_export_with_sessions(self, client, storage):
+        """GET /export?include_sessions=true includes sessions."""
+        from mind.models import ProjectCreate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+        user = await storage.get_or_create_user()
+        await storage.create_session(project.id, user.id)
+
+        response = await client.get("/export?include_sessions=true")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["sessions"]) == 1
+
+    @pytest.mark.asyncio
+    async def test_export_project_not_found(self, client):
+        """GET /export?project_id=X returns 404 for unknown project."""
+        response = await client.get("/export?project_id=unknown")
+
+        assert response.status_code == 404

@@ -47,6 +47,9 @@ def create_app() -> FastAPI:
         edges,
         episodes,
         sessions,
+        user,
+        search,
+        export,
     )
     app.include_router(projects.router)
     app.include_router(system.router)
@@ -55,6 +58,9 @@ def create_app() -> FastAPI:
     app.include_router(edges.router)
     app.include_router(episodes.router)
     app.include_router(sessions.router)
+    app.include_router(user.router)
+    app.include_router(search.router)
+    app.include_router(export.router)
 
     return app
 

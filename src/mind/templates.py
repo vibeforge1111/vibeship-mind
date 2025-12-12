@@ -1,7 +1,7 @@
 """Templates for Mind files."""
 
 MEMORY_TEMPLATE = """<!-- MIND MEMORY - Append as you work. Write naturally.
-Keywords: decided, problem, learned, tried, fixed, blocked, todo -->
+Keywords: decided, problem, learned, tried, fixed, blocked, KEY, important -->
 
 # {project_name}
 
@@ -21,6 +21,7 @@ Keywords: decided, problem, learned, tried, fixed, blocked, todo -->
 
 (Start writing here)
 
+<!-- End session with: ## DATE | summary of what happened | mood: X -->
 ---
 """
 
@@ -31,6 +32,7 @@ Append to `.mind/MEMORY.md` throughout the conversation (not just at the end):
 **Decisions** - when you choose something:
 - `decided X because Y`
 - `chose X over Y because Z`
+- Use `KEY: decided X` for architectural choices that should never fade
 - Include alternatives you rejected and why
 
 **Problems** - when something breaks or blocks:
@@ -42,15 +44,14 @@ Append to `.mind/MEMORY.md` throughout the conversation (not just at the end):
 - `learned that X`
 - `TIL: X`
 - `gotcha: X` (for things that will bite again)
+- Use `important:` prefix for learnings that should never fade
 
 **Progress** - when you fix or complete:
 - `fixed X by doing Y`
 - `resolved X`
 
-**Session end** - before ending, note:
-- What's still open
-- What to do next
-- Mood (frustrated/stuck/breakthrough/accomplished)
+**Session end** - summarize with:
+`## DATE | what happened | mood: X`
 
 ---
 

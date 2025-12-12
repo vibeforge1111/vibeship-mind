@@ -105,7 +105,11 @@ def match_edges(
     global_edges: list[dict],
     project_edges: list[dict],
 ) -> list[dict]:
-    """Match edges against intent and code."""
+    """Match edges against intent, code, and stack.
+
+    Stack-aware matching: edges with stack_tags that match project stack
+    are surfaced even without explicit intent/code matches.
+    """
     intent_lower = intent.lower()
     code_lower = code.lower() if code else ""
     stack_set = set(s.lower() for s in stack)
@@ -116,11 +120,18 @@ def match_edges(
     for edge in global_edges:
         detection = edge.get("detection", {})
 
-        # Check context match (stack)
+        # Check context match (from detection patterns)
         context_patterns = detection.get("context", [])
         context_match = any(
             p.lower() in stack_set or any(p.lower() in s for s in stack_set)
             for p in context_patterns
+        )
+
+        # Check stack_tags match (direct stack matching)
+        stack_tags = edge.get("stack_tags", [])
+        stack_match = any(
+            tag.lower() in stack_set or any(tag.lower() in s for s in stack_set)
+            for tag in stack_tags
         )
 
         # Check intent match
@@ -131,10 +142,26 @@ def match_edges(
         code_patterns = detection.get("code", [])
         code_match = code and any(p.lower() in code_lower for p in code_patterns)
 
-        # Calculate confidence
-        matches = sum([context_match, intent_match, code_match])
-        if matches >= 1:
-            confidence = matches / 3
+        # Combine context and stack match
+        full_context_match = context_match or stack_match
+
+        # Calculate confidence - stack match alone gives lower confidence
+        matches = sum([full_context_match, intent_match, code_match])
+
+        # If only stack matches (no intent/code), still include but lower confidence
+        if matches >= 1 or stack_match:
+            if matches == 0 and stack_match:
+                # Stack-only match - relevant but not urgent
+                confidence = 0.3
+                matched_on = "stack"
+            else:
+                confidence = matches / 3
+                matched_on = ", ".join(filter(None, [
+                    "stack" if full_context_match else None,
+                    "intent" if intent_match else None,
+                    "code" if code_match else None,
+                ]))
+
             warnings.append({
                 "id": edge.get("id", ""),
                 "title": edge.get("title", ""),
@@ -142,18 +169,27 @@ def match_edges(
                 "workaround": edge.get("workaround", ""),
                 "severity": edge.get("severity", "warning"),
                 "source": "global",
-                "matched_on": ", ".join(filter(None, [
-                    "context" if context_match else None,
-                    "intent" if intent_match else None,
-                    "code" if code_match else None,
-                ])),
+                "matched_on": matched_on,
                 "confidence": confidence,
             })
 
-    # Check project edges (simpler matching)
+    # Check project edges (simpler matching + stack awareness)
     for edge in project_edges:
         title_lower = edge.get("title", "").lower()
-        if any(word in title_lower for word in intent_lower.split()):
+        workaround_lower = (edge.get("workaround") or "").lower()
+
+        # Check if any stack term appears in edge title/workaround
+        stack_in_edge = any(
+            s in title_lower or s in workaround_lower
+            for s in stack_set
+        )
+
+        # Match on intent words or stack relevance
+        intent_words = intent_lower.split()
+        intent_match = any(word in title_lower for word in intent_words)
+
+        if intent_match or stack_in_edge:
+            confidence = 0.6 if intent_match else 0.4
             warnings.append({
                 "id": "",
                 "title": edge.get("title", ""),
@@ -161,8 +197,8 @@ def match_edges(
                 "workaround": edge.get("workaround", ""),
                 "severity": "info",
                 "source": "project",
-                "matched_on": "title",
-                "confidence": 0.5,
+                "matched_on": "title" if intent_match else "stack",
+                "confidence": confidence,
             })
 
     # Sort by confidence

@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
-from .parser import Entity, EntityType, IssueStatus, ParseResult
+from .parser import Entity, EntityType, IssueStatus, ParseResult, SessionSummary
 from .templates import CONTEXT_TEMPLATE
 
 
@@ -55,12 +55,16 @@ class ContextGenerator:
         max_decisions: int = 5,
         max_open_loops: int = 3,
         max_gotchas: int = 5,
+        max_session_summaries: int = 5,  # How many old sessions to show as summaries
         stale_days: int = 14,
+        recent_session_days: int = 3,  # Sessions within this many days show full detail
     ):
         self.max_decisions = max_decisions
         self.max_open_loops = max_open_loops
         self.max_gotchas = max_gotchas
+        self.max_session_summaries = max_session_summaries
         self.stale_days = stale_days
+        self.recent_session_days = recent_session_days
 
     def generate(
         self,
@@ -80,7 +84,12 @@ class ContextGenerator:
         # Project state
         sections.append(self._project_state(parse_result))
 
-        # Recent decisions
+        # Key items (always show, never fade)
+        key_section = self._key_items(parse_result.entities)
+        if key_section:
+            sections.append(key_section)
+
+        # Recent decisions (exclude key items, they're shown above)
         decisions_section = self._recent_decisions(parse_result.entities)
         if decisions_section:
             sections.append(decisions_section)
@@ -94,6 +103,11 @@ class ContextGenerator:
         gotchas_section = self._gotchas(parse_result.project_edges)
         if gotchas_section:
             sections.append(gotchas_section)
+
+        # Session history (recent full, old compressed)
+        history_section = self._session_history(parse_result.session_summaries)
+        if history_section:
+            sections.append(history_section)
 
         # Continue from
         continue_section = self._continue_from(parse_result.entities)
@@ -131,11 +145,29 @@ class ContextGenerator:
 
         return "\n".join(lines)
 
+    def _key_items(self, entities: list[Entity]) -> Optional[str]:
+        """Generate key items section (items marked KEY: or important:)."""
+        key_entities = [e for e in entities if e.is_key]
+
+        if not key_entities:
+            return None
+
+        lines = ["## Key (Never Forget)"]
+        for e in key_entities:
+            type_prefix = {
+                EntityType.DECISION: "[D]",
+                EntityType.ISSUE: "[I]",
+                EntityType.LEARNING: "[L]",
+            }.get(e.type, "")
+            lines.append(f"- {type_prefix} {e.title}")
+
+        return "\n".join(lines)
+
     def _recent_decisions(self, entities: list[Entity]) -> Optional[str]:
-        """Generate recent decisions section."""
+        """Generate recent decisions section (excluding key items)."""
         decisions = [
             e for e in entities
-            if e.type == EntityType.DECISION
+            if e.type == EntityType.DECISION and not e.is_key  # Exclude key items
         ]
 
         # Sort by date (most recent first), then by line number
@@ -203,6 +235,33 @@ class ContextGenerator:
                 lines.append(f"- {edge.title} -> {edge.workaround}")
             else:
                 lines.append(f"- {edge.title}")
+
+        return "\n".join(lines)
+
+    def _session_history(self, summaries: list[SessionSummary]) -> Optional[str]:
+        """Generate session history section (compressed for old sessions)."""
+        if not summaries:
+            return None
+
+        # Sort by date (most recent first)
+        summaries = sorted(summaries, key=lambda s: s.date, reverse=True)
+        summaries = summaries[:self.max_session_summaries]
+
+        if not summaries:
+            return None
+
+        lines = ["## Session History"]
+        today = datetime.now().date()
+
+        for s in summaries:
+            days_ago = (today - s.date).days
+            date_str = s.date.isoformat()
+
+            if s.summary:
+                mood_str = f" | {s.mood}" if s.mood else ""
+                lines.append(f"- {date_str}: {s.summary}{mood_str}")
+            else:
+                lines.append(f"- {date_str}")
 
         return "\n".join(lines)
 

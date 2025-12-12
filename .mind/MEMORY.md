@@ -52,3 +52,23 @@ learned that the archived version had rich session management (Episodes, mood tr
 fixed memory capture gap by adding explicit instructions to CLAUDE.md template - Claude needs to be told to write memories
 
 ---
+
+## 2025-12-13 | Added intelligence from archives: recency, KEY markers, session summaries, context budget, stack-aware edges | mood: productive
+
+**Researched competition:** Mem0, mcp-memory-service, task-orchestrator, claude-memory-mcp, memory banks
+KEY: decided to stay file-based - that's our identity vs database-heavy competitors
+decided to add only necessary intelligence: recency scoring, KEY markers, session summaries, context budget, stack-aware edges
+decided NOT to add: databases, embeddings, workflow commands, episodes, user model - too much friction
+
+**Implemented:**
+- Recency scoring (days_ago field, entities_by_recency() method)
+- KEY: and important: markers for items that never fade
+- Session summary lines: `## DATE | what happened | mood: X`
+- Context budget: key items section, session history compression
+- Stack-aware edge matching: surfaces relevant gotchas based on project stack
+
+learned that competition (Mem0, mcp-memory-service) all use databases/embeddings - we stay simpler with files
+learned that session summary format `## DATE | summary | mood` compresses history naturally
+gotcha: session summary lines were being parsed as entities - fixed by skipping lines with `|` in _should_skip
+
+---

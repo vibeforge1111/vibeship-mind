@@ -57,40 +57,23 @@ Restart Claude Code after saving.
 
 ---
 
-## How It Actually Works
+## How It Works
 
-### Notes get written to `.mind/MEMORY.md`
+**The problem:** Claude forgets everything when you start a new conversation.
 
-Either you write them, or Claude writes them as you work together. Example:
+**The fix:** Mind saves memories to `.mind/MEMORY.md` as you work. Next session, Claude reads it and remembers.
 
-```markdown
-## Dec 13
-
-Working on auth today.
-
-decided to use JWT instead of sessions - simpler, stateless
-problem: cookies not working in Safari
-learned that Safari blocks third-party cookies after 7 days
-fixed it by using same-domain auth
-
-Next: add refresh tokens
-```
-
-Mind watches for these keywords:
-- `decided`, `chose`, `going with` → decisions
-- `problem`, `issue`, `bug` → issues
-- `learned`, `realized`, `discovered` → learnings
-- `fixed`, `resolved` → resolutions
-
-### Next session, Claude remembers
-
-When you start a new conversation, Claude automatically knows:
-- What was decided and why
-- What problems came up
-- What was learned
+### What gets remembered:
+- Decisions you made and why
+- Problems you hit
+- Things you learned
 - Where you left off
 
-No extra commands needed.
+### How memories are captured:
+
+Claude writes to `.mind/MEMORY.md` during your conversation using keywords like `decided`, `problem`, `learned`, `fixed`. Mind watches the file and keeps everything organized.
+
+You don't have to do anything. Just work normally.
 
 ---
 

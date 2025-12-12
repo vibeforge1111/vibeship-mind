@@ -3,7 +3,7 @@
  * Connects to the Mind HTTP API
  */
 
-const API_BASE = 'http://127.0.0.1:8766';
+const API_BASE = 'http://127.0.0.1:8765';
 
 export interface Project {
   id: string;

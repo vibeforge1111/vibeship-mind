@@ -514,6 +514,8 @@ class MindServer:
         include_sessions: bool = False,
     ) -> dict[str, Any]:
         """Export all data for backup."""
+        from datetime import datetime
+
         if not self.storage:
             raise RuntimeError("Server not initialized")
 
@@ -549,7 +551,6 @@ class MindServer:
             export_data["episodes"].extend([ep.model_dump() for ep in episodes])
 
         # Save export
-        from datetime import datetime
         export_dir = self.data_dir / "exports"
         export_dir.mkdir(exist_ok=True)
 

@@ -1,5 +1,6 @@
 """Session management and episode creation."""
 
+import logging
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -9,6 +10,8 @@ from mind.models import (
 )
 from mind.storage.sqlite import SQLiteStorage
 from mind.engine.primer import PrimerGenerator
+
+logger = logging.getLogger(__name__)
 
 
 def should_create_episode(session: Session) -> bool:
@@ -234,10 +237,7 @@ class SessionManager:
         # End any previous active session for this project
         active_session = await self.storage.get_active_session(project.id)
         if active_session:
-            await self.storage.end_session(
-                active_session.id,
-                SessionEnd(summary="Session ended (new session started)", progress=[], still_open=[], next_steps=[])
-            )
+            await self._force_close_session(active_session)
 
         # Create new session
         session = await self.storage.create_session(project.id, user.id)
@@ -388,3 +388,71 @@ class SessionManager:
         await self.storage.link_session_episode(session.id, episode.id)
 
         return episode.id
+
+    async def _force_close_session(self, session: Session) -> None:
+        """Auto-close a session with best-effort summary from artifacts.
+
+        Called when a new session starts while another is still active.
+        Captures what we CAN automatically (artifacts, duration) while
+        accepting we lose user narrative (summary, progress, next steps, mood).
+        """
+        # Reload session to get latest artifact counts
+        current_session = await self.storage.get_session(session.id)
+        if not current_session:
+            logger.warning("Session %s not found during force close", session.id)
+            return
+
+        # Generate summary from what happened
+        parts = []
+        if current_session.decisions_made:
+            count = len(current_session.decisions_made)
+            parts.append(f"{count} decision{'s' if count > 1 else ''} made")
+        if current_session.issues_opened:
+            count = len(current_session.issues_opened)
+            parts.append(f"{count} issue{'s' if count > 1 else ''} opened")
+        if current_session.issues_resolved:
+            count = len(current_session.issues_resolved)
+            parts.append(f"{count} issue{'s' if count > 1 else ''} resolved")
+        if current_session.issues_updated:
+            # Only count updates that aren't also opens/resolves
+            updated_only = set(current_session.issues_updated) - set(current_session.issues_opened) - set(current_session.issues_resolved)
+            if updated_only:
+                count = len(updated_only)
+                parts.append(f"{count} issue{'s' if count > 1 else ''} updated")
+        if current_session.edges_discovered:
+            count = len(current_session.edges_discovered)
+            parts.append(f"{count} edge{'s' if count > 1 else ''} discovered")
+
+        if parts:
+            summary = f"Session auto-closed. {', '.join(parts)}."
+        else:
+            summary = "Session auto-closed (exploratory, no artifacts)."
+
+        logger.info(
+            "Auto-closing session %s: %s",
+            session.id,
+            summary
+        )
+
+        # End the session with auto-generated summary
+        ended_session = await self.storage.end_session(
+            session.id,
+            SessionEnd(
+                summary=summary,
+                progress=[],   # Can't know without user
+                still_open=[], # Can't know without user
+                next_steps=[], # Can't know without user
+                mood=None      # Can't know without user
+            )
+        )
+
+        # Still check for episode creation based on artifacts
+        # (artifacts alone can trigger episode creation)
+        if ended_session and should_create_episode(ended_session):
+            episode_id = await self._create_episode(ended_session)
+            if episode_id:
+                logger.info(
+                    "Created episode %s from auto-closed session %s",
+                    episode_id,
+                    session.id
+                )

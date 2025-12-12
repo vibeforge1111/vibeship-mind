@@ -169,4 +169,6 @@ Apache 2.0 - See [LICENSE](LICENSE) for details.
 
 ---
 
+Built by [vibeship.co](https://vibeship.co)
+
 *Memory should be automatic, not another task.*

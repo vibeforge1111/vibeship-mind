@@ -22,12 +22,16 @@ That's it. Mind is now running.
 
 ---
 
-## Use in Any Project
+## Use in Other Projects
+
+To add Mind to another project, just `cd` into it and run init again:
 
 ```bash
-cd ~/your-other-project
-uv --directory ~/vibeship-mind run mind init
+cd ~/another-project
+uv run mind init
 ```
+
+(Run from the vibeship-mind folder, or use `uv --directory ~/vibeship-mind run mind init` from anywhere)
 
 ---
 

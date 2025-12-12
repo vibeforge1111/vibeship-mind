@@ -1,4 +1,4 @@
-"""Context retrieval engine with relevance scoring."""
+"""Context retrieval engine with relevance scoring and memory decay."""
 
 import math
 from datetime import datetime
@@ -7,6 +7,7 @@ from typing import Any, Optional
 from mind.models.base import EntityType
 from mind.storage.embeddings import EmbeddingStore
 from mind.storage.sqlite import SQLiteStorage
+from mind.engine.decay import calculate_decay_from_timestamp
 
 
 # Scoring configuration
@@ -14,19 +15,26 @@ RECENCY_HALF_LIFE_DAYS = 7  # Recency boost halves every 7 days
 MAX_RECENCY_BOOST = 0.3
 MAX_FREQUENCY_BOOST = 0.2
 MAX_TRIGGER_BOOST = 0.2
+MIN_DECAY_THRESHOLD = 0.1  # Filter out entities with decay below this
 
 
 class ContextEngine:
     """Intelligent context retrieval combining semantic search with relevance scoring.
 
     Scoring formula:
-        final_score = semantic_similarity * (1 + recency_boost + frequency_boost + trigger_boost)
+        final_score = semantic_similarity * (1 + recency_boost + frequency_boost + trigger_boost) * decay
 
     Where:
         - semantic_similarity: 0.0-1.0 from ChromaDB cosine distance
         - recency_boost: 0.0-0.3 based on entity age (newer = higher)
         - frequency_boost: 0.0-0.2 based on access count (logarithmic)
         - trigger_boost: 0.0-0.2 for exact phrase matches in document
+        - decay: 0.0-1.0 based on time since last access and entity status
+
+    Decay reduces relevance of stale entries:
+        - Old but frequently accessed = fresh (high decay)
+        - Resolved/superseded = stale faster (low decay)
+        - Entities below MIN_DECAY_THRESHOLD are filtered out
     """
 
     def __init__(
@@ -78,25 +86,29 @@ class ContextEngine:
             ids_by_type.setdefault(entity_type, []).append(entity_id)
             all_ids.append(entity_id)
 
-        # Fetch access stats and timestamps if storage available
+        # Fetch access stats, timestamps, and statuses if storage available
         access_stats: dict[str, dict[str, Any]] = {}
         timestamps: dict[str, datetime] = {}
+        statuses: dict[str, str | None] = {}
 
         if self.storage:
             # Get access stats for all entities
             access_stats = await self.storage.get_access_stats(all_ids)
 
-            # Get timestamps by entity type
+            # Get timestamps and statuses by entity type
             for entity_type, ids in ids_by_type.items():
                 type_timestamps = await self.storage.get_entity_timestamps(entity_type, ids)
                 timestamps.update(type_timestamps)
+                type_statuses = await self.storage.get_entity_statuses(entity_type, ids)
+                statuses.update(type_statuses)
 
-        # Apply combined scoring
+        # Apply combined scoring with decay
         now = datetime.utcnow()
         scored_results = []
 
         for result in results:
             entity_id = result["entity_id"]
+            entity_type = result["entity_type"]
             semantic_score = result["similarity"]
 
             # Calculate recency boost
@@ -119,9 +131,23 @@ class ContextEngine:
             if query_lower in doc_lower:
                 trigger_boost = MAX_TRIGGER_BOOST
 
-            # Combined score
+            # Calculate memory decay based on last access and status
+            last_accessed = access_stats.get(entity_id, {}).get("last_accessed")
+            status = statuses.get(entity_id)
+            decay = calculate_decay_from_timestamp(
+                entity_type=EntityType(entity_type),
+                status=status,
+                last_accessed=last_accessed,
+                now=now,
+            )
+
+            # Skip entities that are too stale
+            if decay < MIN_DECAY_THRESHOLD:
+                continue
+
+            # Combined score with decay
             multiplier = 1 + recency_boost + frequency_boost + trigger_boost
-            final_score = semantic_score * multiplier
+            final_score = semantic_score * multiplier * decay
 
             # Add scoring details to result
             result["final_score"] = final_score
@@ -131,6 +157,7 @@ class ContextEngine:
                 "frequency_boost": frequency_boost,
                 "trigger_boost": trigger_boost,
                 "multiplier": multiplier,
+                "decay": decay,
             }
 
             scored_results.append(result)

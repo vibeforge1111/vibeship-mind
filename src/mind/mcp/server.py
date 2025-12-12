@@ -100,6 +100,18 @@ class MindServer:
                 )
                 warnings = [w.model_dump() for w in stack_warnings]
 
+        # Record access for entities surfaced in primer (user-facing retrieval)
+        if self.storage:
+            accesses = []
+            for issue in result.open_issues:
+                accesses.append((EntityType.ISSUE.value, issue.id))
+            for decision in result.pending_decisions:
+                accesses.append((EntityType.DECISION.value, decision.id))
+            for edge in result.relevant_edges:
+                accesses.append((EntityType.SHARP_EDGE.value, edge.id))
+            if accesses:
+                await self.storage.record_accesses(accesses)
+
         return {
             "session_id": result.session_id,
             "project": result.project.model_dump(),
@@ -222,6 +234,11 @@ class MindServer:
             stack=stack,
             file_path=file_path,
         )
+
+        # Record access for edges that triggered warnings (user-facing retrieval)
+        if warnings and self.storage:
+            accesses = [(EntityType.SHARP_EDGE.value, w.edge_id) for w in warnings]
+            await self.storage.record_accesses(accesses)
 
         return {
             "warnings": [w.model_dump() for w in warnings]

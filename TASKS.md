@@ -33,15 +33,21 @@
   - User's words preserved as the "soul" of the episode
   - Optional custom episode title override
   - Resolved issues tracking in sessions
+- [x] Memory decay for stale entries
+  - Staleness based on time since last ACCESS (not creation)
+  - Entity type-specific half-lives (Decision: 60d, Issue: 30d, Sharp Edge: 120d, Episode: 90d)
+  - Status multipliers (superseded: 5x faster, resolved: 2x faster)
+  - Entities below 10% relevance filtered from results
+  - Access recorded for primer, search, and edge warnings
 
 ## Current Status
 
-**Mind is connected to Claude Code.** 62 tests passing. Restart Claude Code to activate.
+**Mind is connected to Claude Code.** 86 tests passing. Restart Claude Code to activate.
 
 After restart, Mind tools will be available:
 - `mind_start_session` - Begin session, get context primer + edge warnings
 - `mind_end_session` - Save session summary
-- `mind_get_context` - Search with relevance scoring + edge warnings
+- `mind_get_context` - Search with relevance scoring + decay + edge warnings
 - `mind_check_edges` - Check code for gotchas
 - `mind_add_decision` - Record decision with reasoning + edge warnings
 - `mind_add_issue` - Track a problem + edge warnings
@@ -53,7 +59,6 @@ After restart, Mind tools will be available:
 ## Next Up - Phase 2: Intelligence (Remaining)
 
 - [ ] Primer generation with smart truncation
-- [ ] Memory decay for stale entries
 
 ## Future Phases
 
@@ -71,7 +76,7 @@ After restart, Mind tools will be available:
 
 ## Known Issues
 
-None currently. All 53 tests passing.
+None currently. All 86 tests passing.
 
 ## Tech Stack
 

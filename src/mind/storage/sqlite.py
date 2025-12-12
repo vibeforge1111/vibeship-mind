@@ -1234,3 +1234,43 @@ class SQLiteStorage:
             row["id"]: _parse_datetime(row[timestamp_col]) or datetime.utcnow()
             for row in rows
         }
+
+    async def get_entity_statuses(
+        self,
+        entity_type: str,
+        entity_ids: list[str],
+    ) -> dict[str, str | None]:
+        """Get status for entities that have a status field.
+
+        Used for memory decay calculation.
+
+        Args:
+            entity_type: Type of entity (decision, issue)
+            entity_ids: List of entity IDs
+
+        Returns:
+            Dict mapping entity_id to status (or None if no status)
+        """
+        if not entity_ids:
+            return {}
+
+        # Only decisions and issues have status fields
+        table_map = {
+            "decision": "decisions",
+            "issue": "issues",
+        }
+
+        if entity_type not in table_map:
+            # Sharp edges and episodes don't have status - return None for all
+            return {entity_id: None for entity_id in entity_ids}
+
+        table = table_map[entity_type]
+        placeholders = ",".join("?" * len(entity_ids))
+
+        async with self.db.execute(
+            f"SELECT id, status FROM {table} WHERE id IN ({placeholders})",
+            entity_ids,
+        ) as cursor:
+            rows = await cursor.fetchall()
+
+        return {row["id"]: row["status"] for row in rows}

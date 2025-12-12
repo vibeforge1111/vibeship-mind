@@ -29,7 +29,7 @@
 
 ## Current Status
 
-**Mind is ready for testing.** 53 tests passing.
+**Mind is connected to Claude Code.** 53 tests passing. Restart Claude Code to activate.
 
 After restart, Mind tools will be available:
 - `mind_start_session` - Begin session, get context primer + edge warnings

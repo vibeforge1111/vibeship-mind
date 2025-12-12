@@ -142,6 +142,81 @@ That's it. Work normally. Memory accumulates.
 
 ---
 
+## Getting Started Guide
+
+### What Gets Created
+
+After `mind init`, your project has:
+
+```
+project/
+├── .mind/
+│   └── MEMORY.md     ← Write here as you work
+└── CLAUDE.md         ← Context auto-injected here
+```
+
+### How to Write Memory
+
+Use natural language with these keywords:
+
+| Keyword | What It Captures |
+|---------|------------------|
+| `decided`, `chose`, `going with` | Decisions |
+| `problem`, `issue`, `bug`, `stuck` | Issues |
+| `learned`, `discovered`, `realized` | Learnings |
+| `fixed`, `resolved` | Resolutions |
+
+**Examples:**
+
+```markdown
+## Dec 13
+
+Working on auth.
+
+decided JWT over sessions - stateless, simpler
+problem: Safari cookies not persisting
+learned that ITP blocks third-party cookies after 7 days
+fixed the cookie issue by using same-domain auth
+
+Next: add refresh tokens
+```
+
+Or use explicit format:
+
+```markdown
+**Decided:** JWT over sessions - stateless, simpler
+**Problem:** Safari cookies not persisting
+**Learned:** ITP blocks third-party cookies after 7 days
+```
+
+### Verify It's Working
+
+```bash
+# Check daemon is running
+mind daemon status
+
+# Parse and see what Mind extracts
+mind parse
+
+# Health check
+mind doctor
+```
+
+**Success indicators:**
+- `mind daemon status` shows "Running"
+- `mind parse` shows extracted entities
+- CLAUDE.md has `MIND:CONTEXT` section
+
+### Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| Daemon not running | `mind daemon start` |
+| No context in CLAUDE.md | Check MEMORY.md has content with keywords |
+| Nothing being captured | Use keywords: decided, problem, learned |
+
+---
+
 ## Three Ways to Capture
 
 Mind watches all three:

@@ -1,0 +1,43 @@
+<!-- MIND MEMORY - Append as you work. Write naturally. -->
+
+# {project_name}
+
+## Project State
+- Goal: (describe your goal)
+- Stack: {stack}
+- Blocked: None
+
+## Gotchas
+<!-- Add project-specific gotchas here -->
+<!-- Format: - Issue → Workaround -->
+
+---
+
+## Session Log
+
+## {date}
+
+**Decided:** Initialize Mind for this project
+- Gives Claude persistent memory across sessions
+- Context appears automatically in CLAUDE.md
+
+Next: Start building!
+
+---
+
+<!-- 
+Your turn! Add entries as you work:
+
+**Decided:** Use X because Y
+**Problem:** Something isn't working  
+**Learned:** Discovered that X does Y
+**Fixed:** Resolved the issue by doing Z
+
+Or quick syntax anywhere:
+MEMORY: decided JWT because simpler
+MEMORY: problem - Safari cookies broken
+MEMORY: learned - ITP blocks cross-domain
+
+Or inline in code:
+// MEMORY: decided Zod for validation
+-->

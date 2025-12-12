@@ -1,0 +1,85 @@
+# CLAUDE.md - Mind
+
+## Project Overview
+
+Mind is a file-based memory system for AI coding assistants. The core insight: **The file is the memory. Mind is the lens.**
+
+## Architecture
+
+```
+Source of truth: .mind/MEMORY.md (per project)
+Context delivery: MIND:CONTEXT section in CLAUDE.md (auto-injected)
+Daemon: Watches files, parses content, updates context
+MCP: 4 tools (search, edges, add_global_edge, status)
+```
+
+## Key Files
+
+```
+src/mind/
+├── cli.py           # CLI commands (init, daemon, add, list, etc.)
+├── daemon.py        # Background file watcher + context updater
+├── watcher.py       # File system watching (watchfiles)
+├── parser.py        # Loose regex extraction from markdown/comments
+├── context.py       # MIND:CONTEXT generation
+├── indexer.py       # Search index (SQLite + embeddings)
+├── storage/
+│   ├── sqlite.py    # Database (simplified schema)
+│   └── embeddings.py # Vector search
+├── mcp/
+│   └── server.py    # 4 MCP tools
+└── edges/
+    ├── detector.py  # Edge detection logic
+    └── global_edges.py # Global edge storage
+```
+
+## Design Principles
+
+1. **File is the memory** - MEMORY.md is source of truth
+2. **Loose parsing** - Accept natural language, score confidence
+3. **Auto context** - CLAUDE.md gets MIND:CONTEXT injected
+4. **Multiple capture** - MEMORY.md, inline comments, git commits
+5. **Zero friction** - No commands during/after work
+
+## Parser Keywords
+
+Decisions: decided, chose, going with, using, went with, settled on
+Issues: problem, issue, bug, doesn't work, stuck on, blocked
+Learnings: learned, discovered, realized, turns out, TIL, gotcha
+Status: fixed, resolved, tried, blocked on
+
+## Quick Syntax
+
+```
+MEMORY: decided X because Y
+MEMORY: problem - X
+MEMORY: learned - X
+```
+
+## Global vs Project Edges
+
+- Global: Platform/language gotchas (via mind_add_global_edge)
+- Project: In .mind/MEMORY.md Gotchas section
+
+## Testing
+
+```bash
+uv run pytest tests/
+```
+
+## Running
+
+```bash
+# CLI
+uv run mind <command>
+
+# MCP Server
+uv run mind mcp
+
+# Daemon
+uv run mind daemon start
+```
+
+## Memory
+
+Append to `.mind/MEMORY.md` as you work on this project.

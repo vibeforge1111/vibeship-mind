@@ -176,6 +176,20 @@ uv run pytest --cov=src
 uv run pytest -v
 ```
 
+## Memory
+
+This project uses Mind's own memory system. At session start, read `.mind/MEMORY.md`.
+Throughout work, append what you're doing - decisions made, problems hit, things learned.
+The file is your memory between sessions. Just write naturally, no rigid format needed.
+
+**The file contains:**
+- Project state (goal, stack, status)
+- Known gotchas (things that bite)
+- Key decisions (why we chose X over Y)
+- Session log (stream of consciousness)
+
+**Keywords Mind looks for:** decided, problem, learned, tried, gotcha, blocked, next
+
 ## Current Focus
 
 Check `docs/ROADMAP.md` for current phase.

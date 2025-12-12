@@ -2,6 +2,7 @@
 
 import logging
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
 from mind.models import (
@@ -10,6 +11,7 @@ from mind.models import (
 )
 from mind.storage.sqlite import SQLiteStorage
 from mind.engine.primer import PrimerGenerator
+from mind.engine.memory_file import MemoryFileManager
 
 logger = logging.getLogger(__name__)
 
@@ -190,6 +192,7 @@ class SessionManager:
     def __init__(self, storage: SQLiteStorage):
         self.storage = storage
         self.primer_generator = PrimerGenerator(storage)
+        self.memory_file_manager = MemoryFileManager()
         self._current_session: Optional[Session] = None
 
     @property
@@ -249,13 +252,24 @@ class SessionManager:
         # Get last ended session for continuity context
         last_session = await self.storage.get_last_ended_session(project.id)
 
+        # Read MEMORY.md if repo path is available
+        memory_context = ""
+        repo_path = detect_from_path or project.repo_path
+        if repo_path:
+            memory_context = self.memory_file_manager.get_primer_context(repo_path) or ""
+
         # Generate primer with smart prioritization
         primer_result = await self.primer_generator.generate(project, last_session)
+
+        # Combine MEMORY.md context with primer
+        combined_primer = primer_result.text
+        if memory_context:
+            combined_primer = memory_context + "\n\n---\n\n" + primer_result.text
 
         return SessionStart(
             session_id=session.id,
             project=project,
-            primer=primer_result.text,
+            primer=combined_primer,
             open_issues=primer_result.issues,
             pending_decisions=primer_result.decisions,
             relevant_edges=primer_result.edges,

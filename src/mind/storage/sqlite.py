@@ -207,10 +207,13 @@ def _json_dumps(obj: Any) -> str:
     if obj is None:
         return "[]"
     if isinstance(obj, list):
-        return json.dumps([item.model_dump() if hasattr(item, "model_dump") else item for item in obj])
+        return json.dumps(
+            [item.model_dump() if hasattr(item, "model_dump") else item for item in obj],
+            default=str,
+        )
     if hasattr(obj, "model_dump"):
-        return json.dumps(obj.model_dump())
-    return json.dumps(obj)
+        return json.dumps(obj.model_dump(), default=str)
+    return json.dumps(obj, default=str)
 
 
 def _json_loads(s: str | None, default: Any = None) -> Any:

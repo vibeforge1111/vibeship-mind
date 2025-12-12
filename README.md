@@ -31,7 +31,7 @@ uv sync
 uv run mind init
 ```
 
-That's it. No daemon to start - Mind v2 is MCP-only.
+That's it. Now connect to Claude Code below.
 
 ---
 

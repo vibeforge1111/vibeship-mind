@@ -22,19 +22,6 @@ That's it. Mind is now running.
 
 ---
 
-## Use in Other Projects
-
-To add Mind to another project, just `cd` into it and run init again:
-
-```bash
-cd ~/another-project
-uv run mind init
-```
-
-(Run from the vibeship-mind folder, or use `uv --directory ~/vibeship-mind run mind init` from anywhere)
-
----
-
 ## Connect to Claude Code (Optional)
 
 Add to MCP config (`~/.config/claude/mcp.json` or `%APPDATA%\Claude\claude_desktop_config.json`):

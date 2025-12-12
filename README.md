@@ -100,6 +100,12 @@ cd your-project
 uv --directory /path/to/vibeship-mind run mind init
 ```
 
+Replace `your-project` with your actual project folder and `/path/to/vibeship-mind` with where you cloned Mind.
+
+**In Claude Code?** Just tell Claude:
+
+> Initialize Mind in this project
+
 This creates `.mind/MEMORY.md` and `.mind/SESSION.md`.
 
 ---

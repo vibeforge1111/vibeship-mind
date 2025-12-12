@@ -375,3 +375,329 @@ class TestSearchStorage:
 
         assert len(results["decisions"]) >= 1
         assert len(results["issues"]) >= 1
+
+
+class TestEpisodeCreation:
+    """Tests for episode creation from sessions."""
+
+    @pytest.mark.asyncio
+    async def test_should_create_episode_with_artifacts(self, storage: SQLiteStorage):
+        """Test that sessions with artifacts become episodes."""
+        from mind.engine.session import should_create_episode
+        from mind.models import Session
+        from datetime import datetime, timedelta
+
+        # Session with decision made
+        session = Session(
+            id="sess_test1",
+            project_id="proj_test",
+            user_id="user_test",
+            started_at=datetime.utcnow() - timedelta(minutes=10),
+            ended_at=datetime.utcnow(),
+            decisions_made=["dec_123"],
+        )
+        assert should_create_episode(session) is True
+
+        # Session with resolved issue
+        session2 = Session(
+            id="sess_test2",
+            project_id="proj_test",
+            user_id="user_test",
+            started_at=datetime.utcnow() - timedelta(minutes=10),
+            ended_at=datetime.utcnow(),
+            issues_resolved=["issue_123"],
+        )
+        assert should_create_episode(session2) is True
+
+        # Session with discovered edge
+        session3 = Session(
+            id="sess_test3",
+            project_id="proj_test",
+            user_id="user_test",
+            started_at=datetime.utcnow() - timedelta(minutes=10),
+            ended_at=datetime.utcnow(),
+            edges_discovered=["edge_123"],
+        )
+        assert should_create_episode(session3) is True
+
+    @pytest.mark.asyncio
+    async def test_should_create_episode_with_substance(self, storage: SQLiteStorage):
+        """Test that sessions with substance (duration + activity) become episodes."""
+        from mind.engine.session import should_create_episode
+        from mind.models import Session
+        from datetime import datetime, timedelta
+
+        # 20-minute session with issue opened
+        session = Session(
+            id="sess_test4",
+            project_id="proj_test",
+            user_id="user_test",
+            started_at=datetime.utcnow() - timedelta(minutes=20),
+            ended_at=datetime.utcnow(),
+            issues_opened=["issue_456"],
+        )
+        assert should_create_episode(session) is True
+
+        # Short session with issue - no episode
+        short_session = Session(
+            id="sess_test5",
+            project_id="proj_test",
+            user_id="user_test",
+            started_at=datetime.utcnow() - timedelta(minutes=5),
+            ended_at=datetime.utcnow(),
+            issues_opened=["issue_789"],
+        )
+        assert should_create_episode(short_session) is False
+
+    @pytest.mark.asyncio
+    async def test_should_create_episode_with_struggle(self, storage: SQLiteStorage):
+        """Test that sessions with struggle signals become episodes."""
+        from mind.engine.session import should_create_episode
+        from mind.models import Session
+        from datetime import datetime, timedelta
+
+        # Long session (45+ min) regardless of artifacts
+        long_session = Session(
+            id="sess_test6",
+            project_id="proj_test",
+            user_id="user_test",
+            started_at=datetime.utcnow() - timedelta(minutes=50),
+            ended_at=datetime.utcnow(),
+        )
+        assert should_create_episode(long_session) is True
+
+        # Session with multiple update attempts
+        multi_attempt = Session(
+            id="sess_test7",
+            project_id="proj_test",
+            user_id="user_test",
+            started_at=datetime.utcnow() - timedelta(minutes=20),
+            ended_at=datetime.utcnow(),
+            issues_updated=["issue_1", "issue_2", "issue_3"],  # 3+ attempts
+        )
+        assert should_create_episode(multi_attempt) is True
+
+        # Session with breakthrough mood
+        breakthrough = Session(
+            id="sess_test8",
+            project_id="proj_test",
+            user_id="user_test",
+            started_at=datetime.utcnow() - timedelta(minutes=10),
+            ended_at=datetime.utcnow(),
+            mood="breakthrough",
+        )
+        assert should_create_episode(breakthrough) is True
+
+        # Session with frustrated mood
+        frustrated = Session(
+            id="sess_test9",
+            project_id="proj_test",
+            user_id="user_test",
+            started_at=datetime.utcnow() - timedelta(minutes=10),
+            ended_at=datetime.utcnow(),
+            mood="frustrated",
+        )
+        assert should_create_episode(frustrated) is True
+
+    @pytest.mark.asyncio
+    async def test_should_create_episode_user_declared(self, storage: SQLiteStorage):
+        """Test that user-declared significant sessions become episodes."""
+        from mind.engine.session import should_create_episode
+        from mind.models import Session
+        from datetime import datetime, timedelta
+
+        # Short session with "significant" in summary
+        session = Session(
+            id="sess_test10",
+            project_id="proj_test",
+            user_id="user_test",
+            started_at=datetime.utcnow() - timedelta(minutes=5),
+            ended_at=datetime.utcnow(),
+            summary="This was a significant breakthrough in understanding the architecture",
+        )
+        assert should_create_episode(session) is True
+
+    @pytest.mark.asyncio
+    async def test_no_episode_for_quick_qa(self, storage: SQLiteStorage):
+        """Test that quick Q&A sessions don't become episodes."""
+        from mind.engine.session import should_create_episode
+        from mind.models import Session
+        from datetime import datetime, timedelta
+
+        # Quick session with nothing significant
+        session = Session(
+            id="sess_test11",
+            project_id="proj_test",
+            user_id="user_test",
+            started_at=datetime.utcnow() - timedelta(minutes=5),
+            ended_at=datetime.utcnow(),
+            summary="Just a quick question about syntax",
+        )
+        assert should_create_episode(session) is False
+
+    @pytest.mark.asyncio
+    async def test_generate_episode_title(self, storage: SQLiteStorage):
+        """Test episode title generation."""
+        from mind.engine.session import generate_episode_title
+        from mind.models import Session, Issue, Decision
+        from datetime import datetime, timedelta
+
+        # Create mock issues and decisions
+        issues = {
+            "issue_1": Issue(
+                id="issue_1",
+                project_id="proj_test",
+                title="Safari auth broken",
+                description="Auth not working in Safari",
+            ),
+        }
+        decisions = {
+            "dec_1": Decision(
+                id="dec_1",
+                project_id="proj_test",
+                title="Move to same-domain auth",
+                description="Change auth to same domain",
+                context="Safari issues",
+                reasoning="ITP blocking cross-domain",
+            ),
+        }
+
+        # Session with resolved issue
+        session = Session(
+            id="sess_test12",
+            project_id="proj_test",
+            user_id="user_test",
+            started_at=datetime.utcnow() - timedelta(minutes=30),
+            ended_at=datetime.utcnow(),
+            issues_resolved=["issue_1"],
+        )
+        title = generate_episode_title(session, issues, decisions)
+        assert title == "Resolved Safari auth broken"
+
+        # Session with decision made
+        session2 = Session(
+            id="sess_test13",
+            project_id="proj_test",
+            user_id="user_test",
+            started_at=datetime.utcnow() - timedelta(minutes=30),
+            ended_at=datetime.utcnow(),
+            decisions_made=["dec_1"],
+        )
+        title2 = generate_episode_title(session2, issues, decisions)
+        assert title2 == "Move to same-domain auth"
+
+        # Session with updated issue and mood
+        session3 = Session(
+            id="sess_test14",
+            project_id="proj_test",
+            user_id="user_test",
+            started_at=datetime.utcnow() - timedelta(minutes=30),
+            ended_at=datetime.utcnow(),
+            issues_updated=["issue_1"],
+            mood="stuck",
+        )
+        title3 = generate_episode_title(session3, issues, decisions)
+        assert title3 == "Stuck on Safari auth broken"
+
+    @pytest.mark.asyncio
+    async def test_generate_episode_summary(self, storage: SQLiteStorage):
+        """Test episode summary generation."""
+        from mind.engine.session import generate_episode_summary
+        from mind.models import Session, Issue, Decision
+        from datetime import datetime, timedelta
+
+        issues = {
+            "issue_1": Issue(
+                id="issue_1",
+                project_id="proj_test",
+                title="Safari auth broken",
+                description="Auth not working in Safari",
+            ),
+        }
+        decisions = {
+            "dec_1": Decision(
+                id="dec_1",
+                project_id="proj_test",
+                title="Move to same-domain auth",
+                description="Change auth to same domain",
+                context="Safari issues",
+                reasoning="ITP blocking cross-domain",
+            ),
+        }
+
+        # Long session with resolution
+        session = Session(
+            id="sess_test15",
+            project_id="proj_test",
+            user_id="user_test",
+            started_at=datetime.utcnow() - timedelta(hours=2),
+            ended_at=datetime.utcnow(),
+            issues_updated=["issue_1"],
+            issues_resolved=["issue_1"],
+            decisions_made=["dec_1"],
+            summary="Finally figured out ITP was blocking cross-domain cookies.",
+            mood="breakthrough",
+        )
+        summary = generate_episode_summary(session, issues, decisions)
+
+        assert "Long session (2+ hour" in summary
+        assert "Focused on Safari auth broken" in summary
+        assert "resolved Safari auth broken" in summary
+        assert "decided to move to same-domain auth" in summary
+        assert "Finally figured out ITP" in summary
+        assert "Breakthrough moment" in summary
+
+    @pytest.mark.asyncio
+    async def test_link_session_episode(self, storage: SQLiteStorage):
+        """Test linking an episode to a session."""
+        project = await storage.create_project(ProjectCreate(name="link-test"))
+        user = await storage.get_or_create_user()
+        session = await storage.create_session(project.id, user.id)
+
+        # Create an episode
+        from mind.models import EpisodeCreate
+        from datetime import datetime
+
+        episode = await storage.create_episode(
+            EpisodeCreate(
+                project_id=project.id,
+                session_id=session.id,
+                title="Test Episode",
+                narrative="",
+                summary="A test episode",
+                started_at=datetime.utcnow(),
+                ended_at=datetime.utcnow(),
+            )
+        )
+
+        # Link episode to session
+        await storage.link_session_episode(session.id, episode.id)
+
+        # Verify link
+        updated_session = await storage.get_session(session.id)
+        assert updated_session is not None
+        assert updated_session.episode_id == episode.id
+
+    @pytest.mark.asyncio
+    async def test_track_resolved_issue(self, storage: SQLiteStorage):
+        """Test that resolved issues are tracked in session."""
+        project = await storage.create_project(ProjectCreate(name="resolve-test"))
+        user = await storage.get_or_create_user()
+        session = await storage.create_session(project.id, user.id)
+
+        # Create and resolve an issue
+        issue = await storage.create_issue(
+            IssueCreate(
+                project_id=project.id,
+                title="Bug to fix",
+                description="A bug that needs fixing",
+            )
+        )
+
+        # Track the resolve
+        await storage.add_session_artifact(session.id, "issue_resolved", issue.id)
+
+        # Verify tracking
+        updated_session = await storage.get_session(session.id)
+        assert updated_session is not None
+        assert issue.id in updated_session.issues_resolved

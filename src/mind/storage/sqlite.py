@@ -173,6 +173,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     decisions_made TEXT,
     issues_opened TEXT,
     issues_updated TEXT,
+    issues_resolved TEXT,
     edges_discovered TEXT,
     episode_id TEXT,
     FOREIGN KEY (project_id) REFERENCES projects(id)
@@ -934,14 +935,14 @@ class SQLiteStorage:
             """INSERT INTO sessions
                (id, project_id, user_id, started_at, status, memories_surfaced,
                 progress, still_open, next_steps, decisions_made, issues_opened,
-                issues_updated, edges_discovered)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                issues_updated, issues_resolved, edges_discovered)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 session.id, project_id, user_id,
                 _datetime_str(session.started_at), session.status,
                 _json_dumps([]), _json_dumps([]), _json_dumps([]),
                 _json_dumps([]), _json_dumps([]), _json_dumps([]),
-                _json_dumps([]), _json_dumps([]),
+                _json_dumps([]), _json_dumps([]), _json_dumps([]),
             ),
         )
         await self.db.commit()
@@ -1004,6 +1005,7 @@ class SQLiteStorage:
             "decision": "decisions_made",
             "issue_opened": "issues_opened",
             "issue_updated": "issues_updated",
+            "issue_resolved": "issues_resolved",
             "edge": "edges_discovered",
         }
 
@@ -1019,6 +1021,14 @@ class SQLiteStorage:
                 (_json_dumps(updated), session_id),
             )
             await self.db.commit()
+
+    async def link_session_episode(self, session_id: str, episode_id: str) -> None:
+        """Link an episode to a session."""
+        await self.db.execute(
+            "UPDATE sessions SET episode_id = ? WHERE id = ?",
+            (episode_id, session_id),
+        )
+        await self.db.commit()
 
     def _row_to_session(self, row: aiosqlite.Row) -> Session:
         """Convert database row to Session."""
@@ -1043,6 +1053,7 @@ class SQLiteStorage:
             decisions_made=_json_loads(row["decisions_made"], []),
             issues_opened=_json_loads(row["issues_opened"], []),
             issues_updated=_json_loads(row["issues_updated"], []),
+            issues_resolved=_json_loads(row["issues_resolved"], []) if "issues_resolved" in row.keys() else [],
             edges_discovered=_json_loads(row["edges_discovered"], []),
             episode_id=row["episode_id"],
         )

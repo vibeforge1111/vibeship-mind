@@ -12,7 +12,7 @@
 - [x] GitHub repo: https://github.com/vibeforge1111/vibeship-mind
 - [x] Added Mind to Claude Code MCP config
 
-## Completed - Phase 2: Intelligence (In Progress)
+## Completed - Phase 2: Intelligence
 
 - [x] Proactive edge detection during coding
   - Detection at decision points (context queries, decisions, issues)
@@ -26,10 +26,17 @@
   - Frequency boost from access tracking (logarithmic scaling)
   - Trigger phrase matching boost
   - Access recording on context retrieval
+- [x] Session narrative capture (auto Episode creation)
+  - Hybrid significance detection (artifacts, substance, struggle, user-declared)
+  - Auto-generated titles from primary artifacts + mood
+  - Human-readable summaries (not log entries)
+  - User's words preserved as the "soul" of the episode
+  - Optional custom episode title override
+  - Resolved issues tracking in sessions
 
 ## Current Status
 
-**Mind is connected to Claude Code.** 53 tests passing. Restart Claude Code to activate.
+**Mind is connected to Claude Code.** 62 tests passing. Restart Claude Code to activate.
 
 After restart, Mind tools will be available:
 - `mind_start_session` - Begin session, get context primer + edge warnings
@@ -46,7 +53,6 @@ After restart, Mind tools will be available:
 ## Next Up - Phase 2: Intelligence (Remaining)
 
 - [ ] Primer generation with smart truncation
-- [ ] Session narrative capture
 - [ ] Memory decay for stale entries
 
 ## Future Phases

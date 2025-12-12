@@ -117,6 +117,7 @@ class MindServer:
         still_open: list[str],
         next_steps: list[str],
         mood: Optional[str] = None,
+        episode_title: Optional[str] = None,
     ) -> dict[str, Any]:
         """End the current session."""
         if not self.session_manager:
@@ -128,6 +129,7 @@ class MindServer:
             still_open=still_open,
             next_steps=next_steps,
             mood=mood,
+            episode_title=episode_title,
         )
 
     async def mind_get_context(
@@ -392,6 +394,13 @@ class MindServer:
                 "issue_updated",
                 issue.id,
             )
+            # Also track if issue was resolved
+            if status == "resolved":
+                await self.storage.add_session_artifact(
+                    self.session_manager.current_session.id,
+                    "issue_resolved",
+                    issue.id,
+                )
 
         return {"issue": issue.model_dump()}
 
@@ -568,7 +577,7 @@ def create_server(data_dir: Optional[Path] = None) -> Server:
             ),
             Tool(
                 name="mind_end_session",
-                description="End the current session, capture summary and state.",
+                description="End the current session, capture summary and state. Creates an Episode if session is significant.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -576,7 +585,8 @@ def create_server(data_dir: Optional[Path] = None) -> Server:
                         "progress": {"type": "array", "items": {"type": "string"}, "description": "What was accomplished"},
                         "still_open": {"type": "array", "items": {"type": "string"}, "description": "Unresolved threads"},
                         "next_steps": {"type": "array", "items": {"type": "string"}, "description": "For next session"},
-                        "mood": {"type": "string", "description": "Optional mood observation"},
+                        "mood": {"type": "string", "description": "Optional mood observation (frustrated, stuck, breakthrough, accomplished, exploratory, tired)"},
+                        "episode_title": {"type": "string", "description": "Optional custom title for the episode (overrides auto-generated)"},
                     },
                     "required": ["summary"],
                 },

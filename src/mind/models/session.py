@@ -49,6 +49,7 @@ class Session(MindBaseModel):
     decisions_made: list[str] = Field(default_factory=list)
     issues_opened: list[str] = Field(default_factory=list)
     issues_updated: list[str] = Field(default_factory=list)
+    issues_resolved: list[str] = Field(default_factory=list)
     edges_discovered: list[str] = Field(default_factory=list)
 
     # If significant enough to become episode
@@ -72,3 +73,4 @@ class SessionEnd(MindBaseModel):
     still_open: list[str] = Field(default_factory=list)
     next_steps: list[str] = Field(default_factory=list)
     mood: Optional[str] = None
+    episode_title: Optional[str] = None  # Override auto-generated episode title

@@ -46,13 +46,21 @@ mind init
 
 ## Connect to Claude Code (Optional)
 
-This lets Claude search your memories and check for gotchas using MCP tools.
+Mind works without this, but connecting via MCP gives Claude extra powers:
 
-**Config file location:**
-- Mac/Linux: `~/.config/claude/mcp.json`
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+| Tool | What it does |
+|------|--------------|
+| `mind_search` | Search past memories ("what did we decide about auth?") |
+| `mind_edges` | Check for gotchas before writing risky code |
+| `mind_status` | See what's being tracked |
 
-**Add this** (replace the path with where you cloned vibeship-mind):
+**To enable:**
+
+1. Open your MCP config file:
+   - Mac/Linux: `~/.config/claude/mcp.json`
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+2. Add this (replace path with where you cloned vibeship-mind):
 
 ```json
 {
@@ -65,7 +73,7 @@ This lets Claude search your memories and check for gotchas using MCP tools.
 }
 ```
 
-Restart Claude Code after saving.
+3. Restart Claude Code
 
 ---
 

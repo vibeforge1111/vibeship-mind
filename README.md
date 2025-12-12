@@ -54,9 +54,9 @@ Mind works without this, but connecting via MCP gives Claude extra powers:
 | `mind_edges` | Check for gotchas before writing risky code |
 | `mind_status` | See what's being tracked |
 
-**Easy way:** Just tell Claude:
+**Easy way:** Just paste this to Claude:
 
-> "Add the Mind MCP server to my config. The path is [wherever you cloned vibeship-mind]"
+> Add Mind MCP server from github.com/vibeforge1111/vibeship-mind to my config
 
 **Manual way:**
 

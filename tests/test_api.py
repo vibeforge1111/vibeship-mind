@@ -282,3 +282,385 @@ class TestEndToEndFlow:
         # 7. List should be empty
         final_list_resp = await client.get("/projects")
         assert final_list_resp.json()["count"] == 0
+
+
+class TestDecisionRoutes:
+    """Test decision routes."""
+
+    @pytest.mark.asyncio
+    async def test_create_decision(self, client, storage):
+        """POST /decisions creates a new decision."""
+        from mind.models import ProjectCreate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+
+        response = await client.post(
+            "/decisions",
+            json={
+                "project_id": project.id,
+                "title": "Use FastAPI",
+                "description": "We chose FastAPI for the HTTP API",
+                "context": "Need an HTTP API",
+                "reasoning": "FastAPI is fast and has good docs",
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["title"] == "Use FastAPI"
+        assert data["project_id"] == project.id
+
+    @pytest.mark.asyncio
+    async def test_create_decision_project_not_found(self, client):
+        """POST /decisions returns 404 for unknown project."""
+        response = await client.post(
+            "/decisions",
+            json={
+                "project_id": "unknown",
+                "title": "Test",
+                "description": "Test",
+                "context": "Test",
+                "reasoning": "Test",
+            },
+        )
+
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_list_decisions(self, client, storage):
+        """GET /decisions/project/{id} lists decisions."""
+        from mind.models import ProjectCreate, DecisionCreate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+        await storage.create_decision(DecisionCreate(
+            project_id=project.id,
+            title="Decision 1",
+            description="First",
+            context="Context",
+            reasoning="Why",
+        ))
+        await storage.create_decision(DecisionCreate(
+            project_id=project.id,
+            title="Decision 2",
+            description="Second",
+            context="Context",
+            reasoning="Why",
+        ))
+
+        response = await client.get(f"/decisions/project/{project.id}")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] == 2
+
+    @pytest.mark.asyncio
+    async def test_get_decision(self, client, storage):
+        """GET /decisions/{id} returns the decision."""
+        from mind.models import ProjectCreate, DecisionCreate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+        decision = await storage.create_decision(DecisionCreate(
+            project_id=project.id,
+            title="My Decision",
+            description="Details",
+            context="Context",
+            reasoning="Why",
+        ))
+
+        response = await client.get(f"/decisions/{decision.id}")
+
+        assert response.status_code == 200
+        assert response.json()["title"] == "My Decision"
+
+
+class TestIssueRoutes:
+    """Test issue routes."""
+
+    @pytest.mark.asyncio
+    async def test_create_issue(self, client, storage):
+        """POST /issues creates a new issue."""
+        from mind.models import ProjectCreate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+
+        response = await client.post(
+            "/issues",
+            json={
+                "project_id": project.id,
+                "title": "Bug in login",
+                "description": "Users can't log in",
+                "severity": "blocking",
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["title"] == "Bug in login"
+        assert data["severity"] == "blocking"
+        assert data["status"] == "open"
+
+    @pytest.mark.asyncio
+    async def test_list_issues(self, client, storage):
+        """GET /issues/project/{id} lists issues."""
+        from mind.models import ProjectCreate, IssueCreate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+        await storage.create_issue(IssueCreate(
+            project_id=project.id,
+            title="Issue 1",
+            description="First",
+        ))
+        await storage.create_issue(IssueCreate(
+            project_id=project.id,
+            title="Issue 2",
+            description="Second",
+        ))
+
+        response = await client.get(f"/issues/project/{project.id}")
+
+        assert response.status_code == 200
+        assert response.json()["count"] == 2
+
+    @pytest.mark.asyncio
+    async def test_list_open_issues(self, client, storage):
+        """GET /issues/project/{id}/open lists open issues by severity."""
+        from mind.models import ProjectCreate, IssueCreate, IssueUpdate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+        issue1 = await storage.create_issue(IssueCreate(
+            project_id=project.id,
+            title="Minor bug",
+            description="Small issue",
+            severity="minor",
+        ))
+        await storage.create_issue(IssueCreate(
+            project_id=project.id,
+            title="Blocking bug",
+            description="Can't work",
+            severity="blocking",
+        ))
+        # Resolve issue1
+        await storage.update_issue(issue1.id, IssueUpdate(status="resolved"))
+
+        response = await client.get(f"/issues/project/{project.id}/open")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] == 1
+        assert data["items"][0]["title"] == "Blocking bug"
+
+    @pytest.mark.asyncio
+    async def test_update_issue(self, client, storage):
+        """PATCH /issues/{id} updates the issue."""
+        from mind.models import ProjectCreate, IssueCreate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+        issue = await storage.create_issue(IssueCreate(
+            project_id=project.id,
+            title="Bug",
+            description="A bug",
+        ))
+
+        response = await client.patch(
+            f"/issues/{issue.id}",
+            json={
+                "status": "investigating",
+                "current_theory": "Might be a race condition",
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "investigating"
+        assert data["current_theory"] == "Might be a race condition"
+
+
+class TestEdgeRoutes:
+    """Test sharp edge routes."""
+
+    @pytest.mark.asyncio
+    async def test_create_global_edge(self, client):
+        """POST /edges creates a global edge when project_id is None."""
+        response = await client.post(
+            "/edges",
+            json={
+                "title": "SQLite WAL mode gotcha",
+                "description": "WAL mode requires specific settings",
+                "workaround": "Set journal_mode=WAL explicitly",
+            },
+        )
+
+        assert response.status_code == 201
+        data = response.json()
+        assert data["title"] == "SQLite WAL mode gotcha"
+        assert data["project_id"] is None
+
+    @pytest.mark.asyncio
+    async def test_create_project_edge(self, client, storage):
+        """POST /edges creates a project-specific edge."""
+        from mind.models import ProjectCreate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+
+        response = await client.post(
+            "/edges",
+            json={
+                "project_id": project.id,
+                "title": "Project-specific gotcha",
+                "description": "Only applies to this project",
+                "workaround": "Do this instead",
+            },
+        )
+
+        assert response.status_code == 201
+        assert response.json()["project_id"] == project.id
+
+    @pytest.mark.asyncio
+    async def test_list_edges_all(self, client, storage):
+        """GET /edges lists all edges."""
+        from mind.models import SharpEdgeCreate
+
+        await storage.create_sharp_edge(SharpEdgeCreate(
+            title="Global edge",
+            description="Applies everywhere",
+            workaround="Fix it",
+        ))
+
+        response = await client.get("/edges")
+
+        assert response.status_code == 200
+        assert response.json()["count"] == 1
+
+    @pytest.mark.asyncio
+    async def test_list_edges_global_only(self, client, storage):
+        """GET /edges?global_only=true lists only global edges."""
+        from mind.models import ProjectCreate, SharpEdgeCreate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+        await storage.create_sharp_edge(SharpEdgeCreate(
+            title="Global edge",
+            description="Applies everywhere",
+            workaround="Fix it",
+        ))
+        await storage.create_sharp_edge(SharpEdgeCreate(
+            project_id=project.id,
+            title="Project edge",
+            description="Only this project",
+            workaround="Fix it",
+        ))
+
+        response = await client.get("/edges?global_only=true")
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["count"] == 1
+        assert data["items"][0]["title"] == "Global edge"
+
+
+class TestEpisodeRoutes:
+    """Test episode routes (read-only)."""
+
+    @pytest.mark.asyncio
+    async def test_list_episodes(self, client, storage):
+        """GET /episodes/project/{id} lists episodes."""
+        from mind.models import ProjectCreate, EpisodeCreate
+        from datetime import datetime, timedelta
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+        now = datetime.utcnow()
+        await storage.create_episode(EpisodeCreate(
+            project_id=project.id,
+            session_id="sess-1",
+            title="First session",
+            narrative="Did some work",
+            started_at=now - timedelta(hours=2),
+            ended_at=now - timedelta(hours=1),
+            summary="Worked on features",
+        ))
+
+        response = await client.get(f"/episodes/project/{project.id}")
+
+        assert response.status_code == 200
+        assert response.json()["count"] == 1
+
+    @pytest.mark.asyncio
+    async def test_get_episode(self, client, storage):
+        """GET /episodes/{id} returns the episode."""
+        from mind.models import ProjectCreate, EpisodeCreate
+        from datetime import datetime, timedelta
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+        now = datetime.utcnow()
+        episode = await storage.create_episode(EpisodeCreate(
+            project_id=project.id,
+            session_id="sess-1",
+            title="My Session",
+            narrative="Did things",
+            started_at=now - timedelta(hours=2),
+            ended_at=now - timedelta(hours=1),
+            summary="Summary",
+        ))
+
+        response = await client.get(f"/episodes/{episode.id}")
+
+        assert response.status_code == 200
+        assert response.json()["title"] == "My Session"
+
+
+class TestSessionRoutes:
+    """Test session routes."""
+
+    @pytest.mark.asyncio
+    async def test_list_sessions(self, client, storage):
+        """GET /sessions/project/{id} lists sessions."""
+        from mind.models import ProjectCreate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+        user = await storage.get_or_create_user()
+        await storage.create_session(project.id, user.id)
+        await storage.create_session(project.id, user.id)
+
+        response = await client.get(f"/sessions/project/{project.id}")
+
+        assert response.status_code == 200
+        assert response.json()["count"] == 2
+
+    @pytest.mark.asyncio
+    async def test_get_active_session(self, client, storage):
+        """GET /sessions/project/{id}/active returns the active session."""
+        from mind.models import ProjectCreate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+        user = await storage.get_or_create_user()
+        session = await storage.create_session(project.id, user.id)
+
+        response = await client.get(f"/sessions/project/{project.id}/active")
+
+        assert response.status_code == 200
+        assert response.json()["id"] == session.id
+        assert response.json()["status"] == "active"
+
+    @pytest.mark.asyncio
+    async def test_get_active_session_not_found(self, client, storage):
+        """GET /sessions/project/{id}/active returns 404 when no active session."""
+        from mind.models import ProjectCreate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+
+        response = await client.get(f"/sessions/project/{project.id}/active")
+
+        assert response.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_get_session(self, client, storage):
+        """GET /sessions/{id} returns the session."""
+        from mind.models import ProjectCreate
+
+        project = await storage.create_project(ProjectCreate(name="Test"))
+        user = await storage.get_or_create_user()
+        session = await storage.create_session(project.id, user.id)
+
+        response = await client.get(f"/sessions/{session.id}")
+
+        assert response.status_code == 200
+        assert response.json()["project_id"] == project.id

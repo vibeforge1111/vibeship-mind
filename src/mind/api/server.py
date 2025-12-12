@@ -39,9 +39,22 @@ def create_app() -> FastAPI:
     app.add_exception_handler(MindAPIError, mind_exception_handler)
 
     # Mount routers
-    from mind.api.routes import projects, system
+    from mind.api.routes import (
+        projects,
+        system,
+        decisions,
+        issues,
+        edges,
+        episodes,
+        sessions,
+    )
     app.include_router(projects.router)
     app.include_router(system.router)
+    app.include_router(decisions.router)
+    app.include_router(issues.router)
+    app.include_router(edges.router)
+    app.include_router(episodes.router)
+    app.include_router(sessions.router)
 
     return app
 

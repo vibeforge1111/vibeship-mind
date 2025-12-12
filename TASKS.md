@@ -56,9 +56,14 @@ After restart, Mind tools will be available:
 - `mind_update_project` - Update project state
 - `mind_export` - Export all data
 
-## Next Up - Phase 2: Intelligence (Remaining)
+## Completed - Phase 2: Intelligence (Remaining)
 
-- [ ] Primer generation with smart truncation
+- [x] Primer generation with smart prioritization
+  - Entity-specific scoring (severity for issues, revisit_if for decisions, stack match for edges)
+  - Continuity boost for items mentioned in last session's next_steps
+  - Goal alignment boost for items related to current_goal
+  - Access frequency boost from entity_access table
+  - Subtle hints for non-obvious prioritization ("from last session", "goal-related")
 
 ## Future Phases
 
@@ -76,7 +81,7 @@ After restart, Mind tools will be available:
 
 ## Known Issues
 
-None currently. All 86 tests passing.
+None currently. All 106 tests passing.
 
 ## Tech Stack
 

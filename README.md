@@ -22,6 +22,16 @@ That's it. Mind is now running.
 
 ---
 
+## Initialize Mind in Any Project
+
+After installing once, run this in any project folder:
+
+```bash
+mind init
+```
+
+---
+
 ## Connect to Claude Code (Optional)
 
 Add to MCP config (`~/.config/claude/mcp.json` or `%APPDATA%\Claude\claude_desktop_config.json`):

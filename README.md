@@ -34,18 +34,26 @@ mind init
 
 ## Connect to Claude Code (Optional)
 
-Add to MCP config (`~/.config/claude/mcp.json` or `%APPDATA%\Claude\claude_desktop_config.json`):
+This lets Claude search your memories and check for gotchas using MCP tools.
+
+**Config file location:**
+- Mac/Linux: `~/.config/claude/mcp.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+**Add this** (replace the path with where you cloned vibeship-mind):
 
 ```json
 {
   "mcpServers": {
     "mind": {
       "command": "uv",
-      "args": ["--directory", "/full/path/to/vibeship-mind", "run", "mind", "mcp"]
+      "args": ["--directory", "/Users/you/vibeship-mind", "run", "mind", "mcp"]
     }
   }
 }
 ```
+
+Restart Claude Code after saving.
 
 ---
 

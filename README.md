@@ -1,8 +1,10 @@
 # Mind
 
-> Memory that accumulates automatically.
+> Memory for vibe coding.
 
-Mind gives AI coding assistants persistent memory across sessions. Your AI remembers what you decided, what broke, and where you left off.
+When you're vibe coding with Claude, it forgets everything between sessions. What you decided, what broke, what worked - gone. You end up re-explaining the same things over and over.
+
+Mind fixes this. It gives Claude persistent memory so your next session picks up where you left off.
 
 ---
 
@@ -59,21 +61,15 @@ Restart Claude Code after saving.
 
 ## How It Works
 
-**The problem:** Claude forgets everything when you start a new conversation.
+As you vibe code, Claude writes memories to `.mind/MEMORY.md` - decisions, problems, learnings, fixes.
 
-**The fix:** Mind saves memories to `.mind/MEMORY.md` as you work. Next session, Claude reads it and remembers.
-
-### What gets remembered:
-- Decisions you made and why
-- Problems you hit
-- Things you learned
+Next session, Claude reads the file and knows:
+- What you decided and why
+- What problems came up
+- What you learned
 - Where you left off
 
-### How memories are captured:
-
-Claude writes to `.mind/MEMORY.md` during your conversation using keywords like `decided`, `problem`, `learned`, `fixed`. Mind watches the file and keeps everything organized.
-
-You don't have to do anything. Just work normally.
+Just keep vibe coding. Mind handles the rest.
 
 ---
 

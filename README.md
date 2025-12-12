@@ -95,16 +95,17 @@ When a new session starts (30 min gap), important learnings get promoted from SE
 
 ## Initialize Mind in Any Project
 
+From your project folder, run:
+
 ```bash
-cd your-project
-uv --directory /path/to/vibeship-mind run mind init
+uv --directory ~/vibeship-mind run mind init
 ```
 
-Replace `your-project` with your actual project folder and `/path/to/vibeship-mind` with where you cloned Mind.
+(Adjust `~/vibeship-mind` if you cloned it somewhere else)
 
-**In Claude Code?** Just tell Claude:
+**Using Claude Code?** Just paste this:
 
-> Initialize Mind in this project
+> Run `uv --directory ~/vibeship-mind run mind init` to set up Mind in this project
 
 This creates `.mind/MEMORY.md` and `.mind/SESSION.md`.
 

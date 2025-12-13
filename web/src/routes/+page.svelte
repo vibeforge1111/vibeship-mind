@@ -272,7 +272,7 @@ Done.`,
 </script>
 
 <div class="hero">
-	<h1>Give Claude a <span class="highlight">Mind</span></h1>
+	<h1>Give Claude a <span class="highlight">Mind<span class="claude-underline"></span></span></h1>
 	<p class="subtitle">
 		Memory for Claude Code that persists across sessions.
 		Decisions, learnings, and reminders.
@@ -607,6 +607,18 @@ Done.`,
 
 	.highlight {
 		color: var(--green-dim);
+		position: relative;
+		display: inline-block;
+	}
+
+	.claude-underline {
+		position: absolute;
+		bottom: calc(0.15em + 2px);
+		left: -3%;
+		width: 115%;
+		height: 3px;
+		background: linear-gradient(90deg, transparent 0%, #D97757 8%, #D97757 60%, transparent 100%);
+		transform: rotate(-3deg) skewX(-15deg);
 	}
 
 	.subtitle {

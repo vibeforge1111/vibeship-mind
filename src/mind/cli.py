@@ -9,10 +9,20 @@ import click
 from . import __version__
 from .context import update_claude_md
 from .detection import detect_stack
+from .mascot import get_mindful, can_use_unicode
 from .parser import InlineScanner, Parser
 from .storage import ProjectsRegistry
 from .config import create_default_config
 from .templates import GITIGNORE_CONTENT, MEMORY_TEMPLATE, SESSION_TEMPLATE
+
+
+def echo_with_mindful(message: str, emotion: str = "idle"):
+    """Print message with Mindful mascot."""
+    fancy = can_use_unicode()
+    art = get_mindful(emotion, fancy=fancy)
+    click.echo(art)
+    click.echo()
+    click.echo(message)
 
 
 @click.group()
@@ -86,7 +96,7 @@ def init(path: str):
     click.echo("[+] Registered project with Mind")
 
     click.echo()
-    click.echo("Mind initialized! Start working - append notes to .mind/MEMORY.md")
+    echo_with_mindful("Mind initialized! Ready to remember.", "happy")
     click.echo()
     click.echo("MCP tools available:")
     click.echo("  - mind_recall() : Load session context (call first!)")
@@ -176,7 +186,7 @@ def parse(path: str, as_json: bool, inline: bool):
 
         click.echo()
         total = len(result.entities) + len(inline_entities)
-        click.echo(f"Total: {total} entities, {len(result.project_edges)} gotchas")
+        echo_with_mindful(f"Total: {total} entities, {len(result.project_edges)} gotchas", "thinking")
 
 
 # Project management commands
@@ -187,11 +197,14 @@ def list_projects():
     projects = registry.list_all()
 
     if not projects:
-        click.echo("No projects registered.")
+        echo_with_mindful("No projects registered.", "sleepy")
         click.echo("Run 'mind init' in a project directory to register it.")
         return
 
-    click.echo("Registered Projects")
+    fancy = can_use_unicode()
+    click.echo(get_mindful("idle", fancy=fancy))
+    click.echo()
+    click.echo(f"Registered Projects ({len(projects)})")
     click.echo("-" * 40)
 
     for i, project in enumerate(projects, 1):
@@ -221,7 +234,7 @@ def add_project(path: str):
     registry = ProjectsRegistry.load()
     registry.register(project_path, stack)
 
-    click.echo(f"[+] Registered: {project_path}")
+    echo_with_mindful(f"Registered: {project_path.name}", "happy")
 
 
 @cli.command("remove")
@@ -232,10 +245,10 @@ def remove_project(path: str):
 
     registry = ProjectsRegistry.load()
     if registry.unregister(project_path):
-        click.echo(f"[+] Unregistered: {project_path}")
-        click.echo("    (Files in .mind/ preserved)")
+        echo_with_mindful(f"Unregistered: {project_path.name}", "sad")
+        click.echo("(Files in .mind/ preserved)")
     else:
-        click.echo(f"Project not registered: {project_path}")
+        echo_with_mindful(f"Project not registered: {project_path.name}", "confused")
 
 
 @cli.command("mcp")
@@ -360,12 +373,12 @@ def doctor():
         click.echo()
 
     if issues:
-        click.echo("Overall: UNHEALTHY")
+        echo_with_mindful("Overall: UNHEALTHY", "error")
         raise SystemExit(1)
     elif warnings:
-        click.echo(f"Overall: Healthy ({len(warnings)} warnings)")
+        echo_with_mindful(f"Overall: Healthy ({len(warnings)} warnings)", "warning")
     else:
-        click.echo("Overall: Healthy")
+        echo_with_mindful("Overall: Healthy", "happy")
 
 
 @cli.command("status")
@@ -383,6 +396,9 @@ def status(path: str):
     memory_file = mind_dir / "MEMORY.md"
     state_file = mind_dir / "state.json"
 
+    fancy = can_use_unicode()
+    click.echo(get_mindful("curious", fancy=fancy))
+    click.echo()
     click.echo(f"Project: {project_path.name}")
     click.echo("-" * 40)
 

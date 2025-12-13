@@ -1,10 +1,18 @@
 """Mindful - Mind's ASCII mascot with emotions."""
 
+import os
 import sys
 
 
 def can_use_unicode() -> bool:
-    """Check if terminal supports Unicode output."""
+    """Check if terminal supports Unicode output.
+
+    Force Unicode with MIND_UNICODE=1 environment variable.
+    """
+    # Allow forcing Unicode via env var
+    if os.environ.get("MIND_UNICODE", "").lower() in ("1", "true", "yes"):
+        return True
+
     try:
         encoding = sys.stdout.encoding or ""
         return encoding.lower() in ("utf-8", "utf8", "utf-16", "utf16")

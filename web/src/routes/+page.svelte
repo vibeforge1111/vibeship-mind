@@ -558,12 +558,31 @@ Done.`,
 
 <section class="get-started-cta">
 	<h2>Ready to Give Claude a Mind?</h2>
-	<p>3 commands. Zero friction.</p>
+	<p>3 commands + 2 prompts. Zero friction.</p>
 
-	<div class="install-preview">
-		<code>git clone https://github.com/vibeforge1111/vibeship-mind.git</code>
-		<code>cd vibeship-mind && uv sync</code>
-		<code>uv run mind init</code>
+	<div class="install-steps">
+		<div class="install-step">
+			<div class="step-label">1. Install</div>
+			<div class="install-preview">
+				<code>git clone https://github.com/vibeforge1111/vibeship-mind.git</code>
+				<code>cd vibeship-mind && uv sync</code>
+				<code>uv run mind init</code>
+			</div>
+		</div>
+
+		<div class="install-step">
+			<div class="step-label">2. Tell Claude Code to connect</div>
+			<div class="prompt-box">
+				<p>"Add Mind MCP server from C:/path/to/vibeship-mind"</p>
+			</div>
+		</div>
+
+		<div class="install-step">
+			<div class="step-label">3. Tell Claude to use it</div>
+			<div class="prompt-box">
+				<p>"Call mind_recall() at the start of every session"</p>
+			</div>
+		</div>
 	</div>
 
 	<div class="cta-buttons">
@@ -1007,27 +1026,59 @@ Done.`,
 		margin-bottom: var(--space-6);
 	}
 
+	.install-steps {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-6);
+		max-width: 550px;
+		margin: 0 auto var(--space-6);
+	}
+
+	.install-step {
+		text-align: left;
+	}
+
+	.step-label {
+		font-family: var(--font-mono);
+		font-size: var(--text-sm);
+		color: var(--green-dim);
+		margin-bottom: var(--space-2);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+	}
+
 	.install-preview {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-2);
-		max-width: 500px;
-		margin: 0 auto var(--space-6);
-		text-align: left;
 	}
 
 	.install-preview code {
 		display: block;
 		padding: var(--space-2) var(--space-3);
-		background: var(--bg-secondary);
-		border: 1px solid var(--border);
+		background: var(--terminal-bg);
+		border: 1px solid var(--terminal-border);
 		font-size: var(--text-sm);
-		color: var(--green-dim);
+		color: var(--terminal-command);
 	}
 
 	.install-preview code::before {
 		content: '$ ';
-		color: var(--text-tertiary);
+		color: var(--terminal-muted);
+	}
+
+	.prompt-box {
+		padding: var(--space-3) var(--space-4);
+		background: var(--bg-secondary);
+		border: 1px solid var(--border);
+		border-left: 3px solid var(--green-dim);
+	}
+
+	.prompt-box p {
+		margin: 0;
+		font-size: var(--text-base);
+		color: var(--text-secondary);
+		font-style: italic;
 	}
 
 	.cta-buttons {

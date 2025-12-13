@@ -573,7 +573,7 @@ Done.`,
 		<div class="install-step">
 			<div class="step-label">2. Tell Claude Code to connect</div>
 			<div class="prompt-box">
-				<p>"Add Mind MCP server from C:/path/to/vibeship-mind"</p>
+				<p>"Add Mind MCP server to my config"</p>
 			</div>
 		</div>
 	</div>

@@ -99,6 +99,17 @@
   /* Light mode orange - use Claude coral for readability */
   --orange: #D97757;
 
+  /* Terminal colors - light terminal for light mode */
+  --terminal-bg: #f5f5f0;
+  --terminal-header: #eaeae5;
+  --terminal-border: #d0d0c8;
+  --terminal-text: #3d3d3d;
+  --terminal-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  --terminal-command: #0d847a;
+  --terminal-heading: #1a1a1a;
+  --terminal-item: #4a4a4a;
+  --terminal-muted: #6a6a6a;
+
   --logo-invert: 0;
 }
 
@@ -133,6 +144,17 @@
 
   /* Claude coral for dark mode too - consistent */
   --orange: #D97757;
+
+  /* Terminal colors - slightly lighter than bg for contrast */
+  --terminal-bg: #0a0c12;
+  --terminal-header: #080a0f;
+  --terminal-border: #1a1f2e;
+  --terminal-text: #a8b5c9;
+  --terminal-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  --terminal-command: #a6e3a1;
+  --terminal-heading: #cdd6f4;
+  --terminal-item: #bac2de;
+  --terminal-muted: #9399b2;
 
   --logo-invert: 1;
 }

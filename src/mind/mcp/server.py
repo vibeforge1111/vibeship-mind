@@ -459,6 +459,11 @@ def update_session_section(project_path: Path, section_name: str, content: str, 
     if append:
         # Add as new item
         new_entry = f"- {content}\n"
+        # Check if we need a blank line before next section
+        rest = session_content[insert_pos:].lstrip("\n")
+        if rest.startswith("##"):
+            # Next section coming - need blank line separator
+            new_entry = f"- {content}\n\n"
         new_content = session_content[:insert_pos] + new_entry + session_content[insert_pos:]
     else:
         # Replace section content (find end of section)

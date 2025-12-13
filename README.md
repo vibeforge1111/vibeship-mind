@@ -21,7 +21,7 @@ Mind fixes both problems with two-layer memory:
 - Context auto-injected into CLAUDE.md
 - Reminders auto-surface when due or when keywords match
 
-Optional tools like `mind_blocker()` and `mind_remind()` are there when you want them, but the core memory flow runs hands-free.
+Optional tools are there when you want them, but the core memory flow runs hands-free.
 
 **Two-layer memory:**
 - Cross-session recall (MEMORY.md)

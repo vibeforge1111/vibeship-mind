@@ -564,7 +564,7 @@ Done.`,
 		<div class="install-step">
 			<div class="step-label">1. Install Mind</div>
 			<div class="install-preview">
-				<button class="copy-btn" onclick="navigator.clipboard.writeText('git clone https://github.com/vibeforge1111/vibeship-mind.git\ncd vibeship-mind\nuv sync\nuv run mind init'); this.textContent = 'Copied!'; setTimeout(() => this.textContent = 'Copy', 2000)">Copy</button>
+				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('git clone https://github.com/vibeforge1111/vibeship-mind.git\ncd vibeship-mind\nuv sync\nuv run mind init'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
 				<code>git clone https://github.com/vibeforge1111/vibeship-mind.git</code>
 				<code>cd vibeship-mind</code>
 				<code>uv sync</code>
@@ -575,10 +575,10 @@ Done.`,
 		<div class="install-step">
 			<div class="step-label">2. Tell Claude Code to connect</div>
 			<div class="prompt-box">
-				<button class="copy-btn" onclick="navigator.clipboard.writeText('Add Mind MCP server to my config'); this.textContent = 'Copied!'; setTimeout(() => this.textContent = 'Copy', 2000)">Copy</button>
+				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('Add Mind MCP server to my config'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
 				<p>Add Mind MCP server to my config</p>
 			</div>
-			<div class="step-note">Then in any project: "Initialize Mind here"</div>
+			<div class="step-note">Then in any Claude project: "Let's run The Mind"</div>
 		</div>
 	</div>
 

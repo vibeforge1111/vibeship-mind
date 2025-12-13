@@ -214,3 +214,4 @@ learned: Hand-drawn underline effect: use gradient fade on both ends + skew + sl
 learned: Claude's brand color is coral/orange #D97757 - use for subtle visual connection to Claude
 learned: Hero subtitle should focus on: what it is, what it stores, and ease of install - not technical details like "markdown files"
 fixed: Fixed session premature clearing bug: added touch_activity() to mind_log, mind_blocker, mind_session, mind_search - any Mind tool usage now keeps the session alive
+decided: Use svelte-claude-skills (svelte5-runes, sveltekit-data-flow, sveltekit-structure) from ~/.claude/skills/svelte-claude-skills when working on Svelte/SvelteKit projects

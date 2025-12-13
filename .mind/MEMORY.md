@@ -166,3 +166,31 @@ learned: mind_recall() rule in CLAUDE.md is critical - without it, Claude won't 
 
 **Future idea:**
 - `mind_remind(msg, when)` tool - for scheduled reminders across sessions
+
+
+<!-- Promoted from SESSION.md on 2025-12-13 -->
+decided against: Database for session storage - Too much friction, files are simpler and human-readable
+decided against: Complex episode management from archived version - Overkill for the problem we're solving
+learned: `parse_session_section()` function handles any section name via regex
+
+
+reminder completed: Improve reminders with context-matching
+
+## 2025-12-13: Added Reminder System (Phase A)
+
+decided: Use separate REMINDERS.md file instead of storing in MEMORY.md - reminders are transient, memory is permanent
+decided: Single mind_remind(msg, when) tool that parses natural language times - simpler than multiple tools
+decided: Fired reminders get promoted to MEMORY.md - preserves history of what was reminded
+decided: Auto-dismiss after surfacing, with snooze option - user says "snooze" to push back, default is next session
+
+learned: parse_when() handles "next session", "tomorrow", "in X days/weeks", ISO dates, "December 25" etc.
+learned: Due reminders inject into MIND:CONTEXT after "## Memory: Active" section
+learned: Reminder lifecycle: created -> due -> surfaced -> work/snooze -> done/rescheduled
+
+**Implementation:**
+- Added ~200 lines to server.py: helper functions + 2 MCP tools (mind_remind, mind_reminders)
+- Modified handle_recall() to check get_due_reminders() and inject into context
+- REMINDERS.md format: `- [ ] {due} | {type} | {message}`
+- Types: "next session" (fires on recall), "absolute" (fires when date passed), "done"
+
+**Phase B (future):** Context-triggered reminders - "remind me when we work on auth"

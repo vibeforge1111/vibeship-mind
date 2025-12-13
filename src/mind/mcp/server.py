@@ -1,10 +1,10 @@
-"""Mind MCP server - 8 tools for AI memory (v2: daemon-free, stateless)."""
+"""Mind MCP server - 10 tools for AI memory (v2: daemon-free, stateless)."""
 
 import hashlib
 import json
 import os
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
 
@@ -183,6 +183,218 @@ def save_global_edges(edges: list[dict]) -> None:
     """Save global edges to disk."""
     path = get_global_edges_file()
     path.write_text(json.dumps(edges, indent=2))
+
+
+# REMINDERS.md management
+def get_reminders_file(project_path: Path) -> Path:
+    """Get path to reminders file."""
+    return project_path / ".mind" / "REMINDERS.md"
+
+
+def parse_reminders(project_path: Path) -> list[dict]:
+    """Parse REMINDERS.md into list of reminder dicts."""
+    path = get_reminders_file(project_path)
+    if not path.exists():
+        return []
+
+    content = path.read_text(encoding="utf-8")
+    reminders = []
+
+    # Match lines like: - [ ] 2025-12-14 | next session | message
+    # or: - [x] 2025-12-14 | done | message
+    pattern = r"^- \[([ x])\] ([^\|]+)\|([^\|]+)\|(.+)$"
+
+    for i, line in enumerate(content.split("\n")):
+        match = re.match(pattern, line.strip())
+        if match:
+            done = match.group(1) == "x"
+            due = match.group(2).strip()
+            reminder_type = match.group(3).strip()
+            message = match.group(4).strip()
+
+            reminders.append({
+                "index": i,
+                "done": done,
+                "due": due,
+                "type": reminder_type,
+                "message": message,
+                "line": line,
+            })
+
+    return reminders
+
+
+def parse_when(when_str: str) -> tuple[str, str]:
+    """Parse a 'when' string into (due_date, type).
+
+    Supports:
+    - "next session" -> (today, "next session")
+    - "tomorrow" -> (today+1, "absolute")
+    - "in X days/hours/weeks" -> (calculated, "absolute")
+    - "2025-12-20" or "December 20" -> (parsed, "absolute")
+    """
+    when_lower = when_str.lower().strip()
+    today = date.today()
+
+    # Next session
+    if "next session" in when_lower:
+        return today.isoformat(), "next session"
+
+    # Tomorrow
+    if when_lower == "tomorrow":
+        return (today + timedelta(days=1)).isoformat(), "absolute"
+
+    # Relative: "in X days/hours/weeks"
+    relative_match = re.match(r"in\s+(\d+)\s+(day|hour|week|month)s?", when_lower)
+    if relative_match:
+        amount = int(relative_match.group(1))
+        unit = relative_match.group(2)
+
+        if unit == "day":
+            due = today + timedelta(days=amount)
+        elif unit == "hour":
+            due = datetime.now() + timedelta(hours=amount)
+            return due.isoformat(), "absolute"
+        elif unit == "week":
+            due = today + timedelta(weeks=amount)
+        elif unit == "month":
+            due = today + timedelta(days=amount * 30)  # Approximate
+        else:
+            due = today + timedelta(days=1)
+
+        return due.isoformat(), "absolute"
+
+    # ISO date: 2025-12-20
+    iso_match = re.match(r"(\d{4}-\d{2}-\d{2})", when_str)
+    if iso_match:
+        return iso_match.group(1), "absolute"
+
+    # Month day: "December 20" or "Dec 20"
+    month_names = {
+        "jan": 1, "january": 1, "feb": 2, "february": 2, "mar": 3, "march": 3,
+        "apr": 4, "april": 4, "may": 5, "jun": 6, "june": 6,
+        "jul": 7, "july": 7, "aug": 8, "august": 8, "sep": 9, "september": 9,
+        "oct": 10, "october": 10, "nov": 11, "november": 11, "dec": 12, "december": 12,
+    }
+    month_pattern = r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:tember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)\s+(\d{1,2})"
+    month_match = re.match(month_pattern, when_lower)
+    if month_match:
+        month = month_names.get(month_match.group(1).lower()[:3], 1)
+        day = int(month_match.group(2))
+        year = today.year
+        # If the date has passed this year, use next year
+        try:
+            due = date(year, month, day)
+            if due < today:
+                due = date(year + 1, month, day)
+            return due.isoformat(), "absolute"
+        except ValueError:
+            pass
+
+    # Default: next session if unparseable
+    return today.isoformat(), "next session"
+
+
+def add_reminder(project_path: Path, message: str, due: str, reminder_type: str) -> dict:
+    """Add a new reminder to REMINDERS.md."""
+    path = get_reminders_file(project_path)
+
+    # Create file if it doesn't exist
+    if not path.exists():
+        path.write_text("## Reminders\n\n", encoding="utf-8")
+
+    content = path.read_text(encoding="utf-8")
+
+    # Add new reminder line
+    new_line = f"- [ ] {due} | {reminder_type} | {message}\n"
+
+    # Insert after the header
+    if "## Reminders" in content:
+        parts = content.split("## Reminders", 1)
+        # Find end of header line
+        header_end = parts[1].find("\n") + 1
+        new_content = parts[0] + "## Reminders" + parts[1][:header_end] + new_line + parts[1][header_end:]
+    else:
+        new_content = "## Reminders\n\n" + new_line + content
+
+    path.write_text(new_content, encoding="utf-8")
+
+    return {
+        "message": message,
+        "due": due,
+        "type": reminder_type,
+    }
+
+
+def mark_reminder_done(project_path: Path, index: int) -> bool:
+    """Mark a reminder as done by its line index."""
+    path = get_reminders_file(project_path)
+    if not path.exists():
+        return False
+
+    content = path.read_text(encoding="utf-8")
+    lines = content.split("\n")
+
+    if 0 <= index < len(lines):
+        line = lines[index]
+        if line.strip().startswith("- [ ]"):
+            lines[index] = line.replace("- [ ]", "- [x]", 1)
+            # Also update type to "done"
+            parts = lines[index].split("|")
+            if len(parts) >= 2:
+                parts[1] = " done "
+                lines[index] = "|".join(parts)
+            path.write_text("\n".join(lines), encoding="utf-8")
+            return True
+
+    return False
+
+
+def get_due_reminders(project_path: Path) -> list[dict]:
+    """Get all reminders that are currently due."""
+    reminders = parse_reminders(project_path)
+    today = date.today()
+    now = datetime.now()
+    due_reminders = []
+
+    for r in reminders:
+        if r["done"]:
+            continue
+
+        # "next session" type is always due when recalled
+        if r["type"] == "next session":
+            due_reminders.append(r)
+            continue
+
+        # Check absolute dates
+        if r["type"] == "absolute":
+            try:
+                # Try datetime first (for hour-based reminders)
+                if "T" in r["due"]:
+                    due_dt = datetime.fromisoformat(r["due"])
+                    if due_dt <= now:
+                        due_reminders.append(r)
+                else:
+                    # Date only
+                    due_date = date.fromisoformat(r["due"])
+                    if due_date <= today:
+                        due_reminders.append(r)
+            except ValueError:
+                # If parsing fails, consider it due
+                due_reminders.append(r)
+
+    return due_reminders
+
+
+def promote_reminder_to_memory(project_path: Path, reminder: dict) -> None:
+    """Promote a completed reminder to MEMORY.md."""
+    memory_file = project_path / ".mind" / "MEMORY.md"
+    if not memory_file.exists():
+        return
+
+    content = memory_file.read_text(encoding="utf-8")
+    addition = f"\n\nreminder completed: {reminder['message']}"
+    memory_file.write_text(content + addition, encoding="utf-8")
 
 
 def get_current_project() -> Optional[Path]:
@@ -538,6 +750,32 @@ def create_server() -> Server:
                     "properties": {},
                 },
             ),
+            Tool(
+                name="mind_remind",
+                description="Set a reminder for later. Use for 'remind me to...', 'don't forget to...', etc. Supports 'next session', 'tomorrow', 'in 3 days', specific dates.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "message": {
+                            "type": "string",
+                            "description": "What to remind about",
+                        },
+                        "when": {
+                            "type": "string",
+                            "description": "When to remind: 'next session', 'tomorrow', 'in 3 days', '2025-12-20', etc.",
+                        },
+                    },
+                    "required": ["message", "when"],
+                },
+            ),
+            Tool(
+                name="mind_reminders",
+                description="List all pending reminders. Use to see what reminders are set.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {},
+                },
+            ),
         ]
 
     @server.call_tool()
@@ -560,6 +798,10 @@ def create_server() -> Server:
             return await handle_blocker(arguments)
         elif name == "mind_status":
             return await handle_status(arguments)
+        elif name == "mind_remind":
+            return await handle_remind(arguments)
+        elif name == "mind_reminders":
+            return await handle_reminders(arguments)
         else:
             return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
@@ -623,6 +865,32 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
     last_activity = datetime.fromtimestamp(state.get("last_activity", now) / 1000) if state.get("last_activity") else None
     context = context_gen.generate(result, last_activity)
 
+    # Check for due reminders and inject into context
+    due_reminders = get_due_reminders(project_path)
+    reminders_section = None
+    if due_reminders:
+        reminders_section = []
+        for r in due_reminders:
+            reminders_section.append(r["message"])
+
+        # Inject into context after "## Memory: Active" line
+        if "## Memory: Active" in context:
+            # Find where to insert (after the "Last captured" line)
+            lines = context.split("\n")
+            insert_idx = None
+            for i, line in enumerate(lines):
+                if line.startswith("Last captured:"):
+                    insert_idx = i + 1
+                    break
+
+            if insert_idx:
+                reminder_text = "\n## Reminders Due\n"
+                reminder_text += f"You have {len(due_reminders)} reminder(s) for this session:\n"
+                for msg in reminders_section:
+                    reminder_text += f"- {msg}\n"
+                lines.insert(insert_idx, reminder_text)
+                context = "\n".join(lines)
+
     # Update state
     state["last_activity"] = now
     state["memory_hash"] = current_hash
@@ -650,6 +918,12 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
     output = {
         "context": context,
         "session": session_state,
+        "reminders_due": [{
+            "message": r["message"],
+            "due": r["due"],
+            "type": r["type"],
+            "index": r["index"],
+        } for r in due_reminders] if due_reminders else [],
         "session_info": {
             "last_session": datetime.fromtimestamp(state["last_activity"] / 1000).isoformat() if state.get("last_activity") else None,
             "gap_detected": gap_detected,
@@ -1021,6 +1295,60 @@ async def handle_status(args: dict[str, Any]) -> list[TextContent]:
     }
 
     return [TextContent(type="text", text=json.dumps(status, indent=2))]
+
+
+async def handle_remind(args: dict[str, Any]) -> list[TextContent]:
+    """Handle mind_remind tool - set a reminder for later."""
+    message = args.get("message", "")
+    when = args.get("when", "")
+
+    if not message:
+        return [TextContent(type="text", text="Error: message is required")]
+    if not when:
+        return [TextContent(type="text", text="Error: when is required")]
+
+    project_path = get_current_project()
+    if not project_path:
+        return [TextContent(type="text", text="Error: No Mind project found")]
+
+    # Parse the 'when' string
+    due, reminder_type = parse_when(when)
+
+    # Add the reminder
+    reminder = add_reminder(project_path, message, due, reminder_type)
+
+    output = {
+        "success": True,
+        "reminder": reminder,
+        "message": f"Reminder set: '{message}' - will remind {reminder_type if reminder_type == 'next session' else f'on {due}'}",
+    }
+
+    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+
+
+async def handle_reminders(args: dict[str, Any]) -> list[TextContent]:
+    """Handle mind_reminders tool - list all pending reminders."""
+    project_path = get_current_project()
+    if not project_path:
+        return [TextContent(type="text", text="Error: No Mind project found")]
+
+    reminders = parse_reminders(project_path)
+
+    # Separate pending and done
+    pending = [r for r in reminders if not r["done"]]
+    done = [r for r in reminders if r["done"]]
+
+    output = {
+        "pending": [{
+            "message": r["message"],
+            "due": r["due"],
+            "type": r["type"],
+        } for r in pending],
+        "done_count": len(done),
+        "total": len(reminders),
+    }
+
+    return [TextContent(type="text", text=json.dumps(output, indent=2))]
 
 
 def run_server() -> None:

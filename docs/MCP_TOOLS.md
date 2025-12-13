@@ -2,7 +2,7 @@
 
 ## Overview
 
-Mind has **8 MCP tools** for AI memory. The architecture is stateless (v2: daemon-free) - tools load and process on demand.
+Mind has **10 MCP tools** for AI memory. The architecture is stateless (v2: daemon-free) - tools load and process on demand.
 
 ---
 
@@ -476,6 +476,138 @@ class GlobalStats(BaseModel):
 
 ---
 
+## Tool: mind_remind
+
+### Purpose
+
+Set a reminder for later. Use for "remind me to...", "don't forget to...", etc. Supports "next session", "tomorrow", "in 3 days", specific dates.
+
+### Signature
+
+```python
+@tool
+def mind_remind(
+    message: str,
+    when: str
+) -> RemindResult:
+    """
+    Set a reminder for later.
+
+    Args:
+        message: What to remind about
+        when: When to remind - "next session", "tomorrow", "in 3 days", "2025-12-20", etc.
+
+    Returns:
+        RemindResult with confirmation and parsed due date
+    """
+```
+
+### Response Schema
+
+```python
+class RemindResult(BaseModel):
+    success: bool
+    reminder: Reminder
+    message: str              # Human-readable confirmation
+
+class Reminder(BaseModel):
+    message: str
+    due: str                  # ISO date
+    type: str                 # "next session" or "absolute"
+```
+
+### Supported "when" Formats
+
+| Format | Example | Result |
+|--------|---------|--------|
+| Next session | "next session" | Fires on next mind_recall() |
+| Tomorrow | "tomorrow" | Tomorrow's date |
+| Relative days | "in 3 days" | Date + 3 days |
+| Relative weeks | "in 2 weeks" | Date + 14 days |
+| Relative hours | "in 4 hours" | DateTime + 4 hours |
+| ISO date | "2025-12-20" | Exact date |
+| Month day | "December 25" | Parsed date (next year if passed) |
+
+### When to Use
+
+- User says "remind me to..."
+- User says "don't forget to..."
+- Setting up follow-up work for later
+- Planning Phase B of a feature
+
+### Example Usage
+
+```python
+# Remind next session
+mind_remind("Add context-matching to reminders", "next session")
+
+# Remind in a few days
+mind_remind("Review PR #42", "in 3 days")
+
+# Remind on specific date
+mind_remind("Prepare demo", "December 20")
+```
+
+---
+
+## Tool: mind_reminders
+
+### Purpose
+
+List all pending reminders. Use to see what reminders are set.
+
+### Signature
+
+```python
+@tool
+def mind_reminders() -> RemindersResult:
+    """
+    List all pending reminders.
+
+    Returns:
+        RemindersResult with pending and done counts
+    """
+```
+
+### Response Schema
+
+```python
+class RemindersResult(BaseModel):
+    pending: list[Reminder]
+    done_count: int
+    total: int
+```
+
+### When to Use
+
+- Check what reminders are set
+- Review upcoming reminders
+- Before setting a new reminder (avoid duplicates)
+
+---
+
+## Reminder Lifecycle
+
+1. **Created** - `mind_remind("message", "when")` saves to .mind/REMINDERS.md
+2. **Due** - `mind_recall()` checks for due reminders
+3. **Surfaced** - Due reminders appear in MIND:CONTEXT under `## Reminders Due`
+4. **User responds** - "work on it now" or "snooze"
+5. **If work** - Mark done, promote to MEMORY.md
+6. **If snooze** - Call `mind_remind()` again with new time
+
+### Snooze Behavior
+
+When a reminder is due, ask the user:
+
+> "You have a reminder: **{message}**
+>
+> Want to work on this now, or should I remind you later? (You can say 'snooze', 'next session', 'in a week', etc.)"
+
+- "snooze" with no time → next session (default)
+- Explicit time → parse and set new reminder
+
+---
+
 ## Tool Usage Guidelines
 
 ### Session Start Protocol
@@ -496,6 +628,8 @@ class GlobalStats(BaseModel):
 | After writing several memories | `mind_checkpoint()` |
 | Found a platform gotcha | `mind_add_global_edge()` |
 | Something seems wrong | `mind_status()` |
+| User says "remind me..." | `mind_remind()` |
+| Check pending reminders | `mind_reminders()` |
 
 ### Tool Call Frequency
 
@@ -511,6 +645,8 @@ Expected frequency per session:
 | `mind_checkpoint` | 0-1 calls |
 | `mind_add_global_edge` | 0-1 calls |
 | `mind_status` | 0-1 calls |
+| `mind_remind` | 0-2 calls |
+| `mind_reminders` | 0-1 calls |
 
 Most sessions: **1-5 tool calls total** (mind_recall + as needed).
 

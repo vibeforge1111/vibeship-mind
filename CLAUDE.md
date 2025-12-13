@@ -60,6 +60,8 @@ This loads fresh context, detects session gaps, and ensures you have the latest 
 | `mind_checkpoint()` | Force process pending memories |
 | `mind_status()` | Check memory health |
 | `mind_add_global_edge()` | Found a platform gotcha that applies across projects |
+| `mind_remind(msg, when)` | User says "remind me..." - supports "next session", "tomorrow", "in 3 days", dates |
+| `mind_reminders()` | List pending reminders |
 
 ---
 

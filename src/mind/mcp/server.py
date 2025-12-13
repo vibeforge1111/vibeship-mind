@@ -153,6 +153,17 @@ def save_state(project_path: Path, state: dict) -> None:
     path.write_text(json.dumps(state, indent=2))
 
 
+def touch_activity(project_path: Path) -> None:
+    """Update last_activity timestamp to keep session alive.
+
+    Call this from any tool that indicates the user is actively working.
+    This prevents premature session gap detection.
+    """
+    state = load_state(project_path)
+    state["last_activity"] = int(datetime.now().timestamp() * 1000)
+    save_state(project_path, state)
+
+
 def hash_file(path: Path) -> str:
     """Get hash of file content for change detection."""
     if not path.exists():
@@ -1124,6 +1135,12 @@ async def handle_search(args: dict[str, Any]) -> list[TextContent]:
         "results": merged,
     }
 
+    # Keep session alive - user is actively working
+    if scope == "project":
+        project_path = get_current_project()
+        if project_path:
+            touch_activity(project_path)
+
     return [TextContent(type="text", text=json.dumps(output, indent=2))]
 
 
@@ -1273,6 +1290,9 @@ async def handle_session(args: dict[str, Any]) -> list[TextContent]:
         },
     }
 
+    # Keep session alive - user is actively working
+    touch_activity(project_path)
+
     return [TextContent(type="text", text=json.dumps(output, indent=2))]
 
 
@@ -1357,6 +1377,9 @@ async def handle_blocker(args: dict[str, Any]) -> list[TextContent]:
         output["suggestions"].append("1. Check Working Assumptions - is one wrong?")
         output["suggestions"].append("2. Check pivot condition in Current Approach")
         output["suggestions"].append("3. Zoom out and ask user for guidance")
+
+    # Keep session alive - user is actively working
+    touch_activity(project_path)
 
     return [TextContent(type="text", text=json.dumps(output, indent=2))]
 
@@ -1521,6 +1544,8 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
         message = formatted if entry_type in memory_types else message
 
     if success:
+        # Keep session alive - user is actively working
+        touch_activity(project_path)
         output = {
             "success": True,
             "logged": message,

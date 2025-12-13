@@ -567,10 +567,7 @@ Done.`,
 	</div>
 
 	<div class="cta-buttons">
-		<a href="/get-started" class="btn btn-primary btn-lg">
-			Full Install Guide
-		</a>
-		<a href="https://github.com/vibeforge1111/vibeship-mind" class="btn btn-secondary btn-lg" target="_blank">
+		<a href="https://github.com/vibeforge1111/vibeship-mind" class="btn btn-primary btn-lg" target="_blank">
 			View on GitHub
 		</a>
 	</div>

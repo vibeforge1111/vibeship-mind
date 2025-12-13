@@ -558,15 +558,14 @@ Done.`,
 
 <section class="get-started-cta">
 	<h2>Ready to Give Claude a Mind?</h2>
-	<p>3 commands + 1 prompt. Zero friction.</p>
+	<p>2 commands + 1 prompt. Zero friction.</p>
 
 	<div class="install-steps">
 		<div class="install-step">
-			<div class="step-label">1. Install</div>
+			<div class="step-label">1. Install Mind</div>
 			<div class="install-preview">
 				<code>git clone https://github.com/vibeforge1111/vibeship-mind.git</code>
 				<code>cd vibeship-mind && uv sync</code>
-				<code>uv run mind init</code>
 			</div>
 		</div>
 
@@ -575,6 +574,7 @@ Done.`,
 			<div class="prompt-box">
 				<p>"Add Mind MCP server to my config"</p>
 			</div>
+			<div class="step-note">Then in any project: "Initialize Mind here"</div>
 		</div>
 	</div>
 
@@ -1072,6 +1072,12 @@ Done.`,
 		font-size: var(--text-base);
 		color: var(--text-secondary);
 		font-style: italic;
+	}
+
+	.step-note {
+		margin-top: var(--space-2);
+		font-size: var(--text-sm);
+		color: var(--text-tertiary);
 	}
 
 	.cta-buttons {

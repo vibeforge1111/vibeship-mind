@@ -1041,6 +1041,7 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
 
     # Parse session sections for quick access (v2 goal-oriented structure)
     session_state = None
+    session_warnings = []
     if session_content:
         session_state = {
             "experience": parse_session_section(session_content, "Experience"),
@@ -1048,10 +1049,18 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
             "rejected": parse_session_section(session_content, "Rejected"),
             "assumptions": parse_session_section(session_content, "Assumptions"),
         }
+        # Generate warnings for loop/rabbit hole detection
+        rejected_count = len(session_state["rejected"])
+        blocker_count = len(session_state["blockers"])
+        if rejected_count >= 3:
+            session_warnings.append(f"WARNING: {rejected_count} rejected approaches this session - check mind_session() before trying more fixes")
+        if blocker_count >= 2:
+            session_warnings.append(f"WARNING: {blocker_count} blockers logged - consider asking user for direction")
 
     output = {
         "context": context,
         "session": session_state,
+        "session_warnings": session_warnings if session_warnings else None,
         "reminders_due": [{
             "message": r["message"],
             "due": r["due"],

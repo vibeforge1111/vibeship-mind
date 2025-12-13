@@ -87,27 +87,92 @@ This loads fresh context, detects session gaps, and ensures you have the latest 
 
 ---
 
-# IMPORTANT: Log to SESSION.md frequently!
+# SESSION.md Logging Protocol (MANDATORY)
 
-SESSION.md is ephemeral - it gets cleared between sessions. **Log liberally.** Don't worry about clutter. Valuable items get promoted to MEMORY.md automatically.
+**Log actively throughout work, not just at milestones.** SESSION.md prevents within-session loops - you suggesting the same failed fix twice, forgetting what you already tried, losing track of assumptions.
 
-**During work, log your stream of consciousness:**
+## When to Log
+
+| Moment | Type | Example |
+|--------|------|---------|
+| Starting any task | `experience` | "reading auth module to understand flow" |
+| Making an assumption | `assumption` | "assuming user wants client-side validation" |
+| Considering an approach | `experience` | "could use Redis or in-memory cache" |
+| Dismissing an approach | `rejected` | "Redis overkill for this - too much infra" |
+| Hitting a wall | `blocker` | "can't find where tokens are validated" |
+| Noticing something odd | `experience` | "this function has no error handling" |
+
+## Frequency
+
+- **Minimum:** Log at least once every 2-3 tool calls
+- **Ideal:** Log whenever your thinking shifts
+- **Don't batch:** Log in the moment, not retroactively
+
+## Why This Matters
+
+Without active logging:
+- You'll suggest the same failed approach twice
+- You'll forget what you assumed vs verified
+- Next session starts with zero context on what you tried
+
+With active logging:
+- `mind_session()` shows your current mental state
+- Rejected approaches prevent loops
+- Assumptions are visible to question when stuck
+
+## Quick Reference
+
 ```
-mind_log("trying the flex approach for layout", type="experience")
-mind_log("user wants it to match vibeship.co style", type="experience")
-mind_log("assuming the API returns JSON", type="assumption")
-mind_log("grid didn't work - items overlapped on mobile", type="rejected")
+mind_log("what I'm doing/seeing", type="experience")
+mind_log("what I'm treating as true", type="assumption")
+mind_log("approach X - didn't work because Y", type="rejected")
+mind_blocker("what's stopping me")  # Also auto-searches memory
 ```
 
-**Only use MEMORY.md types for important permanent stuff:**
-```
-mind_log("chose SvelteKit over Next.js - simpler routing", type="decision")
-mind_log("Safari doesn't support :has() in older versions", type="learning")
-mind_log("build failing with unclear error", type="problem")
-mind_log("resolved build by updating vite config", type="progress")
-```
+**Rule of thumb:** If in doubt, log it. SESSION.md gets cleared anyway.
 
-**Rule of thumb:** If in doubt, use `type="experience"`. It's free - SESSION.md gets cleared anyway.
+---
+
+# Loop & Rabbit Hole Detection
+
+**Check yourself before you wreck yourself.** Call `mind_session()` when any of these happen:
+
+## Warning Signs You're Looping
+
+| Signal | What's Happening |
+|--------|------------------|
+| Trying a fix for the 2nd time | You forgot it failed before |
+| "Let me try one more thing" | You're guessing, not diagnosing |
+| Same error after 3+ attempts | Root cause not understood |
+| Editing the same file repeatedly | Symptom-chasing, not solving |
+| Growing frustration | Time to step back |
+
+## Warning Signs You're in a Rabbit Hole
+
+| Signal | What's Happening |
+|--------|------------------|
+| Task scope expanded without user asking | You're solving imaginary problems |
+| "While I'm here, I should also..." | Feature creep |
+| 10+ tool calls without user check-in | Lost in the weeds |
+| Can't explain what you're doing in 1 sentence | Lost the thread |
+| Original goal feels far away | Drifted off course |
+
+## What To Do
+
+1. **Stop.** Don't try another fix yet.
+2. **Call `mind_session()`** - See what you've already tried
+3. **Check Rejected section** - Have you tried this before?
+4. **Check Assumptions section** - Is something you assumed wrong?
+5. **If stuck 3+ times:** Use `mind_blocker()` - it auto-searches memory for solutions
+6. **Ask the user** - "I've tried X, Y, Z. Should I keep going or try a different approach?"
+
+## Prevention
+
+- Log every approach **before** trying it: `mind_log("trying X approach", type="experience")`
+- Log failures **immediately**: `mind_log("X didn't work - reason", type="rejected")`
+- State assumptions upfront: `mind_log("assuming Y is true", type="assumption")`
+
+**The goal:** Never suggest the same failed fix twice. Never drift without noticing.
 
 ---
 

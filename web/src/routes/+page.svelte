@@ -9,15 +9,18 @@
 		'## Memory: Active',
 		'Last captured: 2 hours ago',
 		'',
+		'## Reminders Due',
+		'- Review auth flow when we work on login',
+		'',
 		'## Recent Decisions',
-		'- use file-based storage (simpler, git-trackable)',
-		'- skip database (too much friction)',
+		'- file-based storage (simpler, git-trackable)',
+		'- 12 focused MCP tools (memorable, purposeful)',
 		'',
 		'## Gotchas',
-		'- Windows cp1252 encoding -> use UTF-8',
+		'- Windows cp1252 -> use UTF-8',
 		'',
 		'## Continue From',
-		'Last: implementing context reminders'
+		'Last: two-layer memory system'
 	];
 
 	$effect(() => {
@@ -197,6 +200,51 @@
 	</div>
 </section>
 
+<section class="reminders">
+	<h2>Smart Reminders</h2>
+	<p class="section-subtitle">Time-based or context-triggered. Never forget what matters.</p>
+
+	<div class="reminders-grid">
+		<div class="reminder-type">
+			<div class="reminder-header">Time-Based</div>
+			<div class="reminder-examples">
+				<div class="reminder-example">
+					<code>"tomorrow"</code>
+					<span>Next day</span>
+				</div>
+				<div class="reminder-example">
+					<code>"in 3 days"</code>
+					<span>Relative date</span>
+				</div>
+				<div class="reminder-example">
+					<code>"next session"</code>
+					<span>On next recall</span>
+				</div>
+				<div class="reminder-example">
+					<code>"2025-12-25"</code>
+					<span>Specific date</span>
+				</div>
+			</div>
+		</div>
+		<div class="reminder-type">
+			<div class="reminder-header">Context-Based</div>
+			<div class="reminder-examples">
+				<div class="reminder-example">
+					<code>"when I mention auth"</code>
+					<span>Keyword trigger</span>
+				</div>
+				<div class="reminder-example">
+					<code>"when we work on API"</code>
+					<span>Topic trigger</span>
+				</div>
+			</div>
+			<div class="reminder-note">
+				Surfaces automatically when relevant keywords appear in conversation.
+			</div>
+		</div>
+	</div>
+</section>
+
 <section class="files">
 	<h2>Simple File Structure</h2>
 
@@ -210,32 +258,65 @@
 </section>
 
 <section class="tools">
-	<h2>11 MCP Tools</h2>
+	<h2>12 MCP Tools</h2>
 
 	<div class="tools-grid">
-		<div class="tool">
-			<code>mind_recall()</code>
-			<span>Load context - call first</span>
+		<div class="tool-category">
+			<div class="tool-category-header">Core</div>
+			<div class="tool">
+				<code>mind_recall()</code>
+				<span>Load context - call first</span>
+			</div>
+			<div class="tool">
+				<code>mind_log()</code>
+				<span>Log to session or memory</span>
+			</div>
 		</div>
-		<div class="tool">
-			<code>mind_log()</code>
-			<span>Log to session or memory</span>
+		<div class="tool-category">
+			<div class="tool-category-header">Reading</div>
+			<div class="tool">
+				<code>mind_session()</code>
+				<span>Check session state</span>
+			</div>
+			<div class="tool">
+				<code>mind_search()</code>
+				<span>Search memories</span>
+			</div>
+			<div class="tool">
+				<code>mind_status()</code>
+				<span>Check memory health</span>
+			</div>
+			<div class="tool">
+				<code>mind_reminders()</code>
+				<span>List pending reminders</span>
+			</div>
 		</div>
-		<div class="tool">
-			<code>mind_session()</code>
-			<span>Check session state</span>
-		</div>
-		<div class="tool">
-			<code>mind_blocker()</code>
-			<span>Log blocker + search</span>
-		</div>
-		<div class="tool">
-			<code>mind_search()</code>
-			<span>Search memories</span>
-		</div>
-		<div class="tool">
-			<code>mind_remind()</code>
-			<span>Set reminders</span>
+		<div class="tool-category">
+			<div class="tool-category-header">Actions</div>
+			<div class="tool">
+				<code>mind_blocker()</code>
+				<span>Log blocker + search</span>
+			</div>
+			<div class="tool">
+				<code>mind_remind()</code>
+				<span>Set time/context reminder</span>
+			</div>
+			<div class="tool">
+				<code>mind_reminder_done()</code>
+				<span>Mark reminder complete</span>
+			</div>
+			<div class="tool">
+				<code>mind_edges()</code>
+				<span>Check for gotchas</span>
+			</div>
+			<div class="tool">
+				<code>mind_checkpoint()</code>
+				<span>Force process memories</span>
+			</div>
+			<div class="tool">
+				<code>mind_add_global_edge()</code>
+				<span>Add cross-project gotcha</span>
+			</div>
 		</div>
 	</div>
 </section>
@@ -343,9 +424,16 @@
 	}
 
 	/* Features */
-	.features, .how-it-works, .files, .tools {
+	.features, .how-it-works, .reminders, .files, .tools {
 		padding: var(--space-12) 0;
 		border-top: 1px solid var(--border);
+	}
+
+	.section-subtitle {
+		text-align: center;
+		color: var(--text-secondary);
+		margin-top: calc(-1 * var(--space-4));
+		margin-bottom: var(--space-6);
 	}
 
 	section h2 {
@@ -377,6 +465,63 @@
 		color: var(--text-secondary);
 	}
 
+	/* Reminders */
+	.reminders-grid {
+		display: grid;
+		grid-template-columns: repeat(2, 1fr);
+		gap: var(--space-6);
+		max-width: 700px;
+		margin: 0 auto;
+	}
+
+	.reminder-type {
+		background: var(--bg-secondary);
+		border: 1px solid var(--border);
+		padding: var(--space-4);
+	}
+
+	.reminder-header {
+		font-family: var(--font-mono);
+		font-size: var(--text-sm);
+		color: var(--green-dim);
+		margin-bottom: var(--space-3);
+		padding-bottom: var(--space-2);
+		border-bottom: 1px solid var(--border);
+	}
+
+	.reminder-examples {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+
+	.reminder-example {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+
+	.reminder-example code {
+		color: var(--text-primary);
+		background: transparent;
+		padding: 0;
+		font-size: var(--text-sm);
+	}
+
+	.reminder-example span {
+		font-size: var(--text-xs);
+		color: var(--text-tertiary);
+	}
+
+	.reminder-note {
+		margin-top: var(--space-3);
+		padding-top: var(--space-2);
+		border-top: 1px dashed var(--border);
+		font-size: var(--text-xs);
+		color: var(--text-tertiary);
+		font-style: italic;
+	}
+
 	/* Files */
 	.files pre {
 		max-width: 400px;
@@ -386,15 +531,33 @@
 	/* Tools */
 	.tools-grid {
 		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		gap: var(--space-3);
+		grid-template-columns: repeat(3, 1fr);
+		gap: var(--space-4);
+		max-width: 900px;
+		margin: 0 auto;
+	}
+
+	.tool-category {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+
+	.tool-category-header {
+		font-family: var(--font-mono);
+		font-size: var(--text-xs);
+		color: var(--green-dim);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		padding-bottom: var(--space-1);
+		border-bottom: 1px solid var(--border);
 	}
 
 	.tool {
 		display: flex;
-		align-items: center;
-		gap: var(--space-3);
-		padding: var(--space-3);
+		flex-direction: column;
+		gap: var(--space-1);
+		padding: var(--space-2);
 		background: var(--bg-secondary);
 		border: 1px solid var(--border);
 	}
@@ -403,6 +566,7 @@
 		color: var(--green-dim);
 		background: transparent;
 		padding: 0;
+		font-size: var(--text-sm);
 	}
 
 	.tool span {
@@ -645,7 +809,16 @@
 			font-size: 2.5rem;
 		}
 
-		.feature-grid, .tools-grid {
+		.feature-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.tools-grid {
+			grid-template-columns: 1fr;
+			gap: var(--space-6);
+		}
+
+		.reminders-grid {
 			grid-template-columns: 1fr;
 		}
 

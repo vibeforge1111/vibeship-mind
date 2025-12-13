@@ -32,6 +32,246 @@
 			return () => clearTimeout(timeout);
 		}
 	});
+
+	// Tool explorer state
+	let selectedTool = $state('mind_recall');
+
+	const tools = {
+		mind_recall: {
+			name: 'mind_recall()',
+			category: 'core',
+			desc: 'Load context at session start',
+			output: `## Memory: Active
+Last captured: 2 hours ago
+
+## Reminders Due
+- Review auth flow when we work on login
+
+## Recent Decisions
+- file-based storage (simpler, git-trackable)
+
+## Continue From
+Last: two-layer memory system`,
+			explain: {
+				what: "Loads everything Claude needs to remember about your project - past decisions, learnings, what you were working on, and any reminders.",
+				auto: true,
+				autoWhen: "Called automatically at the start of every session",
+				manual: "Call manually if context feels stale or after long breaks"
+			}
+		},
+		mind_log: {
+			name: 'mind_log(msg, type)',
+			category: 'core',
+			desc: 'Log to SESSION or MEMORY',
+			output: `> mind_log("using flexbox for layout", type="experience")
+
+{
+  "success": true,
+  "logged": "using flexbox for layout",
+  "type": "experience",
+  "target": "SESSION.md"
+}`,
+			explain: {
+				what: "Saves thoughts, decisions, and learnings as you work. Session types (experience, blocker) are temporary. Memory types (decision, learning) are permanent.",
+				auto: false,
+				autoWhen: null,
+				manual: "Claude calls this throughout your session to remember what's happening"
+			}
+		},
+		mind_session: {
+			name: 'mind_session()',
+			category: 'reading',
+			desc: 'Check current session state',
+			output: `## Experience
+- trying flexbox approach
+- user wants vibeship.co style
+
+## Blockers
+(none)
+
+## Assumptions
+- API returns JSON`,
+			explain: {
+				what: "Shows what's been logged in the current session - your experiences, blockers, rejected approaches, and assumptions.",
+				auto: false,
+				autoWhen: null,
+				manual: "Useful to review what's happened so far or debug why Claude seems confused"
+			}
+		},
+		mind_search: {
+			name: 'mind_search(query)',
+			category: 'reading',
+			desc: 'Search across memories',
+			output: `> mind_search("authentication")
+
+Found 3 results:
+- [decision] use JWT for auth tokens
+- [learning] Safari blocks third-party cookies
+- [problem] CORS issue with auth endpoint`,
+			explain: {
+				what: "Searches through all your project memories to find relevant past decisions, learnings, and problems.",
+				auto: false,
+				autoWhen: null,
+				manual: "Ask Claude to search when you need to recall why something was done a certain way"
+			}
+		},
+		mind_status: {
+			name: 'mind_status()',
+			category: 'reading',
+			desc: 'Check memory health',
+			output: `## Mind Status
+
+Memory: 47 entries (12.3 KB)
+Session: 4 items
+Reminders: 2 pending
+Stack: typescript, react
+
+Health: OK`,
+			explain: {
+				what: "Quick health check - how many memories, file sizes, detected tech stack, and if everything's working.",
+				auto: false,
+				autoWhen: null,
+				manual: "Run if Mind seems broken or you're curious about memory stats"
+			}
+		},
+		mind_reminders: {
+			name: 'mind_reminders()',
+			category: 'reading',
+			desc: 'List pending reminders',
+			output: `## Pending Reminders
+
+1. [tomorrow] Review PR #42
+2. [context: "auth"] Add rate limiting
+3. [in 3 days] Update dependencies`,
+			explain: {
+				what: "Shows all your pending reminders - both time-based (tomorrow, in 3 days) and context-triggered (when you mention X).",
+				auto: true,
+				autoWhen: "Due reminders shown automatically in mind_recall()",
+				manual: "Check the full list anytime you want to see what's pending"
+			}
+		},
+		mind_blocker: {
+			name: 'mind_blocker(desc)',
+			category: 'actions',
+			desc: 'Log blocker + auto-search',
+			output: `> mind_blocker("CORS error on API call")
+
+Logged to SESSION.md
+
+Searching memory for solutions...
+Found: "Fixed CORS by adding proxy in vite.config"
+
+Related gotcha: configure proxy for dev server`,
+			explain: {
+				what: "Logs what's blocking you AND automatically searches memory for related solutions. Two-in-one problem solver.",
+				auto: false,
+				autoWhen: null,
+				manual: "Tell Claude you're stuck - it'll log it and try to find past solutions"
+			}
+		},
+		mind_remind: {
+			name: 'mind_remind(msg, when)',
+			category: 'actions',
+			desc: 'Set time or context reminder',
+			output: `> mind_remind("add tests", when="when I mention auth")
+
+{
+  "success": true,
+  "type": "context",
+  "triggers_on": "auth",
+  "message": "add tests"
+}`,
+			explain: {
+				what: "Set reminders that trigger by time (tomorrow, in 3 days) or by context (when you mention a topic).",
+				auto: false,
+				autoWhen: null,
+				manual: "Say 'remind me to...' and Claude will set it up automatically"
+			}
+		},
+		mind_reminder_done: {
+			name: 'mind_reminder_done(idx)',
+			category: 'actions',
+			desc: 'Mark reminder complete',
+			output: `> mind_reminder_done(1)
+
+{
+  "success": true,
+  "marked_done": "Review PR #42"
+}`,
+			explain: {
+				what: "Marks a reminder as done so it stops showing up.",
+				auto: true,
+				autoWhen: "'Next session' reminders auto-mark when surfaced",
+				manual: "Tell Claude you finished something it reminded you about"
+			}
+		},
+		mind_edges: {
+			name: 'mind_edges(intent)',
+			category: 'actions',
+			desc: 'Check for gotchas before coding',
+			output: `> mind_edges("implement file upload")
+
+## Warnings
+
+[!] Max file size varies by hosting provider
+[!] Safari handles FormData differently
+[!] Consider chunked upload for large files
+
+Proceed with caution.`,
+			explain: {
+				what: "Checks for known gotchas before you implement something risky. Like a senior dev warning you about edge cases.",
+				auto: false,
+				autoWhen: null,
+				manual: "Ask before implementing tricky features like auth, file upload, payments"
+			}
+		},
+		mind_checkpoint: {
+			name: 'mind_checkpoint()',
+			category: 'actions',
+			desc: 'Force process pending memories',
+			output: `Processing pending memories...
+
+Indexed: 3 new entries
+Promoted: 1 item from SESSION
+Regenerated: MIND:CONTEXT
+
+Done.`,
+			explain: {
+				what: "Forces Mind to process and index everything right now, instead of waiting for the next session.",
+				auto: true,
+				autoWhen: "Happens automatically on session gaps (>30 min)",
+				manual: "Run after big changes if you want context updated immediately"
+			}
+		},
+		mind_add_global_edge: {
+			name: 'mind_add_global_edge()',
+			category: 'actions',
+			desc: 'Add cross-project gotcha',
+			output: `> mind_add_global_edge(
+    title="Safari FormData",
+    description="Safari handles FormData differently",
+    workaround="Use polyfill or manual boundary"
+  )
+
+{
+  "success": true,
+  "added_to": "global_edges.json",
+  "applies_to": ["javascript", "typescript"]
+}`,
+			explain: {
+				what: "Adds a gotcha that applies across ALL your projects - platform bugs, language quirks, things every project should know.",
+				auto: false,
+				autoWhen: null,
+				manual: "When you hit a gotcha that's not project-specific (browser bugs, OS quirks)"
+			}
+		}
+	};
+
+	const categories = [
+		{ id: 'core', label: 'Core' },
+		{ id: 'reading', label: 'Reading' },
+		{ id: 'actions', label: 'Actions' }
+	];
 </script>
 
 <div class="hero">
@@ -259,63 +499,54 @@
 
 <section class="tools">
 	<h2>12 MCP Tools</h2>
+	<p class="section-subtitle">Click a command to see what it does</p>
 
-	<div class="tools-grid">
-		<div class="tool-category">
-			<div class="tool-category-header">Core</div>
-			<div class="tool">
-				<code>mind_recall()</code>
-				<span>Load context - call first</span>
-			</div>
-			<div class="tool">
-				<code>mind_log()</code>
-				<span>Log to session or memory</span>
-			</div>
+	<div class="tool-explorer">
+		<div class="tool-list">
+			{#each categories as cat}
+				<div class="tool-category-section">
+					<div class="tool-category-label">{cat.label}</div>
+					{#each Object.entries(tools).filter(([_, t]) => t.category === cat.id) as [key, tool]}
+						<button
+							class="tool-item"
+							class:active={selectedTool === key}
+							onclick={() => selectedTool = key}
+						>
+							<code>{tool.name}</code>
+							<span>{tool.desc}</span>
+						</button>
+					{/each}
+				</div>
+			{/each}
 		</div>
-		<div class="tool-category">
-			<div class="tool-category-header">Reading</div>
-			<div class="tool">
-				<code>mind_session()</code>
-				<span>Check session state</span>
+		<div class="tool-output-wrapper">
+			<div class="tool-output">
+				<div class="tool-output-header">
+					<span class="tool-output-dot"></span>
+					<span class="tool-output-dot"></span>
+					<span class="tool-output-dot"></span>
+					<span class="tool-output-title">{tools[selectedTool].name}</span>
+				</div>
+				<div class="tool-output-body">
+					<pre>{tools[selectedTool].output}</pre>
+				</div>
 			</div>
-			<div class="tool">
-				<code>mind_search()</code>
-				<span>Search memories</span>
-			</div>
-			<div class="tool">
-				<code>mind_status()</code>
-				<span>Check memory health</span>
-			</div>
-			<div class="tool">
-				<code>mind_reminders()</code>
-				<span>List pending reminders</span>
-			</div>
-		</div>
-		<div class="tool-category">
-			<div class="tool-category-header">Actions</div>
-			<div class="tool">
-				<code>mind_blocker()</code>
-				<span>Log blocker + search</span>
-			</div>
-			<div class="tool">
-				<code>mind_remind()</code>
-				<span>Set time/context reminder</span>
-			</div>
-			<div class="tool">
-				<code>mind_reminder_done()</code>
-				<span>Mark reminder complete</span>
-			</div>
-			<div class="tool">
-				<code>mind_edges()</code>
-				<span>Check for gotchas</span>
-			</div>
-			<div class="tool">
-				<code>mind_checkpoint()</code>
-				<span>Force process memories</span>
-			</div>
-			<div class="tool">
-				<code>mind_add_global_edge()</code>
-				<span>Add cross-project gotcha</span>
+			<div class="tool-explain">
+				<div class="tool-explain-what">
+					<p>{tools[selectedTool].explain.what}</p>
+				</div>
+				<div class="tool-explain-usage">
+					{#if tools[selectedTool].explain.auto}
+						<div class="usage-tag auto">
+							<span class="tag-label">Auto</span>
+							<span class="tag-desc">{tools[selectedTool].explain.autoWhen}</span>
+						</div>
+					{/if}
+					<div class="usage-tag manual">
+						<span class="tag-label">Manual</span>
+						<span class="tag-desc">{tools[selectedTool].explain.manual}</span>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -548,50 +779,183 @@
 		margin: 0 auto;
 	}
 
-	/* Tools */
-	.tools-grid {
+	/* Tool Explorer */
+	.tool-explorer {
 		display: grid;
-		grid-template-columns: repeat(3, 1fr);
+		grid-template-columns: 280px 1fr;
 		gap: var(--space-4);
 		max-width: 900px;
 		margin: 0 auto;
+		align-items: stretch;
 	}
 
-	.tool-category {
+	.tool-list {
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-2);
+		gap: var(--space-4);
 	}
 
-	.tool-category-header {
-		font-family: var(--font-mono);
-		font-size: var(--text-xs);
-		color: var(--green-dim);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		padding-bottom: var(--space-1);
-		border-bottom: 1px solid var(--border);
-	}
-
-	.tool {
+	.tool-category-section {
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-1);
-		padding: var(--space-2);
-		background: var(--bg-secondary);
-		border: 1px solid var(--border);
 	}
 
-	.tool code {
+	.tool-category-label {
+		font-family: var(--font-mono);
+		font-size: var(--text-xs);
+		color: var(--text-tertiary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		padding: var(--space-1) 0;
+	}
+
+	.tool-item {
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		padding: var(--space-2) var(--space-3);
+		background: var(--bg-secondary);
+		border: 1px solid var(--border);
+		cursor: pointer;
+		text-align: left;
+		transition: all var(--transition-fast);
+	}
+
+	.tool-item:hover {
+		border-color: var(--green-dim);
+	}
+
+	.tool-item.active {
+		border-color: var(--green-dim);
+		background: rgba(0, 196, 154, 0.1);
+	}
+
+	.tool-item code {
 		color: var(--green-dim);
 		background: transparent;
 		padding: 0;
 		font-size: var(--text-sm);
 	}
 
-	.tool span {
+	.tool-item span {
 		font-size: var(--text-xs);
 		color: var(--text-tertiary);
+	}
+
+	.tool-output {
+		background: var(--bg-secondary);
+		border: 1px solid var(--border);
+		border-bottom: none;
+		display: flex;
+		flex-direction: column;
+		flex: 1;
+		min-height: 0;
+	}
+
+	.tool-output-header {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		padding: var(--space-2) var(--space-3);
+		border-bottom: 1px solid var(--border);
+	}
+
+	.tool-output-dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		background: var(--gray-400);
+	}
+
+	.tool-output-title {
+		margin-left: auto;
+		font-family: var(--font-mono);
+		font-size: var(--text-xs);
+		color: var(--green-dim);
+	}
+
+	.tool-output-body {
+		padding: var(--space-4);
+		flex: 1;
+		overflow: auto;
+	}
+
+	.tool-output-body pre {
+		margin: 0;
+		background: transparent;
+		border: none;
+		padding: 0;
+		font-size: var(--text-sm);
+		color: var(--text-secondary);
+		white-space: pre-wrap;
+		line-height: 1.6;
+	}
+
+	.tool-output-wrapper {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.tool-explain {
+		background: var(--bg-secondary);
+		border: 1px solid var(--border);
+		border-top: 1px dashed var(--border);
+		padding: var(--space-4);
+		flex-shrink: 0;
+		font-family: var(--font-sans);
+	}
+
+	.tool-explain-what {
+		margin-bottom: var(--space-3);
+		padding-bottom: var(--space-3);
+		border-bottom: 1px dashed var(--border);
+	}
+
+	.tool-explain-what p {
+		font-size: var(--text-lg);
+		color: var(--text-primary);
+		line-height: 1.6;
+		margin: 0;
+	}
+
+	.tool-explain-usage {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+
+	.usage-tag {
+		display: flex;
+		align-items: flex-start;
+		gap: var(--space-3);
+	}
+
+	.usage-tag .tag-label {
+		font-family: var(--font-mono);
+		font-size: var(--text-xs);
+		text-transform: uppercase;
+		padding: 2px 8px;
+		border: 1px solid;
+		flex-shrink: 0;
+		min-width: 60px;
+		text-align: center;
+	}
+
+	.usage-tag.auto .tag-label {
+		color: var(--green-dim);
+		border-color: var(--green-dim);
+	}
+
+	.usage-tag.manual .tag-label {
+		color: var(--text-tertiary);
+		border-color: var(--border);
+	}
+
+	.usage-tag .tag-desc {
+		font-size: var(--text-lg);
+		color: var(--text-secondary);
+		line-height: 1.5;
 	}
 
 	/* Get Started CTA */
@@ -894,9 +1258,13 @@
 			grid-template-columns: 1fr;
 		}
 
-		.tools-grid {
+		.tool-explorer {
 			grid-template-columns: 1fr;
-			gap: var(--space-6);
+			min-height: auto;
+		}
+
+		.tool-output {
+			min-height: 300px;
 		}
 
 		.reminders-grid {

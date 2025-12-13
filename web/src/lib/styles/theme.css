@@ -3,6 +3,7 @@
 
 /* Fonts */
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap');
+@import url('https://cdn.jsdelivr.net/npm/geist@1.2.0/dist/fonts/geist-sans/style.min.css');
 
 /* CSS Reset */
 *, *::before, *::after {
@@ -16,6 +17,7 @@
   /* Font families */
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
   --font-serif: 'Instrument Serif', Georgia, serif;
+  --font-sans: 'Geist Sans', 'Geist', system-ui, sans-serif;
 
   /* Font sizes */
   --text-xs: 0.65rem;

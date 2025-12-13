@@ -83,18 +83,31 @@ Add Mind as an MCP server to give Claude memory tools:
 
 ## MCP Tools
 
+**Reading:**
 | Tool | What it does |
 |------|--------------|
 | `mind_recall()` | Load session context - CALL FIRST every session |
 | `mind_session()` | Check current session state (goal, approach, blockers) |
-| `mind_blocker(desc)` | Log blocker + auto-search memory for solutions |
 | `mind_search(query)` | Search past memories |
+| `mind_status()` | Check memory health |
+| `mind_reminders()` | List pending reminders |
+
+**Writing (the automation magic):**
+| Tool | What it does |
+|------|--------------|
+| `mind_log(msg, type)` | Log decision/learning/problem/progress to MEMORY.md |
+| `mind_session_goal(goal)` | Set session goal |
+| `mind_session_approach(text)` | Set current approach |
+| `mind_session_discovery(text)` | Add a discovery |
+| `mind_blocker(desc)` | Log blocker + auto-search memory for solutions |
+
+**Other:**
+| Tool | What it does |
+|------|--------------|
+| `mind_remind(msg, when)` | Set reminder - time or context-based |
 | `mind_edges(intent)` | Check for gotchas before risky code |
 | `mind_checkpoint()` | Force process pending memories |
-| `mind_status()` | Check memory health |
-| `mind_add_global_edge()` | Add cross-project gotcha (platform/language issues) |
-| `mind_remind(msg, when)` | Set reminder - time or context-based |
-| `mind_reminders()` | List pending reminders |
+| `mind_add_global_edge()` | Add cross-project gotcha |
 
 ---
 
@@ -175,6 +188,27 @@ uv --directory /path/to/vibeship-mind run mind status
 - "What are we building again?" → Drifts into rabbit holes
 
 **Mind fixes both.** Two layers of memory, zero friction.
+
+---
+
+## Claude Code Hooks (Optional)
+
+For fully automated memory capture, add these hooks to your `.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "SessionStart": [{"matcher": "*", "hooks": [{"type": "command", "command": "bash ./hooks/session-start.sh"}]}],
+    "PostToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "bash ./hooks/post-commit.sh"}]}],
+    "Stop": [{"matcher": "*", "hooks": [{"type": "command", "command": "bash ./hooks/session-end.sh"}]}]
+  }
+}
+```
+
+Copy the hooks from `vibeship-mind/hooks/` to your project. They:
+- **SessionStart:** Remind Claude to call `mind_recall()`
+- **PostToolUse (git commit):** Prompt to log decisions/learnings
+- **Stop:** Prompt to summarize the session
 
 ---
 

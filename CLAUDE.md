@@ -50,48 +50,54 @@ This loads fresh context, detects session gaps, and ensures you have the latest 
 
 ## MCP Tools - When to Use
 
+### Reading Tools
 | Tool | When to Use |
 |------|-------------|
 | `mind_recall()` | **FIRST thing every session** - loads fresh context |
 | `mind_session()` | Check current goal, approach, blockers |
-| `mind_blocker(desc)` | When stuck - logs blocker + auto-searches memory for solutions |
 | `mind_search(query)` | When MIND:CONTEXT doesn't have what you need |
+| `mind_status()` | Check memory health |
+| `mind_reminders()` | List pending reminders |
+
+### Writing Tools (USE THESE PROACTIVELY!)
+| Tool | When to Use |
+|------|-------------|
+| `mind_log(msg, type)` | **After every decision, learning, problem, or fix** |
+| `mind_session_goal(goal)` | At start of task - what does success look like? |
+| `mind_session_approach(text)` | When you decide how to tackle something |
+| `mind_session_discovery(text)` | When you discover something useful |
+| `mind_blocker(desc)` | When stuck - logs + auto-searches memory |
+
+### Other Tools
+| Tool | When to Use |
+|------|-------------|
+| `mind_remind(msg, when)` | User says "remind me..." |
 | `mind_edges(intent)` | Before implementing risky code |
 | `mind_checkpoint()` | Force process pending memories |
-| `mind_status()` | Check memory health |
-| `mind_add_global_edge()` | Found a platform gotcha that applies across projects |
-| `mind_remind(msg, when)` | User says "remind me..." - supports "next session", "tomorrow", "in 3 days", dates |
-| `mind_reminders()` | List pending reminders |
+| `mind_add_global_edge()` | Found a cross-project gotcha |
 
 ---
 
-# IMPORTANT: Write memories as you work
+# IMPORTANT: Use mind_log() as you work
 
-Append to `.mind/MEMORY.md` throughout the conversation (not just at the end):
+**Don't write to files manually. Use the tools:**
 
-**Decisions** - when you choose something:
-- `decided X because Y`
-- `chose X over Y because Z`
-- Include alternatives you rejected and why
+```
+mind_log("chose SvelteKit over Next.js - simpler routing", type="decision")
+mind_log("Safari doesn't support :has() in older versions", type="learning")
+mind_log("build failing with unclear error", type="problem")
+mind_log("resolved build by updating vite config", type="progress")
+```
 
-**Problems** - when something breaks or blocks:
-- `problem: X`
-- `stuck on X`
-- Add symptoms, what you've tried, current theory
+**Call these proactively:**
+- Made a choice? → `mind_log(..., type="decision")`
+- Discovered something? → `mind_log(..., type="learning")`
+- Hit a problem? → `mind_log(..., type="problem")`
+- Fixed something? → `mind_log(..., type="progress")`
 
-**Learnings** - when you discover something:
-- `learned that X`
-- `TIL: X`
-- `gotcha: X` (for things that will bite again)
-
-**Progress** - when you fix or complete:
-- `fixed X by doing Y`
-- `resolved X`
-
-**Session end** - before ending, note:
-- What's still open
-- What to do next
-- Mood (frustrated/stuck/breakthrough/accomplished)
+**At session start:**
+- `mind_session_goal("User can upload images and see them in gallery")`
+- `mind_session_approach("Using multer for uploads. Pivot if: memory issues")`
 
 ---
 

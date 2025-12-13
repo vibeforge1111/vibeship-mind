@@ -1,4 +1,4 @@
-"""Mind MCP server - 10 tools for AI memory (v2: daemon-free, stateless)."""
+"""Mind MCP server - 14 tools for AI memory (v2: daemon-free, stateless)."""
 
 import hashlib
 import json
@@ -411,6 +411,60 @@ def get_context_reminders(project_path: Path) -> list[dict]:
     return [r for r in reminders if r["type"] == "context" and not r["done"]]
 
 
+# MEMORY.md writing helpers
+def append_memory_entry(project_path: Path, entry: str, entry_type: str = "general") -> bool:
+    """Append an entry to MEMORY.md with timestamp."""
+    memory_file = project_path / ".mind" / "MEMORY.md"
+    if not memory_file.exists():
+        return False
+
+    content = memory_file.read_text(encoding="utf-8")
+
+    # Format the entry based on type
+    today = date.today().isoformat()
+    formatted_entry = f"\n{entry}"
+
+    memory_file.write_text(content + formatted_entry, encoding="utf-8")
+    return True
+
+
+# SESSION.md writing helpers
+def update_session_section(project_path: Path, section_name: str, content: str, append: bool = False) -> bool:
+    """Update a section in SESSION.md."""
+    session_file = get_session_file(project_path)
+    if not session_file.exists():
+        return False
+
+    session_content = session_file.read_text(encoding="utf-8")
+
+    # Find the section
+    pattern = rf"(## {re.escape(section_name)}\s*\n(?:<!--[^>]*-->\s*\n)?)"
+    match = re.search(pattern, session_content)
+
+    if not match:
+        return False
+
+    insert_pos = match.end()
+
+    if append:
+        # Add as new item
+        new_entry = f"- {content}\n"
+        new_content = session_content[:insert_pos] + new_entry + session_content[insert_pos:]
+    else:
+        # Replace section content (find end of section)
+        next_section = re.search(r"\n## ", session_content[insert_pos:])
+        if next_section:
+            end_pos = insert_pos + next_section.start()
+        else:
+            end_pos = len(session_content)
+
+        new_entry = f"{content}\n\n"
+        new_content = session_content[:insert_pos] + new_entry + session_content[end_pos:]
+
+    session_file.write_text(new_content, encoding="utf-8")
+    return True
+
+
 def promote_reminder_to_memory(project_path: Path, reminder: dict) -> None:
     """Promote a completed reminder to MEMORY.md."""
     memory_file = project_path / ".mind" / "MEMORY.md"
@@ -801,6 +855,67 @@ def create_server() -> Server:
                     "properties": {},
                 },
             ),
+            Tool(
+                name="mind_log",
+                description="Log a memory entry. Use this to record decisions, learnings, problems, and progress. Call this proactively as you work - don't wait until the end.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "message": {
+                            "type": "string",
+                            "description": "What to log (e.g., 'decided X because Y', 'learned that X', 'problem: X', 'fixed X')",
+                        },
+                        "type": {
+                            "type": "string",
+                            "enum": ["decision", "learning", "problem", "progress"],
+                            "description": "Type of memory entry",
+                        },
+                    },
+                    "required": ["message"],
+                },
+            ),
+            Tool(
+                name="mind_session_goal",
+                description="Set the session goal. Use at the start of a task to clarify what success looks like for the user.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "goal": {
+                            "type": "string",
+                            "description": "The user outcome (e.g., 'User can upload images and see them in gallery')",
+                        },
+                    },
+                    "required": ["goal"],
+                },
+            ),
+            Tool(
+                name="mind_session_approach",
+                description="Set the current approach. Include what you're trying and when to pivot.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "approach": {
+                            "type": "string",
+                            "description": "What you're trying now (e.g., 'Using multer for uploads. Pivot if: memory issues')",
+                        },
+                    },
+                    "required": ["approach"],
+                },
+            ),
+            Tool(
+                name="mind_session_discovery",
+                description="Log a discovery during the session. Useful findings that might be promoted to permanent memory.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "discovery": {
+                            "type": "string",
+                            "description": "What you discovered (e.g., 'The auth middleware runs before CORS')",
+                        },
+                    },
+                    "required": ["discovery"],
+                },
+            ),
         ]
 
     @server.call_tool()
@@ -827,6 +942,14 @@ def create_server() -> Server:
             return await handle_remind(arguments)
         elif name == "mind_reminders":
             return await handle_reminders(arguments)
+        elif name == "mind_log":
+            return await handle_log(arguments)
+        elif name == "mind_session_goal":
+            return await handle_session_goal(arguments)
+        elif name == "mind_session_approach":
+            return await handle_session_approach(arguments)
+        elif name == "mind_session_discovery":
+            return await handle_session_discovery(arguments)
         else:
             return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
@@ -1388,6 +1511,131 @@ async def handle_reminders(args: dict[str, Any]) -> list[TextContent]:
         "done_count": len(done),
         "total": len(reminders),
     }
+
+    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+
+
+async def handle_log(args: dict[str, Any]) -> list[TextContent]:
+    """Handle mind_log tool - append entry to MEMORY.md."""
+    message = args.get("message", "")
+    entry_type = args.get("type", "general")
+
+    if not message:
+        return [TextContent(type="text", text="Error: message is required")]
+
+    project_path = get_current_project()
+    if not project_path:
+        return [TextContent(type="text", text="Error: No Mind project found")]
+
+    # Format based on type
+    type_prefixes = {
+        "decision": "decided:",
+        "learning": "learned:",
+        "problem": "problem:",
+        "progress": "fixed:",
+    }
+
+    # Add prefix if message doesn't already have one
+    prefix = type_prefixes.get(entry_type, "")
+    if prefix and not any(message.lower().startswith(p) for p in type_prefixes.values()):
+        formatted = f"{prefix} {message}"
+    else:
+        formatted = message
+
+    success = append_memory_entry(project_path, formatted, entry_type)
+
+    if success:
+        output = {
+            "success": True,
+            "logged": formatted,
+            "type": entry_type,
+        }
+    else:
+        output = {
+            "success": False,
+            "error": "Failed to write to MEMORY.md",
+        }
+
+    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+
+
+async def handle_session_goal(args: dict[str, Any]) -> list[TextContent]:
+    """Handle mind_session_goal tool - set the session goal."""
+    goal = args.get("goal", "")
+
+    if not goal:
+        return [TextContent(type="text", text="Error: goal is required")]
+
+    project_path = get_current_project()
+    if not project_path:
+        return [TextContent(type="text", text="Error: No Mind project found")]
+
+    success = update_session_section(project_path, "The Goal", goal, append=False)
+
+    if success:
+        output = {
+            "success": True,
+            "goal_set": goal,
+        }
+    else:
+        output = {
+            "success": False,
+            "error": "Failed to update SESSION.md - section not found",
+        }
+
+    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+
+
+async def handle_session_approach(args: dict[str, Any]) -> list[TextContent]:
+    """Handle mind_session_approach tool - set current approach."""
+    approach = args.get("approach", "")
+
+    if not approach:
+        return [TextContent(type="text", text="Error: approach is required")]
+
+    project_path = get_current_project()
+    if not project_path:
+        return [TextContent(type="text", text="Error: No Mind project found")]
+
+    success = update_session_section(project_path, "Current Approach", approach, append=False)
+
+    if success:
+        output = {
+            "success": True,
+            "approach_set": approach,
+        }
+    else:
+        output = {
+            "success": False,
+            "error": "Failed to update SESSION.md - section not found",
+        }
+
+    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+
+
+async def handle_session_discovery(args: dict[str, Any]) -> list[TextContent]:
+    """Handle mind_session_discovery tool - add a discovery."""
+    discovery = args.get("discovery", "")
+
+    if not discovery:
+        return [TextContent(type="text", text="Error: discovery is required")]
+
+    project_path = get_current_project()
+    if not project_path:
+        return [TextContent(type="text", text="Error: No Mind project found")]
+
+    success = update_session_section(project_path, "Discoveries", discovery, append=True)
+
+    if success:
+        output = {
+            "success": True,
+            "discovery_added": discovery,
+        }
+    else:
+        output = {
+            "success": False,
+            "error": "Failed to update SESSION.md - section not found",
+        }
 
     return [TextContent(type="text", text=json.dumps(output, indent=2))]
 

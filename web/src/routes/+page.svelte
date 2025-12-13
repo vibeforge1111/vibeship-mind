@@ -6,21 +6,18 @@
 	const lines = [
 		'> mind_recall()',
 		'',
-		'## Memory: Active',
-		'Last captured: 2 hours ago',
+		'Welcome back. Last session was 3 days ago.',
 		'',
-		'## Reminders Due',
-		'- Review auth flow when we work on login',
+		'## I Remember',
+		'- You prefer Tailwind over CSS modules',
+		'- We chose Zustand because Redux felt heavy',
+		'- The auth bug was a Safari cookie issue',
 		'',
-		'## Recent Decisions',
-		'- file-based storage (simpler, git-trackable)',
-		'- 12 focused MCP tools (memorable, purposeful)',
+		'## You Asked Me to Remind You',
+		'- "Add rate limiting before launch"',
 		'',
-		'## Gotchas',
-		'- Windows cp1252 -> use UTF-8',
-		'',
-		'## Continue From',
-		'Last: two-layer memory system'
+		'## Where We Left Off',
+		'Implementing the checkout flow. Payment API was working.'
 	];
 
 	$effect(() => {
@@ -279,7 +276,7 @@ Done.`,
 	<p class="subtitle">
 		Memory for Claude Code that persists across sessions.
 		Decisions, learnings, and reminders.
-		Free, open source, easy to install in 2 prompts.
+		Install in 2 minutes with 2 prompts. Free for now.
 	</p>
 
 	<div class="terminal">
@@ -293,12 +290,14 @@ Done.`,
 			{#each terminalLines as line}
 				{#if line.startsWith('>')}
 					<div class="line command">{line}</div>
+				{:else if line.startsWith('Welcome')}
+					<div class="line welcome">{line}</div>
 				{:else if line.startsWith('##')}
 					<div class="line heading">{line}</div>
 				{:else if line.startsWith('-')}
 					<div class="line item">{line}</div>
-				{:else if line.startsWith('Last')}
-					<div class="line muted">{line}</div>
+				{:else if line.startsWith('Implementing')}
+					<div class="line continue">{line}</div>
 				{:else}
 					<div class="line">{line}</div>
 				{/if}
@@ -316,26 +315,37 @@ Done.`,
 
 <section class="features">
 	<h2>Why Mind?</h2>
+	<p class="section-subtitle">Without memory, Claude starts every session blank. These problems go away.</p>
 
 	<div class="feature-grid">
 		<div class="feature">
-			<h3>2-Prompt Install</h3>
-			<p>Clone the repo, tell Claude to add the MCP server. Done.</p>
+			<h3>Rabbit Holes</h3>
+			<p>Claude goes down the wrong path for an hour before you notice. Mind tracks what's been tried so it doesn't loop.</p>
 		</div>
 
 		<div class="feature">
-			<h3>Fully Automated</h3>
-			<p>Memory just works. Session gaps auto-detected, learnings auto-promoted, context auto-injected.</p>
+			<h3>Doesn't Remember You</h3>
+			<p>Your preferences, your stack, your way of doing things - gone every session. Mind remembers who it's working with.</p>
 		</div>
 
 		<div class="feature">
-			<h3>Two-Layer Memory</h3>
-			<p>MEMORY.md for cross-session recall. SESSION.md for within-session focus.</p>
+			<h3>Session Memory Lost</h3>
+			<p>Terminal closes. All that context? Vanished. Mind persists what matters between sessions.</p>
 		</div>
 
 		<div class="feature">
-			<h3>Human Readable</h3>
-			<p>Plain .md files you can open, edit, or git-track anytime. No black box.</p>
+			<h3>Forgets What's Built</h3>
+			<p>Claude references features that don't exist, or rebuilds things you have. Mind tracks what's done vs not.</p>
+		</div>
+
+		<div class="feature">
+			<h3>Spaghetti Code</h3>
+			<p>No memory means disconnected updates. Claude patches on patches. Mind keeps the full picture for coherent changes.</p>
+		</div>
+
+		<div class="feature feature-highlight">
+			<h3>2 Minutes to Fix All This</h3>
+			<p>3 commands to install. 2 prompts to configure. These problems stop. Fully automated after.</p>
 		</div>
 	</div>
 </section>
@@ -491,18 +501,6 @@ Done.`,
 	</div>
 </section>
 
-<section class="files">
-	<h2>Simple File Structure</h2>
-
-	<pre><code>your-project/
-├── .mind/
-│   ├── MEMORY.md      # Long-term memory
-│   ├── SESSION.md     # Current session focus
-│   ├── REMINDERS.md   # Time & context reminders
-│   └── state.json     # Timestamps
-└── CLAUDE.md          # Context injected here</code></pre>
-</section>
-
 <section class="tools">
 	<h2>12 MCP Tools</h2>
 	<p class="section-subtitle">Click a command to see what it does</p>
@@ -560,7 +558,7 @@ Done.`,
 
 <section class="get-started-cta">
 	<h2>Ready to Give Claude a Mind?</h2>
-	<p>5 commands. 2 minutes. Zero friction.</p>
+	<p>3 commands. Zero friction.</p>
 
 	<div class="install-preview">
 		<code>git clone https://github.com/vibeforge1111/vibeship-mind.git</code>
@@ -674,8 +672,13 @@ Done.`,
 		padding-left: var(--space-4);
 	}
 
-	.line.muted {
-		color: var(--text-tertiary);
+	.line.welcome {
+		color: var(--text-secondary);
+		font-style: italic;
+	}
+
+	.line.continue {
+		color: var(--text-secondary);
 	}
 
 	.cursor {
@@ -693,7 +696,7 @@ Done.`,
 	}
 
 	/* Features */
-	.features, .how-it-works, .reminders, .files, .tools {
+	.features, .how-it-works, .reminders, .tools {
 		padding: var(--space-12) 0;
 		border-top: 1px solid var(--border);
 	}
@@ -720,6 +723,11 @@ Done.`,
 		padding: var(--space-5);
 		background: var(--bg-secondary);
 		border: 1px solid var(--border);
+	}
+
+	.feature-highlight {
+		border-color: var(--green-dim);
+		background: var(--bg-tertiary);
 	}
 
 	.feature h3 {
@@ -790,12 +798,6 @@ Done.`,
 		font-size: var(--text-xs);
 		color: var(--text-tertiary);
 		font-style: italic;
-	}
-
-	/* Files */
-	.files pre {
-		max-width: 400px;
-		margin: 0 auto;
 	}
 
 	/* Tool Explorer */
@@ -1335,8 +1337,19 @@ Done.`,
 			text-align: center;
 		}
 
+		.filter-right {
+			margin-left: 0;
+			margin-right: 0;
+			flex-direction: column;
+			gap: var(--space-1);
+		}
+
 		.filter-arrow {
 			transform: rotate(90deg);
+		}
+
+		.filter-output {
+			text-align: center;
 		}
 	}
 </style>

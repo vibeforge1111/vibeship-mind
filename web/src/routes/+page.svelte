@@ -574,7 +574,7 @@ Done.`,
 		<div class="install-step">
 			<div class="step-label">2. Tell Claude Code to connect</div>
 			<div class="prompt-box">
-				<p>"Add Mind MCP server to my config"</p>
+				<p>Add Mind MCP server to my config</p>
 			</div>
 			<div class="step-note">Then in any project: "Initialize Mind here"</div>
 		</div>

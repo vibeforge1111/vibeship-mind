@@ -54,7 +54,6 @@
   /* Accent colors */
   --green: #2ECC71;
   --green-dim: #00C49A;
-  --orange: #FFB020;
   --orange-dim: #d97706;
   --red: #FF4D4D;
   --blue: #3399FF;
@@ -97,6 +96,9 @@
   --green-dim: #0d847a;
   --shadow-glow-green: 0 0 20px rgba(10, 138, 106, 0.2);
 
+  /* Light mode orange - use Claude coral for readability */
+  --orange: #D97757;
+
   --logo-invert: 0;
 }
 
@@ -128,6 +130,9 @@
   /* Bright shiny green for dark mode */
   --green-dim: #00C49A;
   --shadow-glow-green: 0 0 20px rgba(0, 196, 154, 0.3);
+
+  /* Claude coral for dark mode too - consistent */
+  --orange: #D97757;
 
   --logo-invert: 1;
 }

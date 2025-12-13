@@ -423,18 +423,24 @@ Done.`,
 		<div class="filter-examples">
 			<div class="filter-example">
 				<div class="filter-input">"We decided to use Zustand for state"</div>
-				<div class="filter-arrow">→</div>
-				<div class="filter-output memory">MEMORY.md <span class="why">future sessions need this</span></div>
+				<div class="filter-right">
+					<div class="filter-arrow">→</div>
+					<div class="filter-output memory">MEMORY.md <span class="why">future sessions need this</span></div>
+				</div>
 			</div>
 			<div class="filter-example">
 				<div class="filter-input">"Trying the flexbox approach now"</div>
-				<div class="filter-arrow">→</div>
-				<div class="filter-output session">SESSION.md <span class="why">only matters right now</span></div>
+				<div class="filter-right">
+					<div class="filter-arrow">→</div>
+					<div class="filter-output session">SESSION.md <span class="why">only matters right now</span></div>
+				</div>
 			</div>
 			<div class="filter-example">
 				<div class="filter-input">"Safari doesn't support :has() in older versions"</div>
-				<div class="filter-arrow">→</div>
-				<div class="filter-output memory">MEMORY.md <span class="why">gotcha worth keeping</span></div>
+				<div class="filter-right">
+					<div class="filter-arrow">→</div>
+					<div class="filter-output memory">MEMORY.md <span class="why">gotcha worth keeping</span></div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -1131,7 +1137,7 @@ Done.`,
 	}
 
 	.storage-side.short-term {
-		border-color: var(--green-dim);
+		border-color: var(--orange);
 	}
 
 	.storage-header {
@@ -1146,7 +1152,7 @@ Done.`,
 	}
 
 	.short-term .storage-header {
-		color: var(--green-dim);
+		color: var(--orange);
 	}
 
 	.storage-file {
@@ -1221,6 +1227,7 @@ Done.`,
 	.filter-example {
 		display: flex;
 		align-items: center;
+		justify-content: space-between;
 		gap: var(--space-3);
 		padding: var(--space-3);
 		background: var(--bg-secondary);
@@ -1234,11 +1241,18 @@ Done.`,
 		font-style: italic;
 	}
 
+	.filter-right {
+		display: flex;
+		align-items: center;
+		gap: 2px;
+		margin-left: auto;
+		margin-right: var(--space-4);
+	}
+
 	.filter-arrow {
 		color: var(--text-tertiary);
 		font-size: var(--text-lg);
 		flex-shrink: 0;
-		margin-left: 5px;
 	}
 
 	.filter-output {
@@ -1248,8 +1262,7 @@ Done.`,
 		flex-direction: column;
 		gap: 2px;
 		min-width: 140px;
-		text-align: left;
-		margin-left: 5px;
+		text-align: right;
 	}
 
 	.filter-output.memory {
@@ -1257,7 +1270,7 @@ Done.`,
 	}
 
 	.filter-output.session {
-		color: var(--green-dim);
+		color: var(--orange);
 	}
 
 	.filter-output .why {

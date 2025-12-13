@@ -202,3 +202,4 @@ decided: Mind's real purpose: not just a dev tool, but substrate for AI persiste
 decided: Simplified SESSION.md from 6 sections to 4: Experience, Blockers, Rejected, Assumptions - removed goal, approach, discoveries, working_assumptions
 fixed: cleaned up codebase: HOW_IT_WORKS.md added, outdated docs archived, hooks folder removed, unused code removed, website updated
 fixed: implemented maintainability system - CHANGELOG.md, semantic versioning (v2.0.0), feature flags (config.py), layered docs structure
+fixed: added mind_reminder_done tool + auto-mark for next session reminders - v2.1.0 shipped

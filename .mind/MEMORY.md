@@ -203,3 +203,4 @@ decided: Simplified SESSION.md from 6 sections to 4: Experience, Blockers, Rejec
 fixed: cleaned up codebase: HOW_IT_WORKS.md added, outdated docs archived, hooks folder removed, unused code removed, website updated
 fixed: implemented maintainability system - CHANGELOG.md, semantic versioning (v2.0.0), feature flags (config.py), layered docs structure
 fixed: added mind_reminder_done tool + auto-mark for next session reminders - v2.1.0 shipped
+decided: Consolidated docs: merged DESIGN_RATIONALE into ARCHITECTURE, archived PARSER.md, deleted obsolete CLI/IMPLEMENTATION/ONBOARDING. Added version banners (doc-version + last-updated) to all docs. Set 30-day periodic review reminder.

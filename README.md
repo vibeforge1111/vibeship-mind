@@ -1,5 +1,7 @@
 # Mind
 
+<!-- doc-version: 2.1.0 | last-updated: 2025-12-13 -->
+
 > Mind gives Claude a mind - not just memory across sessions, but focus within them. It remembers what worked, what didn't, and what it's supposed to be building.
 
 When you're vibe coding with Claude, it forgets everything between sessions. What you decided, what broke, what worked - gone. Even worse, in long sessions it starts suggesting the same failed fixes over and over.
@@ -81,7 +83,7 @@ Add Mind as an MCP server to give Claude memory tools:
 
 ---
 
-## MCP Tools (11 total)
+## MCP Tools (12 total)
 
 **Core:**
 | Tool | What it does |
@@ -106,6 +108,7 @@ Add Mind as an MCP server to give Claude memory tools:
 |------|--------------|
 | `mind_blocker(desc)` | Log blocker + auto-search memory for solutions |
 | `mind_remind(msg, when)` | Set reminder - time or context-based |
+| `mind_reminder_done(index)` | Mark a reminder as done |
 | `mind_edges(intent)` | Check for gotchas before risky code |
 | `mind_checkpoint()` | Force process pending memories |
 | `mind_add_global_edge()` | Add cross-project gotcha |
@@ -220,9 +223,9 @@ your-project/
 
 ## Documentation
 
-- [Architecture](docs/ARCHITECTURE.md) - How it works internally
-- [v2 Migration](docs/mind-v2-architecture-migration.md) - Daemon-free architecture
-- [Session Memory](docs/mind-v2-session-memory.md) - Within-session focus
+- [Architecture](docs/ARCHITECTURE.md) - Technical deep-dive, design principles
+- [How It Works](docs/HOW_IT_WORKS.md) - Visual diagrams explaining the system
+- [MCP Tools](docs/MCP_TOOLS.md) - Full tool reference with parameters
 
 ---
 

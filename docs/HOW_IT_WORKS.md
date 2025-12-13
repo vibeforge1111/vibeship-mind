@@ -1,5 +1,7 @@
 # How Mind Works
 
+<!-- doc-version: 2.1.0 | last-updated: 2025-12-13 -->
+
 Mind gives Claude persistent memory through simple markdown files. No database, no cloud, no friction.
 
 ---
@@ -200,7 +202,7 @@ SESSION.md                              MEMORY.md
 
 ---
 
-## MCP Tools (11 total)
+## MCP Tools (12 total)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

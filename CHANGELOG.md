@@ -10,9 +10,17 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 - `mind_reminder_done` tool - Mark reminders as done manually
 - Auto-mark "next session" reminders when surfaced in `mind_recall()`
+- Version banners in all docs (`<!-- doc-version: X.X.X | last-updated: YYYY-MM-DD -->`)
+- Periodic doc review reminder (every 30 days)
 
 ### Changed
 - Now 12 MCP tools (was 11)
+- Consolidated docs: merged DESIGN_RATIONALE.md into ARCHITECTURE.md
+- Moved PARSER.md to archive (stable, rarely changes)
+- Updated all docs to reflect 12 tool count
+
+### Removed
+- Outdated archive docs: CLI.md, IMPLEMENTATION.md, ONBOARDING.md
 
 ---
 

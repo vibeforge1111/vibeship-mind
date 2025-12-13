@@ -1,6 +1,8 @@
 # Mind MCP Tools
 
-Mind has **11 MCP tools**. The architecture is stateless - tools load and process on demand.
+<!-- doc-version: 2.1.0 | last-updated: 2025-12-13 -->
+
+Mind has **12 MCP tools**. The architecture is stateless - tools load and process on demand.
 
 ---
 

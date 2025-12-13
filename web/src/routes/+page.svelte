@@ -1068,15 +1068,15 @@ Done.`,
 
 	.prompt-box {
 		padding: var(--space-3) var(--space-4);
-		background: var(--bg-secondary);
-		border: 1px solid var(--border);
-		border-left: 3px solid var(--green-dim);
+		background: var(--terminal-bg);
+		border: 1px solid var(--green-dim);
+		box-shadow: 0 0 12px rgba(0, 196, 154, 0.15);
 	}
 
 	.prompt-box p {
 		margin: 0;
 		font-size: var(--text-base);
-		color: var(--text-secondary);
+		color: var(--terminal-command);
 		font-style: italic;
 	}
 

@@ -12,6 +12,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
+from ..config import is_mascot_enabled
 from ..context import ContextGenerator
 from ..mascot import get_mindful, mindful_line, can_use_unicode, ACTION_EMOTIONS
 from ..parser import Entity, EntityType, Parser
@@ -23,26 +24,34 @@ from ..templates import SESSION_TEMPLATE
 GAP_THRESHOLD_MS = 30 * 60 * 1000
 
 
-def mindful_response(action: str, data: dict, message: str = "") -> str:
-    """Wrap response data with Mindful mascot.
+def mindful_response(action: str, data: dict, message: str = "", project_path: Optional[Path] = None) -> str:
+    """Wrap response data with Mindful mascot (if enabled).
 
     Args:
         action: Mind action (recall, log, search, etc.)
         data: Response data dict
         message: Short message describing what happened
+        project_path: Project path to check mascot config (uses current project if None)
 
     Returns:
-        JSON string with mindful field added
+        JSON string with optional mindful field added
     """
-    fancy = can_use_unicode()
-    emotion = ACTION_EMOTIONS.get(action, "idle")
+    # Check if mascot is enabled
+    if project_path is None:
+        project_path = get_current_project()
 
-    # Add mindful to response
-    data["mindful"] = {
-        "emotion": emotion,
-        "art": get_mindful(emotion, fancy=fancy),
-        "says": message,
-    }
+    mascot_enabled = is_mascot_enabled(project_path) if project_path else True
+
+    if mascot_enabled:
+        fancy = can_use_unicode()
+        emotion = ACTION_EMOTIONS.get(action, "idle")
+
+        # Add mindful to response
+        data["mindful"] = {
+            "emotion": emotion,
+            "art": get_mindful(emotion, fancy=fancy),
+            "says": message,
+        }
 
     return json.dumps(data, indent=2)
 

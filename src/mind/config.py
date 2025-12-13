@@ -7,6 +7,7 @@ from typing import Any
 
 DEFAULT_CONFIG = {
     "version": 1,
+    "mascot": True,  # Show Mindful mascot in CLI and MCP responses
     "experimental": {
         # Add experimental features here
         # "auto_mark_reminders": False,
@@ -63,6 +64,19 @@ def disable_feature(feature: str, project_path: Path) -> None:
     if "experimental" not in config:
         config["experimental"] = {}
     config["experimental"][feature] = False
+    save_config(project_path, config)
+
+
+def is_mascot_enabled(project_path: Path) -> bool:
+    """Check if Mindful mascot is enabled for this project."""
+    config = load_config(project_path)
+    return config.get("mascot", True)  # Default on
+
+
+def set_mascot_enabled(project_path: Path, enabled: bool) -> None:
+    """Enable or disable Mindful mascot for this project."""
+    config = load_config(project_path)
+    config["mascot"] = enabled
     save_config(project_path, config)
 
 

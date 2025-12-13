@@ -8,10 +8,24 @@ def can_use_unicode() -> bool:
     """Check if terminal supports Unicode output.
 
     Returns True by default. Set MIND_ASCII=1 to force ASCII fallback.
+    Set MIND_UNICODE=1 to force Unicode even on Windows.
     """
     # Allow forcing ASCII via env var
     if os.environ.get("MIND_ASCII", "").lower() in ("1", "true", "yes"):
         return False
+
+    # Allow forcing Unicode via env var (overrides Windows detection)
+    if os.environ.get("MIND_UNICODE", "").lower() in ("1", "true", "yes"):
+        return True
+
+    # Check if stdout encoding supports Unicode
+    # Windows cp1252 doesn't support box drawing characters
+    try:
+        encoding = sys.stdout.encoding or ""
+        if encoding.lower() in ("cp1252", "cp1251", "ascii", "latin-1", "latin1"):
+            return False
+    except Exception:
+        pass
 
     return True
 

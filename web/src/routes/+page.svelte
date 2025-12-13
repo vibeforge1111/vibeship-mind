@@ -1045,13 +1045,17 @@ Done.`,
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-2);
+		padding: var(--space-4);
+		background: var(--terminal-bg);
+		border: 1px solid var(--green-dim);
+		box-shadow: 0 0 12px rgba(0, 196, 154, 0.15);
 	}
 
 	.install-preview code {
 		display: block;
 		padding: var(--space-2) var(--space-3);
-		background: var(--terminal-bg);
-		border: 1px solid var(--terminal-border);
+		background: transparent;
+		border: none;
 		font-size: var(--text-sm);
 		color: var(--terminal-command);
 	}

@@ -275,9 +275,11 @@ Done.`,
 </script>
 
 <div class="hero">
-	<h1>Give Claude a <span class="highlight">Mind</span></h1>
+	<h1>Give Claude a <span class="highlight">Mind<span class="claude-underline"></span></span></h1>
 	<p class="subtitle">
-		File-based memory that persists across sessions. No database, no cloud, no friction.
+		Memory for Claude Code that persists across sessions.
+		Decisions, learnings, and reminders.
+		Free, open source, easy to install in 2 prompts.
 	</p>
 
 	<div class="terminal">
@@ -593,6 +595,18 @@ Done.`,
 
 	.highlight {
 		color: var(--green-dim);
+		position: relative;
+		display: inline-block;
+	}
+
+	.claude-underline {
+		position: absolute;
+		bottom: calc(0.15em + 2px);
+		left: -3%;
+		width: 115%;
+		height: 3px;
+		background: linear-gradient(90deg, transparent 0%, #D97757 8%, #D97757 60%, transparent 100%);
+		transform: rotate(-3deg) skewX(-15deg);
 	}
 
 	.subtitle {
@@ -754,6 +768,7 @@ Done.`,
 
 	.reminder-example code {
 		color: var(--text-primary);
+		opacity: 0.93;
 		background: transparent;
 		padding: 0;
 		font-size: var(--text-sm);
@@ -886,7 +901,7 @@ Done.`,
 		background: transparent;
 		border: none;
 		padding: 0;
-		font-size: var(--text-sm);
+		font-size: var(--text-base);
 		color: var(--text-secondary);
 		white-space: pre-wrap;
 		line-height: 1.6;
@@ -915,6 +930,7 @@ Done.`,
 	.tool-explain-what p {
 		font-size: var(--text-lg);
 		color: var(--text-primary);
+		opacity: 0.93;
 		line-height: 1.6;
 		margin: 0;
 	}

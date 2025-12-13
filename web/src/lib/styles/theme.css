@@ -90,6 +90,8 @@
   --gray-700: #3d3d3d;
   --gray-800: #2a2a2a;
   --gray-900: #1a1a1a;
+
+  --logo-invert: 0;
 }
 
 /* Dark Theme */
@@ -116,6 +118,8 @@
   --gray-700: #b8c0d0;
   --gray-800: #dce1eb;
   --gray-900: #f0f2f5;
+
+  --logo-invert: 1;
 }
 
 /* Base Styles */

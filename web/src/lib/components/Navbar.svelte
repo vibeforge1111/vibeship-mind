@@ -10,8 +10,9 @@
 <nav>
 	<div class="nav-content">
 		<a href="/" class="logo">
-			<span class="logo-text">Mind</span>
-			<span class="logo-tag">memory for claude</span>
+			<img src="/logo.png" alt="vibeship" class="logo-icon" />
+			<span class="logo-text">vibeship</span>
+			<span class="logo-text logo-product">mind</span>
 		</a>
 
 		<div class="nav-right">
@@ -63,21 +64,30 @@
 
 	.logo {
 		display: flex;
-		align-items: baseline;
+		align-items: center;
 		gap: var(--space-2);
+	}
+
+	.logo-icon {
+		height: 28px;
+		width: auto;
+		/* Dark grey on light mode, white on dark mode */
+		filter: brightness(0) saturate(100%) invert(20%) sepia(5%) saturate(500%) hue-rotate(180deg);
+	}
+
+	:global([data-theme="dark"]) .logo-icon {
+		filter: none;
 	}
 
 	.logo-text {
 		font-family: var(--font-serif);
 		font-size: var(--text-2xl);
 		color: var(--text-primary);
+		letter-spacing: -0.02em;
 	}
 
-	.logo-tag {
-		font-size: var(--text-xs);
-		color: var(--text-tertiary);
-		text-transform: uppercase;
-		letter-spacing: 0.1em;
+	.logo-product {
+		margin-left: -0.1rem;
 	}
 
 	.nav-right {

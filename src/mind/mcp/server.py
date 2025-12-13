@@ -13,6 +13,7 @@ from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
 from ..context import ContextGenerator
+from ..mascot import get_mindful, mindful_line, can_use_unicode, ACTION_EMOTIONS
 from ..parser import Entity, EntityType, Parser
 from ..storage import ProjectsRegistry, get_mind_home
 from ..templates import SESSION_TEMPLATE
@@ -20,6 +21,30 @@ from ..templates import SESSION_TEMPLATE
 
 # Gap threshold for session detection (30 minutes)
 GAP_THRESHOLD_MS = 30 * 60 * 1000
+
+
+def mindful_response(action: str, data: dict, message: str = "") -> str:
+    """Wrap response data with Mindful mascot.
+
+    Args:
+        action: Mind action (recall, log, search, etc.)
+        data: Response data dict
+        message: Short message describing what happened
+
+    Returns:
+        JSON string with mindful field added
+    """
+    fancy = can_use_unicode()
+    emotion = ACTION_EMOTIONS.get(action, "idle")
+
+    # Add mindful to response
+    data["mindful"] = {
+        "emotion": emotion,
+        "art": get_mindful(emotion, fancy=fancy),
+        "says": message,
+    }
+
+    return json.dumps(data, indent=2)
 
 
 # SESSION.md management
@@ -1087,7 +1112,17 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
         },
     }
 
-    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+    # Determine emotion based on state
+    action = "recall"
+    if session_warnings:
+        action = "warning"
+    elif gap_detected:
+        action = "new_session"
+    message = f"Loaded {entries_processed} memories"
+    if gap_detected:
+        message = f"New session started! {promoted_count} items promoted"
+
+    return [TextContent(type="text", text=mindful_response(action, output, message))]
 
 
 async def handle_search(args: dict[str, Any]) -> list[TextContent]:
@@ -1155,7 +1190,9 @@ async def handle_search(args: dict[str, Any]) -> list[TextContent]:
         if project_path:
             touch_activity(project_path)
 
-    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+    match_count = len(output.get("results", []))
+    message = f"Found {match_count} matches" if match_count else "No matches found"
+    return [TextContent(type="text", text=mindful_response("search", output, message))]
 
 
 async def handle_checkpoint(args: dict[str, Any]) -> list[TextContent]:
@@ -1307,7 +1344,8 @@ async def handle_session(args: dict[str, Any]) -> list[TextContent]:
     # Keep session alive - user is actively working
     touch_activity(project_path)
 
-    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+    message = f"{total_items} items tracked"
+    return [TextContent(type="text", text=mindful_response("session", output, message))]
 
 
 async def handle_blocker(args: dict[str, Any]) -> list[TextContent]:
@@ -1395,7 +1433,9 @@ async def handle_blocker(args: dict[str, Any]) -> list[TextContent]:
     # Keep session alive - user is actively working
     touch_activity(project_path)
 
-    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+    match_count = len(merged)
+    message = f"Blocker logged, found {match_count} related memories" if match_count else "Blocker logged, no related memories found"
+    return [TextContent(type="text", text=mindful_response("blocker", output, message))]
 
 
 async def handle_status(args: dict[str, Any]) -> list[TextContent]:
@@ -1476,7 +1516,8 @@ async def handle_remind(args: dict[str, Any]) -> list[TextContent]:
         "message": f"Reminder set: '{message}' - will remind {reminder_type if reminder_type == 'next session' else f'on {due}'}",
     }
 
-    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+    msg = f"I'll remember! ({reminder_type})"
+    return [TextContent(type="text", text=mindful_response("remind", output, msg))]
 
 
 async def handle_reminders(args: dict[str, Any]) -> list[TextContent]:
@@ -1501,7 +1542,8 @@ async def handle_reminders(args: dict[str, Any]) -> list[TextContent]:
         "total": len(reminders),
     }
 
-    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+    message = f"{len(pending)} pending reminders"
+    return [TextContent(type="text", text=mindful_response("reminders", output, message))]
 
 
 async def handle_log(args: dict[str, Any]) -> list[TextContent]:
@@ -1566,13 +1608,14 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
             "type": entry_type,
             "target": target,
         }
+        msg = f"{entry_type} -> {target}"
+        return [TextContent(type="text", text=mindful_response("log", output, msg))]
     else:
         output = {
             "success": False,
             "error": f"Failed to write to {target}",
         }
-
-    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+        return [TextContent(type="text", text=mindful_response("error", output, f"Failed to write to {target}"))]
 
 
 async def handle_reminder_done(args: dict[str, Any]) -> list[TextContent]:

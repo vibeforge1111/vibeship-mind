@@ -73,10 +73,7 @@ Add Mind as an MCP server to give Claude memory tools:
   "mcpServers": {
     "mind": {
       "command": "uv",
-      "args": ["--directory", "/path/to/vibeship-mind", "run", "mind", "mcp"],
-      "env": {
-        "MIND_UNICODE": "1"
-      }
+      "args": ["--directory", "/path/to/vibeship-mind", "run", "mind", "mcp"]
     }
   }
 }

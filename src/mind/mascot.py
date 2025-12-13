@@ -7,17 +7,13 @@ import sys
 def can_use_unicode() -> bool:
     """Check if terminal supports Unicode output.
 
-    Force Unicode with MIND_UNICODE=1 environment variable.
+    Returns True by default. Set MIND_ASCII=1 to force ASCII fallback.
     """
-    # Allow forcing Unicode via env var
-    if os.environ.get("MIND_UNICODE", "").lower() in ("1", "true", "yes"):
-        return True
-
-    try:
-        encoding = sys.stdout.encoding or ""
-        return encoding.lower() in ("utf-8", "utf8", "utf-16", "utf16")
-    except Exception:
+    # Allow forcing ASCII via env var
+    if os.environ.get("MIND_ASCII", "").lower() in ("1", "true", "yes"):
         return False
+
+    return True
 
 
 # Mindful's expressions - eyes and mouth change with state

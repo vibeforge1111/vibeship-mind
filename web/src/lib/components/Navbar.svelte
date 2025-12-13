@@ -16,6 +16,9 @@
 		</a>
 
 		<div class="nav-right">
+			<a href="/get-started" class="nav-link">
+				Get Started
+			</a>
 			<a href="https://github.com/vibeforge1111/vibeship-mind" target="_blank" class="nav-link">
 				GitHub
 			</a>
@@ -44,7 +47,7 @@
 
 <style>
 	nav {
-		height: 60px;
+		height: 52px;
 		border-bottom: 1px solid var(--border);
 		background: var(--bg-primary);
 		position: sticky;
@@ -67,7 +70,7 @@
 	}
 
 	.logo-icon {
-		height: 28px;
+		height: 22px;
 		width: auto;
 		/* Dark grey on light mode, white on dark mode */
 		filter: brightness(0) saturate(100%) invert(20%) sepia(5%) saturate(500%) hue-rotate(180deg);
@@ -79,13 +82,14 @@
 
 	.logo-text {
 		font-family: var(--font-serif);
-		font-size: var(--text-2xl);
+		font-size: var(--text-xl);
 		color: var(--text-primary);
 		letter-spacing: -0.02em;
 	}
 
 	.logo-product {
-		margin-left: -0.1rem;
+		margin-left: -0.15rem;
+		color: var(--green-dim);
 	}
 
 	.nav-right {

@@ -166,31 +166,31 @@
 		<h3>Session Flow</h3>
 		<div class="session-flow">
 			<div class="flow-step">
-				<div class="flow-icon">&#9654;</div>
+				<div class="flow-icon">[&gt;</div>
 				<div class="flow-text">
 					<strong>Start</strong>
 					<span>mind_recall()</span>
 				</div>
 			</div>
-			<div class="flow-arrow">&#8594;</div>
+			<div class="flow-arrow">-&gt;</div>
 			<div class="flow-step">
-				<div class="flow-icon">&#8987;</div>
+				<div class="flow-icon">[?]</div>
 				<div class="flow-text">
 					<strong>Gap &gt; 30min?</strong>
 					<span>promote + clear</span>
 				</div>
 			</div>
-			<div class="flow-arrow">&#8594;</div>
+			<div class="flow-arrow">-&gt;</div>
 			<div class="flow-step">
-				<div class="flow-icon">&#9998;</div>
+				<div class="flow-icon">[+]</div>
 				<div class="flow-text">
 					<strong>Work</strong>
 					<span>mind_log()</span>
 				</div>
 			</div>
-			<div class="flow-arrow">&#8594;</div>
+			<div class="flow-arrow">-&gt;</div>
 			<div class="flow-step">
-				<div class="flow-icon">&#128260;</div>
+				<div class="flow-icon">[~]</div>
 				<div class="flow-text">
 					<strong>Next session</strong>
 					<span>repeat</span>
@@ -318,6 +318,26 @@
 				<span>Add cross-project gotcha</span>
 			</div>
 		</div>
+	</div>
+</section>
+
+<section class="get-started-cta">
+	<h2>Ready to Give Claude a Mind?</h2>
+	<p>5 commands. 2 minutes. Zero friction.</p>
+
+	<div class="install-preview">
+		<code>git clone https://github.com/vibeforge1111/vibeship-mind.git</code>
+		<code>cd vibeship-mind && uv sync</code>
+		<code>uv run mind init</code>
+	</div>
+
+	<div class="cta-buttons">
+		<a href="/get-started" class="btn btn-primary btn-lg">
+			Full Install Guide
+		</a>
+		<a href="https://github.com/vibeforge1111/vibeship-mind" class="btn btn-secondary btn-lg" target="_blank">
+			View on GitHub
+		</a>
 	</div>
 </section>
 
@@ -574,6 +594,64 @@
 		color: var(--text-tertiary);
 	}
 
+	/* Get Started CTA */
+	.get-started-cta {
+		padding: var(--space-12) 0;
+		border-top: 1px solid var(--border);
+		text-align: center;
+		background: linear-gradient(180deg, transparent 0%, rgba(0, 255, 136, 0.02) 100%);
+	}
+
+	.get-started-cta h2 {
+		margin-bottom: var(--space-2);
+	}
+
+	.get-started-cta > p {
+		color: var(--text-secondary);
+		margin-bottom: var(--space-6);
+	}
+
+	.install-preview {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+		max-width: 500px;
+		margin: 0 auto var(--space-6);
+		text-align: left;
+	}
+
+	.install-preview code {
+		display: block;
+		padding: var(--space-2) var(--space-3);
+		background: var(--bg-secondary);
+		border: 1px solid var(--border);
+		font-size: var(--text-sm);
+		color: var(--green-dim);
+	}
+
+	.install-preview code::before {
+		content: '$ ';
+		color: var(--text-tertiary);
+	}
+
+	.cta-buttons {
+		display: flex;
+		gap: var(--space-3);
+		justify-content: center;
+		flex-wrap: wrap;
+	}
+
+	.btn-secondary {
+		background: transparent;
+		border: 1px solid var(--border);
+		color: var(--text-primary);
+	}
+
+	.btn-secondary:hover {
+		border-color: var(--green-dim);
+		color: var(--green-dim);
+	}
+
 	/* Footer */
 	footer {
 		padding: var(--space-8) 0;
@@ -778,7 +856,9 @@
 	}
 
 	.flow-icon {
-		font-size: var(--text-xl);
+		font-family: var(--font-mono);
+		font-size: var(--text-base);
+		color: var(--green-dim);
 		margin-bottom: var(--space-1);
 	}
 
@@ -799,8 +879,9 @@
 	}
 
 	.flow-arrow {
+		font-family: var(--font-mono);
 		color: var(--text-tertiary);
-		font-size: var(--text-lg);
+		font-size: var(--text-base);
 	}
 
 	/* Mobile */

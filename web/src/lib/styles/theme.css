@@ -91,6 +91,10 @@
   --gray-800: #2a2a2a;
   --gray-900: #1a1a1a;
 
+  /* Light mode green - darker with blue tint for readability */
+  --green-dim: #0d847a;
+  --shadow-glow-green: 0 0 20px rgba(10, 138, 106, 0.2);
+
   --logo-invert: 0;
 }
 
@@ -118,6 +122,10 @@
   --gray-700: #b8c0d0;
   --gray-800: #dce1eb;
   --gray-900: #f0f2f5;
+
+  /* Bright shiny green for dark mode */
+  --green-dim: #00C49A;
+  --shadow-glow-green: 0 0 20px rgba(0, 196, 154, 0.3);
 
   --logo-invert: 1;
 }

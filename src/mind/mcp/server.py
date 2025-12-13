@@ -1,4 +1,4 @@
-"""Mind MCP server - 6 tools for AI memory (v2: daemon-free, with session memory)."""
+"""Mind MCP server - 8 tools for AI memory (v2: daemon-free, stateless)."""
 
 import hashlib
 import json
@@ -371,7 +371,7 @@ def match_edges(
 
 
 def create_server() -> Server:
-    """Create the MCP server with 4 tools (v2: daemon-free)."""
+    """Create the MCP server with 8 tools (v2: stateless)."""
     server = Server("mind")
 
     @server.list_tools()

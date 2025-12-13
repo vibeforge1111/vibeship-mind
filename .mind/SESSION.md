@@ -2,16 +2,15 @@
 
 ## The Goal
 <!-- USER OUTCOME, not technical task. What does success look like for the user? -->
-Improve Mind's session tracking to prevent Claude from getting into rabbit holes, maintain focus on goals, and learn from blockers
+Mind v2 docs and MCP tools are clean, accurate, and work correctly
 
 ## Current Approach
 <!-- What you're trying RIGHT NOW. Include pivot condition. -->
-Implementing goal-oriented SESSION.md structure with blockers auto-searching memory. Pivot if: structure too complex for Claude to maintain
+Session complete - documented all 8 tools, removed daemon references, fixed parser bug
 
 ## Blockers
 <!-- Things stopping progress. When you add here, SEARCH MEMORY for solutions. -->
-
-- Windows encoding issue with Unicode symbols (test entry - found relevant memory!)
+(none)
 
 ## Rejected Approaches
 <!-- Strategic decisions, not tactical failures. Include WHY to prevent circles. -->
@@ -29,3 +28,11 @@ Implementing goal-oriented SESSION.md structure with blockers auto-searching mem
 - `parse_session_section()` function handles any section name via regex
 - Promotion logic promotes Rejected Approaches (with reasoning) and Discoveries (with tech patterns)
 - mind_blocker tool auto-extracts keywords and searches memory
+- Issue parser patterns were too loose - "PID issues" in prose triggered false positive
+- CLAUDE.md needs explicit instruction to call mind_recall() first - it's not automatic
+
+## Next Session Reminders
+<!-- Things to remember for future sessions -->
+- Test that mind_recall() is being called at session start (watch for it!)
+- Consider adding a `mind_remind(msg, when)` tool for scheduled reminders
+- Truncated Open Loop bug was parser matching "issues" in prose - fixed with stricter patterns

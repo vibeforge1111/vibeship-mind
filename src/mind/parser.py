@@ -93,13 +93,14 @@ DECISION_PATTERNS = [
 ]
 
 # Issue patterns
+# Note: Patterns require ":" or "-" after keyword to avoid matching "issues" in prose
 ISSUE_PATTERNS = [
     (r"\*\*[Pp]roblem:?\*\*\s*(.+)", 0.9),
     (r"\*\*[Ii]ssue:?\*\*\s*(.+)", 0.9),
     (r"\*\*[Bb]ug:?\*\*\s*(.+)", 0.9),
-    (r"[Pp]roblem:?\s*[-–]?\s*(.+?)(?:\.|$)", 0.6),
-    (r"[Ii]ssue:?\s*[-–]?\s*(.+?)(?:\.|$)", 0.6),
-    (r"[Bb]ug:?\s*[-–]?\s*(.+?)(?:\.|$)", 0.6),
+    (r"^[Pp]roblem[:–-]\s*(.+?)(?:\.|$)", 0.6),  # Require : or - after keyword
+    (r"^[Ii]ssue[:–-]\s*(.+?)(?:\.|$)", 0.6),    # Require : or - after keyword
+    (r"^[Bb]ug[:–-]\s*(.+?)(?:\.|$)", 0.6),      # Require : or - after keyword
     (r"[Hh]it\s+(?:a\s+)?(?:problem|issue|bug)\s+(?:with\s+)?(.+?)(?:\.|$)", 0.5),
     (r"[Ss]truggling\s+with\s+(.+?)(?:\.|$)", 0.5),
     (r"[Ss]tuck\s+on\s+(.+?)(?:\.|$)", 0.5),

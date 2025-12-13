@@ -2,7 +2,169 @@
 
 ## Overview
 
-Mind has **4 MCP tools**. Most functionality is automatic via the daemon; tools are for explicit queries.
+Mind has **8 MCP tools** for AI memory. The architecture is stateless (v2: daemon-free) - tools load and process on demand.
+
+---
+
+## Tool: mind_recall
+
+### Purpose
+
+**CALL THIS FIRST every session.** Loads fresh context, detects session gaps, and ensures you have the latest memory state.
+
+### Why First?
+
+- The MIND:CONTEXT in CLAUDE.md may be stale
+- `mind_recall()` gets live data and detects session gaps
+- If gap detected (>30 min), promotes learnings from SESSION.md to MEMORY.md and starts fresh session
+
+### Signature
+
+```python
+@tool
+def mind_recall(
+    project_path: Optional[str] = None,
+    force_refresh: bool = False
+) -> RecallResult:
+    """
+    Load session context. ALWAYS call this first.
+
+    Args:
+        project_path: Project path (defaults to cwd)
+        force_refresh: Force regenerate context even if no changes
+
+    Returns:
+        RecallResult with context, session state, and health info
+    """
+```
+
+### Response Schema
+
+```python
+class RecallResult(BaseModel):
+    context: str                    # MIND:CONTEXT markdown
+    session: Optional[SessionState] # Current session state
+    session_info: SessionInfo       # Gap detection, promotions
+    health: HealthInfo              # File size, suggestions
+
+class SessionState(BaseModel):
+    goal: list[str]
+    current_approach: list[str]
+    blockers: list[str]
+    rejected_approaches: list[str]
+    working_assumptions: list[str]
+    discoveries: list[str]
+
+class SessionInfo(BaseModel):
+    last_session: Optional[str]     # ISO timestamp
+    gap_detected: bool              # True if >30 min gap
+    new_session_started: bool       # True if SESSION.md was cleared
+    promoted_to_memory: int         # Count of items promoted
+    entries_processed: int          # Total entities parsed
+    refreshed: bool                 # True if context regenerated
+```
+
+### When to Use
+
+- **START of every session** - before responding to user
+- When you need fresh context after being away
+- After significant changes to MEMORY.md
+
+---
+
+## Tool: mind_session
+
+### Purpose
+
+Get current session state from SESSION.md. Use to check goal, approach, blockers, rejected approaches, assumptions, and discoveries.
+
+### Signature
+
+```python
+@tool
+def mind_session(
+    project_path: Optional[str] = None
+) -> SessionResult:
+    """
+    Get current session state from SESSION.md.
+
+    Args:
+        project_path: Project path (defaults to cwd)
+
+    Returns:
+        SessionResult with parsed session state and workflow hints
+    """
+```
+
+### Response Schema
+
+```python
+class SessionResult(BaseModel):
+    session: SessionState
+    stats: SessionStats
+    workflow: WorkflowHints
+
+class SessionStats(BaseModel):
+    total_items: int
+    blockers_count: int
+    discoveries_count: int
+
+class WorkflowHints(BaseModel):
+    stuck: str       # What to do when stuck
+    before_proposing: str  # Check rejected approaches
+    lost: str        # Check the goal
+```
+
+### When to Use
+
+- When you feel lost or off-track
+- Before proposing a new approach (check rejected approaches)
+- To remind yourself of the current goal
+
+---
+
+## Tool: mind_blocker
+
+### Purpose
+
+Log a blocker and auto-search memory for solutions. Call this when stuck - it adds to SESSION.md Blockers and searches MEMORY.md for relevant past solutions.
+
+### Signature
+
+```python
+@tool
+def mind_blocker(
+    description: str,
+    keywords: Optional[list[str]] = None
+) -> BlockerResult:
+    """
+    Log a blocker and auto-search memory for solutions.
+
+    Args:
+        description: What's blocking you
+        keywords: Optional specific keywords to search for
+
+    Returns:
+        BlockerResult with logged status and memory search results
+    """
+```
+
+### Response Schema
+
+```python
+class BlockerResult(BaseModel):
+    blocker_logged: bool
+    description: str
+    keywords_searched: list[str]
+    memory_search_results: list[SearchResult]
+    suggestions: list[str]
+```
+
+### When to Use
+
+- When you're stuck on something
+- When hitting an error you've seen before
+- When an approach isn't working
 
 ---
 
@@ -10,7 +172,7 @@ Mind has **4 MCP tools**. Most functionality is automatic via the daemon; tools 
 
 ### Purpose
 
-Semantic search across memories when CLAUDE.md context isn't enough.
+Semantic search across memories when CLAUDE.md context isn't enough. Searches both indexed and current session content.
 
 ### Signature
 
@@ -24,13 +186,13 @@ def mind_search(
 ) -> SearchResults:
     """
     Search across memories.
-    
+
     Args:
         query: Natural language search query
         scope: "project" (current) or "all" (all registered projects)
-        types: Filter by type - "decision", "issue", "learning", "edge"
+        types: Filter by type - "decision", "issue", "learning"
         limit: Max results to return
-    
+
     Returns:
         SearchResults with matches, scores, and source locations
     """
@@ -45,7 +207,7 @@ class SearchResults(BaseModel):
     results: list[SearchResult]
 
 class SearchResult(BaseModel):
-    type: str              # decision, issue, learning, edge
+    type: str              # decision, issue, learning, raw
     title: str
     content: str
     reasoning: Optional[str]
@@ -55,6 +217,7 @@ class SearchResult(BaseModel):
     confidence: float      # Extraction confidence 0-1
     relevance: float       # Search relevance 0-1
     date: datetime
+    source: str            # "indexed" or "unparsed"
 ```
 
 ### Example Usage
@@ -96,17 +259,17 @@ def mind_edges(
 ) -> list[EdgeWarning]:
     """
     Check for gotchas before coding.
-    
+
     Combines:
     - Global edges (platform-wide gotchas)
     - Project edges (from MEMORY.md Gotchas section)
     - Stack-specific edges (auto-detected from project)
-    
+
     Args:
         intent: What you're about to do ("implementing OAuth", "adding crypto")
         code: Optional code snippet to analyze for patterns
         stack: Override auto-detected stack (optional)
-    
+
     Returns:
         List of relevant warnings
     """
@@ -121,7 +284,7 @@ class EdgeWarning(BaseModel):
     description: str
     workaround: str
     severity: Literal["info", "warning", "critical"]
-    source: Literal["global", "project", "stack"]
+    source: Literal["global", "project"]
     matched_on: str        # What triggered this match
     confidence: float      # How confident the match is
 ```
@@ -131,39 +294,12 @@ class EdgeWarning(BaseModel):
 ```python
 # Before implementing crypto
 warnings = mind_edges("implementing token generation with crypto")
-# Returns: Vercel Edge crypto limitation
 
 # With code snippet
 warnings = mind_edges(
     intent="auth middleware",
     code="import crypto from 'crypto'"
 )
-
-# Override stack detection
-warnings = mind_edges("database queries", stack=["supabase", "edge"])
-```
-
-### Detection Patterns
-
-Edges have detection patterns for:
-
-```python
-class EdgePatterns(BaseModel):
-    context: list[str]    # Project context keywords
-    intent: list[str]     # Intent keywords
-    code: list[str]       # Regex patterns for code
-```
-
-Example:
-```json
-{
-    "title": "Vercel Edge crypto limitation",
-    "detection": {
-        "context": ["vercel", "edge", "middleware"],
-        "intent": ["crypto", "uuid", "random", "token"],
-        "code": ["import.*crypto", "require.*crypto"]
-    }
-}
 ```
 
 ### When to Use
@@ -172,6 +308,47 @@ Example:
 - When working with platform-specific features
 - Starting work on area with known issues
 - Proactively avoiding past mistakes
+
+---
+
+## Tool: mind_checkpoint
+
+### Purpose
+
+Force process pending memories and regenerate context. Use when you want to ensure recent writes are indexed.
+
+### Signature
+
+```python
+@tool
+def mind_checkpoint(
+    project_path: Optional[str] = None
+) -> CheckpointResult:
+    """
+    Force process pending memories.
+
+    Args:
+        project_path: Project path (defaults to cwd)
+
+    Returns:
+        CheckpointResult with processing stats
+    """
+```
+
+### Response Schema
+
+```python
+class CheckpointResult(BaseModel):
+    processed: int
+    context_updated: bool
+    timestamp: str
+```
+
+### When to Use
+
+- After writing several memories to MEMORY.md
+- Before ending a session to ensure everything is captured
+- When you want to verify recent writes are indexed
 
 ---
 
@@ -195,10 +372,10 @@ def mind_add_global_edge(
 ) -> Edge:
     """
     Add a cross-project gotcha.
-    
+
     Use for platform/language gotchas, not project-specific issues.
     Project-specific gotchas go in .mind/MEMORY.md Gotchas section.
-    
+
     Args:
         title: Short title ("Vercel Edge crypto limitation")
         description: What the problem is
@@ -207,31 +384,15 @@ def mind_add_global_edge(
             {"context": [], "intent": [], "code": []}
         stack_tags: Tech this applies to (auto-matched to projects)
         severity: How critical this gotcha is
-    
+
     Returns:
         Created edge with ID
     """
 ```
 
-### Response Schema
-
-```python
-class Edge(BaseModel):
-    id: str
-    title: str
-    description: str
-    workaround: str
-    detection: EdgePatterns
-    stack_tags: list[str]
-    severity: str
-    created_at: datetime
-    verified_count: int = 0
-```
-
 ### Example Usage
 
 ```python
-# Add a new global edge
 edge = mind_add_global_edge(
     title="Safari ITP blocks cross-domain cookies",
     description="Safari's Intelligent Tracking Prevention deletes third-party cookies after 7 days",
@@ -266,7 +427,7 @@ edge = mind_add_global_edge(
 
 ### Purpose
 
-Check Mind daemon status and project statistics.
+Check Mind status and project statistics.
 
 ### Signature
 
@@ -275,9 +436,9 @@ Check Mind daemon status and project statistics.
 def mind_status() -> Status:
     """
     Check Mind health and stats.
-    
+
     Returns:
-        Status with daemon info and project stats
+        Status with project info and stats
     """
 ```
 
@@ -285,23 +446,15 @@ def mind_status() -> Status:
 
 ```python
 class Status(BaseModel):
-    daemon: DaemonStatus
+    version: int                    # Schema version (2)
     current_project: Optional[ProjectStatus]
     global_stats: GlobalStats
-
-class DaemonStatus(BaseModel):
-    running: bool
-    pid: Optional[int]
-    uptime_seconds: Optional[int]
-    projects_watching: int
-    last_index: Optional[datetime]
 
 class ProjectStatus(BaseModel):
     path: str
     name: str
     stack: list[str]
-    memory_health: str           # "good", "stale", "empty"
-    last_activity: datetime
+    last_activity: Optional[str]    # ISO timestamp
     stats: ProjectStats
 
 class ProjectStats(BaseModel):
@@ -309,31 +462,15 @@ class ProjectStats(BaseModel):
     issues_open: int
     issues_resolved: int
     learnings: int
-    edges: int
-    sessions_inferred: int
 
 class GlobalStats(BaseModel):
     projects_registered: int
     global_edges: int
-    total_memories: int
-```
-
-### Example Usage
-
-```python
-status = mind_status()
-
-if not status.daemon.running:
-    print("Mind daemon not running. Start with: mind daemon start")
-
-if status.current_project:
-    print(f"Memory health: {status.current_project.memory_health}")
 ```
 
 ### When to Use
 
 - Debugging memory issues
-- Checking if daemon is running
 - Getting project statistics
 - Health checks
 
@@ -341,26 +478,24 @@ if status.current_project:
 
 ## Tool Usage Guidelines
 
-### When CLAUDE.md Context is Enough
+### Session Start Protocol
 
-Don't call tools when MIND:CONTEXT has what you need:
+1. **ALWAYS call `mind_recall()` first** before responding to user
+2. Check session state for goal, approach, blockers
+3. Review MIND:CONTEXT for recent decisions and gotchas
 
-```markdown
-<!-- MIND:CONTEXT -->
-## Recent Decisions
-- Use JWT for auth (Dec 10)
-```
-
-If you see a relevant decision, don't call `mind_search("auth")`.
-
-### When to Use Tools
+### When to Use Each Tool
 
 | Situation | Tool |
 |-----------|------|
-| Need details not in MIND:CONTEXT | `mind_search` |
-| About to implement risky code | `mind_edges` |
-| Found a platform gotcha | `mind_add_global_edge` |
-| Something seems wrong | `mind_status` |
+| **Session start** | `mind_recall()` - ALWAYS FIRST |
+| Feeling lost or off-track | `mind_session()` |
+| Stuck on something | `mind_blocker()` |
+| Need details not in MIND:CONTEXT | `mind_search()` |
+| About to implement risky code | `mind_edges()` |
+| After writing several memories | `mind_checkpoint()` |
+| Found a platform gotcha | `mind_add_global_edge()` |
+| Something seems wrong | `mind_status()` |
 
 ### Tool Call Frequency
 
@@ -368,40 +503,16 @@ Expected frequency per session:
 
 | Tool | Typical Usage |
 |------|---------------|
+| `mind_recall` | 1 call (at start) |
+| `mind_session` | 0-2 calls |
+| `mind_blocker` | 0-3 calls |
 | `mind_search` | 0-3 calls |
 | `mind_edges` | 0-2 calls |
+| `mind_checkpoint` | 0-1 calls |
 | `mind_add_global_edge` | 0-1 calls |
 | `mind_status` | 0-1 calls |
 
-Most sessions: **0-2 tool calls total**. Everything else is automatic.
-
----
-
-## Error Handling
-
-### Common Errors
-
-```python
-class MindError(Exception):
-    code: str
-    message: str
-    details: Optional[dict]
-
-# Error codes:
-# DAEMON_NOT_RUNNING - Daemon needs to be started
-# PROJECT_NOT_REGISTERED - Run `mind init` first
-# INDEX_NOT_READY - Wait for initial indexing
-# SEARCH_FAILED - Embedding/search error
-# EDGE_EXISTS - Duplicate edge
-```
-
-### Graceful Degradation
-
-If daemon isn't running:
-- `mind_search` → Returns empty, suggests starting daemon
-- `mind_edges` → Returns global edges only (from file)
-- `mind_status` → Shows daemon not running
-- Context injection → Doesn't happen (stale MIND:CONTEXT)
+Most sessions: **1-5 tool calls total** (mind_recall + as needed).
 
 ---
 
@@ -414,69 +525,8 @@ If daemon isn't running:
   "mcpServers": {
     "mind": {
       "command": "uv",
-      "args": ["--directory", "/path/to/mind", "run", "mind", "mcp"],
-      "env": {}
+      "args": ["--directory", "/path/to/vibeship-mind", "run", "mind", "mcp"]
     }
   }
-}
-```
-
-### Tool Definitions (for MCP)
-
-```json
-{
-  "tools": [
-    {
-      "name": "mind_search",
-      "description": "Semantic search across memories. Use when CLAUDE.md context isn't enough.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "query": {"type": "string", "description": "Search query"},
-          "scope": {"type": "string", "enum": ["project", "all"], "default": "project"},
-          "types": {"type": "array", "items": {"type": "string"}},
-          "limit": {"type": "integer", "default": 10}
-        },
-        "required": ["query"]
-      }
-    },
-    {
-      "name": "mind_edges",
-      "description": "Check for gotchas before implementing risky code.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "intent": {"type": "string", "description": "What you're about to do"},
-          "code": {"type": "string", "description": "Optional code to analyze"},
-          "stack": {"type": "array", "items": {"type": "string"}}
-        },
-        "required": ["intent"]
-      }
-    },
-    {
-      "name": "mind_add_global_edge",
-      "description": "Add a cross-project gotcha.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {
-          "title": {"type": "string"},
-          "description": {"type": "string"},
-          "workaround": {"type": "string"},
-          "detection": {"type": "object"},
-          "stack_tags": {"type": "array", "items": {"type": "string"}},
-          "severity": {"type": "string", "enum": ["info", "warning", "critical"]}
-        },
-        "required": ["title", "description", "workaround", "detection"]
-      }
-    },
-    {
-      "name": "mind_status",
-      "description": "Check Mind daemon status and project stats.",
-      "inputSchema": {
-        "type": "object",
-        "properties": {}
-      }
-    }
-  ]
 }
 ```

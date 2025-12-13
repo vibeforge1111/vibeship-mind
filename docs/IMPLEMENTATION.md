@@ -1,29 +1,24 @@
-# Mind Implementation Plan
+# Mind Implementation (v2)
 
 ## Overview
 
-This document outlines the implementation phases for Mind, a file-based memory system for AI coding assistants.
+Mind v2 is a stateless, MCP-only architecture. No daemon, no file watchers, no background processes.
 
 ---
 
-## Target Architecture
+## Architecture
 
 ```
 src/mind/
-├── cli.py               # CLI commands
-├── daemon.py            # Background daemon
-├── watcher.py           # File system watcher
-├── parser.py            # Loose markdown parser
-├── indexer.py           # Search index management
-├── context.py           # MIND:CONTEXT generation
-├── storage/
-│   ├── sqlite.py        # Simplified schema
-│   └── embeddings.py    # Vector search
-├── mcp/
-│   └── server.py        # 4 MCP tools
-└── edges/
-    ├── detector.py      # Edge detection
-    └── global_edges.py  # Global edge storage
++-- cli.py               # CLI commands (init, list, status, etc.)
++-- parser.py            # Loose markdown parser
++-- context.py           # MIND:CONTEXT generation
++-- detection.py         # Stack detection
++-- storage.py           # Projects registry
++-- templates.py         # File templates
++-- mcp/
+|   +-- server.py        # 8 MCP tools
++-- __init__.py          # Package version
 ```
 
 ### Core Components
@@ -31,690 +26,268 @@ src/mind/
 | Component | Purpose |
 |-----------|---------|
 | Source of truth | .mind/MEMORY.md |
-| MCP tools | 4 (search, edges, add_global_edge, status) |
-| Session tracking | Inferred from activity |
+| Session tracking | .mind/SESSION.md |
+| MCP tools | 8 (recall, session, blocker, search, edges, checkpoint, add_global_edge, status) |
+| Session detection | Lazy via `mind_recall()` |
 | Context delivery | CLAUDE.md injection |
 | Parsing | Loose regex, confidence scoring |
 
 ---
 
-## Phase 1: Foundation
+## Key Files
 
-**Duration:** 1 week
-**Goal:** Basic file-based capture working
+### parser.py
 
-### Tasks
-
-#### 1.1 Create MEMORY.md Template
+Extracts entities from natural language:
 
 ```python
-# src/mind/templates.py
-
-MEMORY_TEMPLATE = """<!-- MIND MEMORY - Append as you work. Write naturally.
-Keywords: decided, problem, learned, tried, fixed, blocked, todo -->
-
-# {project_name}
-
-## Project State
-- Goal: 
-- Stack: {stack}
-- Blocked: None
-
-## Gotchas
-<!-- Project-specific gotchas -->
-
----
-
-## Session Log
-
-## {date}
-
-(Start writing here)
-
----
-"""
-```
-
-#### 1.2 Implement `mind init`
-
-```python
-# src/mind/cli.py
-
-@cli.command()
-@click.argument('path', default='.')
-def init(path: str):
-    """Initialize Mind for a project."""
-    
-    project_path = Path(path).resolve()
-    mind_dir = project_path / '.mind'
-    
-    # Create directories
-    mind_dir.mkdir(exist_ok=True)
-    (mind_dir / '.index').mkdir(exist_ok=True)
-    
-    # Detect stack
-    stack = detect_stack(project_path)
-    
-    # Create MEMORY.md
-    memory_file = mind_dir / 'MEMORY.md'
-    if not memory_file.exists():
-        content = MEMORY_TEMPLATE.format(
-            project_name=project_path.name,
-            stack=', '.join(stack) if stack else '(add your stack)',
-            date=date.today().isoformat()
-        )
-        memory_file.write_text(content)
-    
-    # Create .gitignore
-    gitignore = mind_dir / '.gitignore'
-    gitignore.write_text('.index/\n')
-    
-    # Update CLAUDE.md
-    update_claude_md(project_path, stack)
-    
-    # Register project
-    register_project(project_path, stack)
-    
-    click.echo(f"✓ Mind initialized for {project_path.name}")
-```
-
-#### 1.3 Stack Detection
-
-```python
-# src/mind/detection.py
-
-def detect_stack(project_path: Path) -> list[str]:
-    """Auto-detect project stack from files."""
-    
-    stack = []
-    
-    # Package.json analysis
-    pkg_json = project_path / 'package.json'
-    if pkg_json.exists():
-        pkg = json.loads(pkg_json.read_text())
-        deps = {**pkg.get('dependencies', {}), **pkg.get('devDependencies', {})}
-        
-        if 'svelte' in deps or '@sveltejs/kit' in deps:
-            stack.append('sveltekit')
-        if 'next' in deps:
-            stack.append('nextjs')
-        if 'react' in deps:
-            stack.append('react')
-        if 'vue' in deps:
-            stack.append('vue')
-        if 'typescript' in deps:
-            stack.append('typescript')
-        if 'tailwindcss' in deps:
-            stack.append('tailwind')
-    
-    # Python analysis
-    if (project_path / 'pyproject.toml').exists():
-        stack.append('python')
-        pyproject = (project_path / 'pyproject.toml').read_text()
-        if 'fastapi' in pyproject.lower():
-            stack.append('fastapi')
-        if 'django' in pyproject.lower():
-            stack.append('django')
-    
-    # Other files
-    if (project_path / 'Cargo.toml').exists():
-        stack.append('rust')
-    if (project_path / 'go.mod').exists():
-        stack.append('go')
-    if (project_path / 'vercel.json').exists():
-        stack.append('vercel')
-    if (project_path / 'supabase').is_dir():
-        stack.append('supabase')
-    
-    return stack
-```
-
-#### 1.4 CLAUDE.md Injection
-
-```python
-# src/mind/context.py
-
-def update_claude_md(project_path: Path, stack: list[str]):
-    """Add MIND:CONTEXT section to CLAUDE.md."""
-    
-    claude_md = project_path / 'CLAUDE.md'
-    
-    context = generate_initial_context(stack)
-    
-    if claude_md.exists():
-        content = claude_md.read_text()
-        # Remove existing MIND:CONTEXT
-        content = re.sub(
-            r'<!-- MIND:CONTEXT.*?<!-- MIND:END -->\n*',
-            '',
-            content,
-            flags=re.DOTALL
-        )
-        content = context + '\n\n' + content.lstrip()
-    else:
-        content = context + '\n\n# Project Instructions\n\n'
-    
-    claude_md.write_text(content)
-
-def generate_initial_context(stack: list[str]) -> str:
-    """Generate initial MIND:CONTEXT."""
-    
-    # Get relevant global edges for stack
-    edges = get_global_edges_for_stack(stack)
-    
-    edge_lines = []
-    for edge in edges[:5]:  # Top 5
-        edge_lines.append(f"- {edge.title}")
-    
-    return f"""<!-- MIND:CONTEXT - Auto-generated by Mind. Do not edit. -->
-## Session Context
-- Status: New project
-- Stack: {', '.join(stack) if stack else 'Unknown'}
-
-## Memory
-Append notes to `.mind/MEMORY.md` as you work.
-Use keywords: decided, problem, learned, tried, fixed
-
-## Gotchas (This Stack)
-{chr(10).join(edge_lines) if edge_lines else '(None loaded yet)'}
-<!-- MIND:END -->"""
-```
-
-### Phase 1 Tests
-
-```python
-# tests/test_init.py
-
-def test_mind_init_creates_structure():
-    with temp_project() as project:
-        result = runner.invoke(cli, ['init', str(project)])
-        
-        assert result.exit_code == 0
-        assert (project / '.mind' / 'MEMORY.md').exists()
-        assert (project / '.mind' / '.gitignore').exists()
-        assert (project / 'CLAUDE.md').exists()
-
-def test_stack_detection():
-    with temp_project() as project:
-        (project / 'package.json').write_text('{"dependencies": {"svelte": "4.0.0"}}')
-        
-        stack = detect_stack(project)
-        
-        assert 'sveltekit' in stack or 'svelte' in stack
-
-def test_claude_md_injection():
-    with temp_project() as project:
-        (project / 'CLAUDE.md').write_text('# Existing Content\n\nSome instructions.')
-        
-        update_claude_md(project, ['python'])
-        
-        content = (project / 'CLAUDE.md').read_text()
-        assert '<!-- MIND:CONTEXT' in content
-        assert '# Existing Content' in content  # Preserved
-```
-
-### Phase 1 Deliverable
-
-- `mind init` works
-- Creates proper file structure
-- Detects stack
-- Injects basic MIND:CONTEXT
-
----
-
-## Phase 2: Parser
-
-**Duration:** 1 week
-**Goal:** Extract entities from natural language
-
-### Tasks
-
-#### 2.1 Implement Loose Parser
-
-```python
-# src/mind/parser.py
-
 class Parser:
-    def parse(self, content: str) -> ParseResult:
+    def parse(self, content: str, source_file: str) -> ParseResult:
         """Parse MEMORY.md content."""
-        
-        entities = []
-        date_context = self._extract_date_context(content)
-        
-        for line_num, line in enumerate(content.split('\n')):
-            # Skip empty, headers, comments
-            if self._should_skip(line):
-                continue
-            
-            # Try each entity type
-            if entity := self._try_parse_decision(line, line_num, date_context):
-                entities.append(entity)
-            elif entity := self._try_parse_issue(line, line_num, date_context):
-                entities.append(entity)
-            elif entity := self._try_parse_learning(line, line_num, date_context):
-                entities.append(entity)
-        
-        # Extract project state
-        state = self._extract_project_state(content)
-        
-        # Extract project edges
-        edges = self._extract_project_edges(content)
-        
-        return ParseResult(
-            project_state=state,
-            entities=entities,
-            project_edges=edges
-        )
-    
-    def _try_parse_decision(self, line: str, line_num: int, dates: dict) -> Optional[Entity]:
-        for pattern in DECISION_PATTERNS:
-            if match := re.search(pattern, line, re.I):
-                return Entity(
-                    type='decision',
-                    title=match.group(1).strip(),
-                    content=line,
-                    reasoning=self._find_reasoning(line),
-                    source_line=line_num,
-                    date=dates.get(line_num),
-                    confidence=self._score_confidence(line, 'decision')
-                )
-        return None
-```
-
-#### 2.2 Implement Inline Comment Scanner
-
-```python
-# src/mind/parser.py
+        # Returns: project_state, entities, project_edges
 
 class InlineScanner:
-    PATTERNS = {
-        '.py': r'#\s*MEMORY:\s*(.+)',
-        '.ts': r'//\s*MEMORY:\s*(.+)',
-        '.js': r'//\s*MEMORY:\s*(.+)',
-        '.svelte': r'<!--\s*MEMORY:\s*(.+?)\s*-->',
-    }
-    
-    def scan_file(self, path: Path) -> list[Entity]:
-        """Scan code file for MEMORY: comments."""
-        
-        suffix = path.suffix
-        if suffix not in self.PATTERNS:
-            return []
-        
-        pattern = self.PATTERNS[suffix]
-        content = path.read_text()
-        entities = []
-        
-        for line_num, line in enumerate(content.split('\n')):
-            if match := re.search(pattern, line):
-                memory_content = match.group(1)
-                entity = self.parser.parse_line(memory_content, line_num, str(path))
-                if entity:
-                    entities.append(entity)
-        
-        return entities
+    def scan_directory(self, path: Path) -> list[Entity]:
+        """Scan code files for // MEMORY: comments."""
 ```
 
-### Phase 2 Tests
+**Entity Types:**
+- `decision` - Choices made (decided, chose, going with)
+- `issue` - Problems (problem, bug, stuck, blocked)
+- `learning` - Discoveries (learned, TIL, gotcha, realized)
+
+**Confidence Scoring:**
+- Explicit format (`**Decided:**`) = 0.9
+- Clear keywords = 0.7
+- Has reasoning (`because`) = +0.1
+- Vague = 0.4
+
+### context.py
+
+Generates MIND:CONTEXT for CLAUDE.md:
 
 ```python
-def test_parse_decision():
-    parser = Parser()
-    
-    result = parser.parse("**Decided:** Use JWT because simpler")
-    assert len(result.entities) == 1
-    assert result.entities[0].type == 'decision'
-    assert result.entities[0].confidence >= 0.8
+def generate_context(project_path: Path, result: ParseResult) -> str:
+    """Generate MIND:CONTEXT markdown section."""
 
-def test_parse_natural_language():
-    parser = Parser()
-    
-    result = parser.parse("decided to go with Supabase over Firebase")
-    assert len(result.entities) == 1
-    assert 'Supabase' in result.entities[0].title
-
-def test_inline_comments():
-    scanner = InlineScanner()
-    
-    with temp_file('.ts', '// MEMORY: decided JWT for auth') as f:
-        entities = scanner.scan_file(f)
-        assert len(entities) == 1
+def update_claude_md(project_path: Path, stack: list[str]):
+    """Inject MIND:CONTEXT into CLAUDE.md."""
 ```
 
-### Phase 2 Deliverable
+### mcp/server.py
 
-- Parser extracts decisions, issues, learnings
-- Confidence scoring works
-- Inline comment scanning works
-
----
-
-## Phase 3: Daemon & File Watching
-
-**Duration:** 1 week
-**Goal:** Automatic capture and context updates
-
-### Tasks
-
-#### 3.1 Implement File Watcher
+8 stateless MCP tools:
 
 ```python
-# src/mind/watcher.py
+@tool
+async def mind_recall(project_path: str = None, force_refresh: bool = False):
+    """Load session context - CALL FIRST every session."""
 
-class FileWatcher:
-    def __init__(self):
-        self.projects: dict[str, Path] = {}
-        self.debouncer = Debouncer(delay_ms=100)
-    
-    async def watch(self):
-        """Watch all registered projects."""
-        
-        async for changes in awatch(*self.projects.values()):
-            for change_type, path in changes:
-                if self._should_process(path):
-                    await self.debouncer.debounce(
-                        path,
-                        lambda: self._handle_change(change_type, path)
-                    )
-```
+@tool
+async def mind_session(project_path: str = None):
+    """Get current session state from SESSION.md."""
 
-#### 3.2 Implement Activity Tracker
+@tool
+async def mind_blocker(description: str, keywords: list[str] = None):
+    """Log blocker and auto-search memory for solutions."""
 
-```python
-# src/mind/daemon.py
-
-class ActivityTracker:
-    def __init__(self, timeout_minutes: int = 30):
-        self.timeout = timedelta(minutes=timeout_minutes)
-        self.sessions: dict[str, datetime] = {}
-    
-    def on_activity(self, project: str):
-        self.sessions[project] = datetime.now()
-    
-    async def check_inactive(self) -> list[str]:
-        """Return projects with ended sessions."""
-        now = datetime.now()
-        ended = []
-        
-        for project, last in list(self.sessions.items()):
-            if now - last > self.timeout:
-                ended.append(project)
-                del self.sessions[project]
-        
-        return ended
-```
-
-#### 3.3 Implement Context Generator
-
-```python
-# src/mind/context.py
-
-class ContextGenerator:
-    def generate(self, project_path: str, entities: list[Entity]) -> str:
-        """Generate MIND:CONTEXT section."""
-        
-        sections = [
-            self._session_context(project_path),
-            self._project_state(entities),
-            self._recent_decisions(entities),
-            self._open_loops(entities),
-            self._gotchas(project_path, entities),
-            self._continue_from(entities),
-        ]
-        
-        content = '\n\n'.join(filter(None, sections))
-        return f"<!-- MIND:CONTEXT -->\n{content}\n<!-- MIND:END -->"
-```
-
-### Phase 3 Tests
-
-```python
-def test_file_watcher_detects_changes():
-    watcher = FileWatcher()
-    watcher.add_project('/tmp/test-project')
-    
-    # Simulate file change
-    Path('/tmp/test-project/.mind/MEMORY.md').write_text('updated')
-    
-    # Check event received
-    ...
-
-def test_activity_tracker_detects_inactivity():
-    tracker = ActivityTracker(timeout_minutes=1)
-    tracker.on_activity('/project')
-    
-    # Wait for timeout
-    await asyncio.sleep(61)
-    
-    ended = await tracker.check_inactive()
-    assert '/project' in ended
-```
-
-### Phase 3 Deliverable
-
-- Daemon runs in background
-- File changes trigger parsing
-- Inactivity triggers context update
-- CLAUDE.md auto-updated
-
----
-
-## Phase 4: MCP Server
-
-**Duration:** 1 week
-**Goal:** 4 MCP tools working
-
-### Tasks
-
-#### 4.1 Implement `mind_search`
-
-```python
-# src/mind/mcp/server.py
-
-@mcp.tool()
-async def mind_search(
-    query: str,
-    scope: str = "project",
-    types: list[str] = None,
-    limit: int = 10
-) -> dict:
+@tool
+async def mind_search(query: str, scope: str = "project", ...):
     """Search across memories."""
-    
-    results = await indexer.search(
-        query=query,
-        scope=scope,
-        types=types,
-        limit=limit
-    )
-    
-    return {
-        "query": query,
-        "total": len(results),
-        "results": [r.to_dict() for r in results]
-    }
-```
 
-#### 4.2 Implement `mind_edges`
+@tool
+async def mind_edges(intent: str, code: str = None, stack: list[str] = None):
+    """Check for gotchas before coding."""
 
-```python
-@mcp.tool()
-async def mind_edges(
-    intent: str,
-    code: str = None,
-    stack: list[str] = None
-) -> list[dict]:
-    """Check for gotchas."""
-    
-    warnings = await edge_detector.check(
-        intent=intent,
-        code=code,
-        stack=stack or current_project_stack()
-    )
-    
-    return [w.to_dict() for w in warnings]
-```
+@tool
+async def mind_checkpoint(project_path: str = None):
+    """Force process pending memories."""
 
-#### 4.3 Implement `mind_add_global_edge`
-
-```python
-@mcp.tool()
-async def mind_add_global_edge(
-    title: str,
-    description: str,
-    workaround: str,
-    detection: dict,
-    stack_tags: list[str] = None,
-    severity: str = "warning"
-) -> dict:
+@tool
+async def mind_add_global_edge(title: str, description: str, ...):
     """Add cross-project gotcha."""
-    
-    edge = GlobalEdge(
-        id=generate_id(),
-        title=title,
-        description=description,
-        workaround=workaround,
-        detection=EdgePatterns(**detection),
-        stack_tags=stack_tags or [],
-        severity=severity
-    )
-    
-    await storage.add_global_edge(edge)
-    
-    return edge.to_dict()
+
+@tool
+async def mind_status():
+    """Check Mind health and stats."""
 ```
 
-#### 4.4 Implement `mind_status`
+### storage.py
+
+Project registry management:
 
 ```python
-@mcp.tool()
-async def mind_status() -> dict:
-    """Check Mind status."""
-    
-    return {
-        "daemon": {
-            "running": daemon_is_running(),
-            "pid": get_daemon_pid(),
-            "uptime_seconds": get_daemon_uptime()
-        },
-        "current_project": get_current_project_status(),
-        "global_stats": get_global_stats()
+class ProjectsRegistry:
+    def register(self, path: Path, stack: list[str]):
+        """Register a project."""
+
+    def list_all(self) -> list[ProjectInfo]:
+        """List all registered projects."""
+```
+
+### templates.py
+
+File templates for init:
+
+```python
+MEMORY_TEMPLATE = """..."""   # .mind/MEMORY.md
+SESSION_TEMPLATE = """..."""  # .mind/SESSION.md
+CONTEXT_TEMPLATE = """..."""  # CLAUDE.md injection
+GITIGNORE_CONTENT = """...""" # .mind/.gitignore
+```
+
+---
+
+## Session Detection (Lazy)
+
+v2 uses lazy session detection instead of a daemon:
+
+```python
+async def mind_recall(project_path, force_refresh=False):
+    # 1. Load state.json (last_activity, memory_hash)
+    state = load_state(project_path)
+
+    # 2. Check for session gap (>30 min)
+    gap = now - state.last_activity
+    if gap > 30_MINUTES:
+        # Promote SESSION.md discoveries to MEMORY.md
+        promote_session_learnings(project_path)
+        # Clear SESSION.md for new session
+        reset_session(project_path)
+
+    # 3. Check if MEMORY.md changed
+    current_hash = hash_file(memory_path)
+    if current_hash != state.memory_hash:
+        # Reparse MEMORY.md
+        entities = parse_memory(project_path)
+        # Regenerate context
+        context = generate_context(project_path, entities)
+
+    # 4. Update state
+    state.last_activity = now
+    state.memory_hash = current_hash
+    save_state(state)
+
+    # 5. Return fresh context
+    return RecallResult(context, session_state, health)
+```
+
+---
+
+## State File
+
+`.mind/state.json` (gitignored):
+
+```json
+{
+  "last_activity": 1702400000000,
+  "memory_hash": "a1b2c3d4e5f6",
+  "schema_version": 2
+}
+```
+
+Used for:
+- Session gap detection (30 min threshold)
+- Change detection (skip reparse if unchanged)
+
+---
+
+## Testing
+
+```bash
+# Run all tests
+uv run pytest tests/
+
+# Run specific test file
+uv run pytest tests/test_parser.py
+
+# Run with coverage
+uv run pytest --cov=src/mind tests/
+```
+
+### Test Structure
+
+```
+tests/
++-- test_parser.py       # Parser and entity extraction
++-- test_context.py      # Context generation
++-- test_cli.py          # CLI commands
++-- test_mcp.py          # MCP tools
++-- conftest.py          # Fixtures
+```
+
+---
+
+## Running
+
+```bash
+# CLI
+uv run mind <command>
+
+# MCP Server (for Claude Code)
+uv run mind mcp
+
+# Development
+uv run mind init .
+uv run mind status
+uv run mind parse --json
+```
+
+---
+
+## MCP Configuration
+
+### Claude Code
+
+Add to `~/.config/claude/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "mind": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/vibeship-mind", "run", "mind", "mcp"]
     }
+  }
+}
 ```
 
-### Phase 4 Deliverable
+### Windows
 
-- 4 MCP tools working
-- Search returns relevant results
-- Edge detection works
-- Global edges can be added
-
----
-
-## Phase 5: Polish
-
-**Duration:** 1 week
-**Goal:** Production ready
-
-### Tasks
-
-#### 5.1 Doctor Command
-
-```python
-@cli.command()
-def doctor():
-    """Run health checks."""
-    
-    checks = [
-        ('Config valid', check_config),
-        ('Daemon running', check_daemon),
-        ('Projects registered', check_projects),
-        ('Memory files accessible', check_memory_files),
-        ('Index not corrupted', check_index),
-        ('Global edges loaded', check_global_edges),
-    ]
-    
-    for name, check in checks:
-        try:
-            result = check()
-            status = '✓' if result.ok else '⚠'
-            click.echo(f"[{status}] {name}")
-            if result.message:
-                click.echo(f"    {result.message}")
-        except Exception as e:
-            click.echo(f"[✗] {name}: {e}")
+```json
+{
+  "mcpServers": {
+    "mind": {
+      "command": "uv",
+      "args": ["--directory", "C:\\path\\to\\vibeship-mind", "run", "mind", "mcp"]
+    }
+  }
+}
 ```
 
-#### 5.2 Documentation
-
-- Update README.md
-- Document all CLI commands
-- Add troubleshooting guide
-- Write onboarding guide
-
-### Phase 5 Deliverable
-
-- Doctor command catches issues
-- Documentation complete
-- Ready for release
-
 ---
 
-## Files to Create
+## v1 to v2 Migration
 
-| File | Purpose |
-|------|---------|
-| `src/mind/cli.py` | CLI commands |
-| `src/mind/daemon.py` | Background daemon |
-| `src/mind/watcher.py` | File watching |
-| `src/mind/parser.py` | Loose parsing |
-| `src/mind/context.py` | MIND:CONTEXT generation |
-| `src/mind/indexer.py` | Search index |
-| `src/mind/storage/sqlite.py` | Database |
-| `src/mind/storage/embeddings.py` | Vector search |
-| `src/mind/mcp/server.py` | MCP tools |
-| `src/mind/edges/detector.py` | Edge detection |
-| `src/mind/edges/global_edges.py` | Global edge storage |
+### Removed
 
----
+- `daemon.py` - Background daemon
+- `watcher.py` - File system watcher
+- `mind daemon start/stop/status/logs` - CLI commands
+- PID file management
+- Signal handlers
+- Platform auto-start configs (launchd, systemd)
 
-## Testing Strategy
+### Added
 
-### Unit Tests
+- `mind_recall()` - Lazy session detection
+- `mind_session()` - Session state access
+- `mind_blocker()` - Blocker logging with auto-search
+- `SESSION.md` - Goal-oriented session tracking
+- Promotion logic (SESSION.md -> MEMORY.md)
 
-- Parser patterns
-- Confidence scoring
-- Stack detection
-- Context generation
+### Changed
 
-### Integration Tests
-
-- File watcher → Parser → Indexer flow
-- Daemon lifecycle
-- MCP tools
-
-### End-to-End Tests
-
-- `mind init` creates working setup
-- Claude can read MIND:CONTEXT
-- Memories accumulate over sessions
-- Search finds relevant results
-
----
-
-## Rollout Plan
-
-1. **Alpha (Week 1-2):** Core team testing
-2. **Beta (Week 3-4):** Expanded testing, feedback
-3. **RC (Week 5):** Bug fixes, polish
-4. **Release (Week 6):** Public release
-
----
-
-## Success Metrics
-
-| Metric | Target |
-|--------|--------|
-| Memories per session | > 2 average |
-| CLAUDE.md context used | > 80% of sessions |
-| Parser false positives | < 10% |
-| Daemon uptime | > 99% |
+- Session detection: Proactive (daemon) -> Lazy (mind_recall)
+- MCP tools: 4 -> 8
+- State file: Simplified schema

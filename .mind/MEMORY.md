@@ -137,3 +137,32 @@ KEY: decided to restructure SESSION.md around goals, not tasks - prevents rabbit
 learned: goal-oriented session structure keeps Claude focused on user outcomes, not implementation details
 learned: mind_blocker auto-extracts keywords and searches memory - found relevant Windows encoding gotcha immediately
 gotcha: SESSION.md blocker insertion needs extra newline before next section to preserve formatting
+
+---
+
+## 2025-12-13 | Documentation cleanup for v2 | mood: productive
+
+**Completed:**
+- Deleted docs/DAEMON.md entirely (no longer relevant)
+- Rewrote docs/ARCHITECTURE.md for v2 (MCP-only, stateless)
+- Rewrote docs/CLI.md (removed daemon commands)
+- Rewrote docs/IMPLEMENTATION.md for v2
+- Updated docs/DESIGN_RATIONALE.md (removed daemon trade-off section, added v2 rationale)
+- Rewrote docs/ONBOARDING.md (no daemon, MCP-only flow)
+- Rewrote docs/MCP_TOOLS.md (documents all 8 tools now)
+- Cleaned CLAUDE.md daemon references
+- Fixed server.py comments (4/6 tools -> 8 tools)
+
+**Also added to CLAUDE.md:**
+- CRITICAL section telling Claude to call mind_recall() FIRST every session
+- Quick reference table for all 8 MCP tools with when to use each
+
+learned: docs were way out of date - said 4 tools when we have 8, still mentioned daemon commands
+learned: mind_recall() rule in CLAUDE.md is critical - without it, Claude won't call it first
+
+**Also fixed:**
+- Parser bug: issue patterns were too loose, matching "PID issues" in prose as an issue entity
+- Changed `[Ii]ssue:?\s*` to `^[Ii]ssue[:–-]\s*` to require : or - after keyword
+
+**Future idea:**
+- `mind_remind(msg, when)` tool - for scheduled reminders across sessions

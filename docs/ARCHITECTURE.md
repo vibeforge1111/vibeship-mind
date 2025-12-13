@@ -1,4 +1,4 @@
-# Mind Architecture
+# Mind Architecture (v2)
 
 ## Overview
 
@@ -6,7 +6,7 @@ Mind is a file-based memory system for AI coding assistants. The core insight:
 
 **The file is the memory. Mind is the lens.**
 
-Instead of storing memories in a database via explicit tool calls, Claude writes directly to `.mind/MEMORY.md`. Mind watches, indexes, and injects context into `CLAUDE.md` automatically.
+Claude writes directly to `.mind/MEMORY.md`. Mind provides tools to search, detect gotchas, and load session context on demand.
 
 ## Why File-Based?
 
@@ -25,9 +25,9 @@ Mind's approach:
 
 | Design | Benefit |
 |--------|---------|
-| 4 MCP tools | Focused, memorable |
+| 8 focused MCP tools | Memorable, purposeful |
 | File-based memory | Claude already writes files |
-| Daemon handles lifecycle | No explicit calls needed |
+| Lazy session detection | `mind_recall()` checks timestamps |
 | Loose parsing | Natural language accepted |
 | CLAUDE.md injection | Context appears automatically |
 
@@ -35,111 +35,85 @@ Mind's approach:
 
 ---
 
-## System Architecture
+## System Architecture (v2: MCP-Only)
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     .mind/MEMORY.md                         │
-│                   (Source of Truth)                         │
-│            Claude reads and writes directly                 │
-└─────────────────────────────────────────────────────────────┘
-                          │
-            ┌─────────────┼─────────────┐
-            ▼             ▼             ▼
-     ┌──────────┐  ┌──────────┐  ┌──────────┐
-     │ MEMORY.md│  │// MEMORY:│  │git commit│
-     │ (direct) │  │(comments)│  │(messages)│
-     └──────────┘  └──────────┘  └──────────┘
-            │             │             │
-            └─────────────┼─────────────┘
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    Mind Daemon                              │
-│         (Runs in background, watches files)                 │
-│                                                             │
-│  • Detects file changes                                     │
-│  • Parses memory content (loose regex)                      │
-│  • Extracts decisions, issues, learnings                    │
-│  • Updates search index                                     │
-│  • Detects session end (30 min inactivity)                  │
-│  • Updates CLAUDE.md with fresh context                     │
-│  • Generates smart prompts (open loops, stale decisions)    │
-└─────────────────────────────────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      CLAUDE.md                              │
-│          (MIND:CONTEXT section auto-updated)                │
-│                                                             │
-│  Claude Code reads this automatically every session.        │
-│  Memory is injected. No tool call needed.                   │
-└─────────────────────────────────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   MCP Server (4 tools)                      │
-│                                                             │
-│  mind_search   - Semantic search across memories            │
-│  mind_edges    - Check for gotchas before coding            │
-│  mind_add_global_edge - Add cross-project gotcha            │
-│  mind_status   - Check daemon status                        │
-└─────────────────────────────────────────────────────────────┘
++-----------------------------------------------------------------+
+|                     .mind/MEMORY.md                              |
+|                   (Source of Truth)                              |
+|            Claude reads and writes directly                      |
++-----------------------------------------------------------------+
+                          |
+            +-------------+-------------+
+            v             v             v
+     +----------+  +----------+  +----------+
+     | MEMORY.md|  |// MEMORY:|  |git commit|
+     | (direct) |  |(comments)|  |(messages)|
+     +----------+  +----------+  +----------+
+            |             |             |
+            +-------------+-------------+
+                          v
++-----------------------------------------------------------------+
+|                    MCP Server (8 tools)                          |
+|                   (Stateless, on-demand)                         |
+|                                                                  |
+|  mind_recall()  - Load session context (CALL FIRST!)             |
+|  mind_session() - Get current session state                      |
+|  mind_blocker() - Log blocker + auto-search memory               |
+|  mind_search()  - Semantic search across memories                |
+|  mind_edges()   - Check for gotchas before coding                |
+|  mind_checkpoint() - Force process pending memories              |
+|  mind_add_global_edge() - Add cross-project gotcha               |
+|  mind_status()  - Check memory health                            |
++-----------------------------------------------------------------+
+                          |
+                          v
++-----------------------------------------------------------------+
+|                      CLAUDE.md                                   |
+|          (MIND:CONTEXT section auto-updated)                     |
+|                                                                  |
+|  Claude Code reads this automatically every session.             |
+|  Memory is injected. No tool call needed.                        |
++-----------------------------------------------------------------+
 ```
 
 ---
 
-## Data Flow
+## Data Flow (v2)
 
-### Session Start (Automatic)
+### Session Start
 
 ```
 1. Claude Code opens project
 2. Claude Code reads CLAUDE.md (built-in behavior)
-3. MIND:CONTEXT section is already there
-4. Claude has full context without any tool call
+3. MIND:CONTEXT section has cached context
+4. Claude calls mind_recall() (instructed by CLAUDE.md)
+5. MCP checks timestamps:
+   - Gap > 30 min? Process old SESSION.md, start fresh
+   - MEMORY.md changed? Reparse
+6. Returns fresh context + session state
 ```
 
-### During Session (Multiple Capture Methods)
+### During Session
 
 ```
-Method A: Direct to MEMORY.md
-└── Claude appends: "decided JWT because simpler"
-└── Mind watcher detects change
-└── Parser extracts decision
+Claude writes to:
+- .mind/MEMORY.md (decisions, problems, learnings)
+- .mind/SESSION.md (goal, approach, blockers)
+- Code comments (// MEMORY: decided X)
 
-Method B: Inline comments in code
-└── Claude writes: // MEMORY: problem - Safari cookies
-└── Mind watcher scans for MEMORY: prefix
-└── Parser extracts issue
-
-Method C: Git commits
-└── Claude commits: "feat: auth - decided JWT over OAuth"
-└── Mind watches .git/COMMIT_EDITMSG
-└── Parser extracts from commit message
+No MCP calls needed during work.
 ```
 
-### Session End (Automatic)
+### Session End (Lazy)
 
 ```
-1. Mind daemon detects 30 min inactivity
-2. Parses all captured content
-3. Extracts entities with confidence scores
-4. Updates search index
-5. Generates MIND:CONTEXT section
-6. Writes to CLAUDE.md
-7. Ready for next session
-```
-
-### Next Session (Automatic)
-
-```
-1. Claude Code opens project
-2. CLAUDE.md has fresh MIND:CONTEXT
-3. Claude immediately knows:
-   - What we worked on last time
-   - Open issues and loops
-   - Relevant gotchas for current stack
-   - Where to continue
+1. User stops working (no explicit end needed)
+2. Next time mind_recall() is called:
+   - Detects gap > 30 min
+   - Promotes discoveries from SESSION.md to MEMORY.md
+   - Clears SESSION.md for new session
+   - Returns fresh context
 ```
 
 ---
@@ -150,27 +124,23 @@ Method C: Git commits
 
 ```
 project/
-├── .mind/
-│   ├── MEMORY.md              # Source of truth (git-tracked)
-│   ├── .index/                # Mind's cache (gitignored)
-│   │   ├── extracted.json     # Parsed entities
-│   │   └── embeddings.db      # Vector search index
-│   └── archive/               # Old entries (auto-rotated)
-│       └── 2024.md
-├── CLAUDE.md                  # Contains MIND:CONTEXT section
-├── src/
-└── ...
++-- .mind/
+|   +-- MEMORY.md              # Long-term memory (git-tracked)
+|   +-- SESSION.md             # Session state (current session)
+|   +-- state.json             # Timestamps for session detection
+|   +-- .gitignore             # Ignores state.json
++-- CLAUDE.md                  # Contains MIND:CONTEXT section
++-- src/
++-- ...
 ```
 
 ### Global Level
 
 ```
 ~/.mind/
-├── config.toml                # Global settings
-├── projects.json              # Registered projects
-├── global_edges.json          # Cross-project gotchas
-├── user_model.json            # User patterns/preferences
-└── daemon.pid                 # Daemon process ID
++-- config.toml                # Global settings
++-- projects.json              # Registered projects
++-- global_edges.json          # Cross-project gotchas
 ```
 
 ---
@@ -183,7 +153,7 @@ The source of truth. Human-readable, git-tracked.
 
 ```markdown
 <!-- MIND MEMORY - Append as you work. Write naturally.
-Keywords: decided, problem, learned, tried, fixed, blocked, todo -->
+Keywords: decided, problem, learned, tried, fixed, blocked, KEY, important -->
 
 # project-name
 
@@ -204,28 +174,59 @@ Keywords: decided, problem, learned, tried, fixed, blocked, todo -->
 
 Working on hero section. User wants living mind visualization.
 
-**Decided:** CSS animations over Three.js - simpler, no deps
-**Problem:** Safari gradient - tried standard CSS, fixed with -webkit
-**Learned:** Safari needs vendor prefixes for backdrop-filter in 2024
+decided: CSS animations over Three.js - simpler, no deps
+problem: Safari gradient - tried standard CSS, fixed with -webkit
+learned: Safari needs vendor prefixes for backdrop-filter in 2024
 
 Next: implement node connections
 
 ---
 ```
 
-### 2. Context Section (in CLAUDE.md)
+### 2. Session File (SESSION.md)
 
-Auto-generated, always fresh:
+Goal-oriented session tracking. Prevents rabbit holes.
+
+```markdown
+# Session: 2024-12-13
+
+## The Goal
+<!-- USER OUTCOME, not technical task -->
+User can upload images and see them in their gallery
+
+## Current Approach
+<!-- What you're trying NOW + pivot condition -->
+Using multer for uploads. Pivot if: memory issues with large files
+
+## Blockers
+<!-- When you add here, triggers memory search -->
+- Image resize quality is poor
+
+## Rejected Approaches
+<!-- Strategic decisions with WHY -->
+- Client-side resize - Quality loss unacceptable for photography app
+
+## Working Assumptions
+<!-- Question these when stuck -->
+- User has stable internet
+- Files under 10MB
+
+## Discoveries
+<!-- Tech patterns get promoted to MEMORY.md on session end -->
+- multer stores files in /tmp by default
+```
+
+### 3. Context Section (in CLAUDE.md)
+
+Auto-generated at `mind_recall()`:
 
 ```markdown
 <!-- MIND:CONTEXT - Auto-generated. Do not edit. -->
-## Memory: ✓ Active
+## Memory: Active
 Last captured: 5 min ago
-This session: 2 decisions, 1 issue
 
 ## Session Context
-- Last active: 2 hours ago (Dec 12, 3:45pm)
-- Recent focus: Dashboard hero section
+Last active: 2 hours ago (Dec 12, 3:45pm)
 
 ## Project State
 - Goal: Ship v1 dashboard
@@ -237,30 +238,17 @@ This session: 2 decisions, 1 issue
 - File-based memory over database (Dec 12) - human-readable
 
 ## Open Loops
-⚠️ Safari cookies bug - mentioned 2 sessions ago, no resolution
-⚠️ "add refresh tokens" - noted as next step, not started
+[!] Safari cookies bug - mentioned 2 sessions ago, no resolution
+[!] "add refresh tokens" - noted as next step, not started
 
 ## Gotchas (This Stack)
 - Safari ITP blocks cross-domain auth
 - SvelteKit: auth checks in +page.server.ts
-- Vercel Edge: use Web Crypto, not Node crypto
 
 ## Continue From
 Last: Hero component CSS animations
-Next suggested: Implement node connections
 <!-- MIND:END -->
 ```
-
-### 3. Daemon
-
-Background process handling automation:
-
-- Watches registered project directories
-- Detects file changes (MEMORY.md, code files, git)
-- Parses content with loose regex
-- Updates search index
-- Detects session boundaries (inactivity)
-- Generates and injects MIND:CONTEXT
 
 ### 4. Parser
 
@@ -280,16 +268,18 @@ Loose extraction from natural language:
 # - Vague mention = low
 ```
 
-### 5. MCP Server
-
-Four focused tools:
+### 5. MCP Server (8 tools)
 
 | Tool | Purpose | When to Use |
 |------|---------|-------------|
+| `mind_recall` | Load session context | **FIRST every session** |
+| `mind_session` | Get current session state | Feeling lost or off-track |
+| `mind_blocker` | Log blocker + search memory | When stuck |
 | `mind_search` | Semantic search | CLAUDE.md context isn't enough |
-| `mind_edges` | Check gotchas | Before implementing risky code |
-| `mind_add_global_edge` | Add cross-project gotcha | Found platform-wide issue |
-| `mind_status` | Check daemon | Debugging, health check |
+| `mind_edges` | Check gotchas | Before risky code |
+| `mind_checkpoint` | Force process memories | After many writes |
+| `mind_add_global_edge` | Add cross-project gotcha | Found platform issue |
+| `mind_status` | Check health | Debugging |
 
 ---
 
@@ -312,30 +302,31 @@ Mind adds value through:
 - Extraction (structure from prose)
 - Injection (context into CLAUDE.md)
 - Detection (edges before mistakes)
-- **Intelligence (relationships, staleness)**
 
 But Memory works without Mind.
 
-### 3. Zero-Friction Intelligence
+### 3. Stateless MCP (v2)
 
-Mind detects patterns automatically:
+No daemon, no file watchers, no background processes.
 
-- **Implicit relationships** - Links entities that reference each other
-- **Temporal markers** - Flags "for MVP", "quick fix" decisions for review
+- `mind_recall()` does lazy session detection
+- Checks timestamps and file hashes on demand
+- Promotes learnings when gap detected
+- Zero ops burden
 
-No special syntax required. See [Intelligence Features](INTELLIGENCE.md).
+### 4. Two-Layer Memory
 
-### 3. Multiple Capture Points
+**Long-term (MEMORY.md):**
+- Decisions, problems, learnings
+- Persists across sessions
+- Git-tracked
 
-Three ways to capture, all watched:
+**Short-term (SESSION.md):**
+- Goal, approach, blockers
+- Prevents rabbit holes
+- Cleared on session end
 
-- MEMORY.md (direct)
-- Code comments (// MEMORY:)
-- Git commits (keywords)
-
-If one fails, others might work.
-
-### 4. Zero Commands During Work
+### 5. Zero Commands During Work
 
 After `mind init`:
 
@@ -344,94 +335,55 @@ After `mind init`:
 - No end command
 - Just work normally
 
-### 5. Proactive, Not Passive
-
-MIND:CONTEXT doesn't just show history:
-
-- Open loops (unfinished business)
-- Stale decisions (might need revisiting)
-- Relevant gotchas (for current stack)
-- Suggested next steps
-
 ### 6. Graceful Degradation
 
 | Scenario | What Works |
 |----------|------------|
-| Daemon running | Full automation |
-| Daemon stopped | Manual MEMORY.md, no auto-inject |
-| Mind not installed | MEMORY.md still useful for Claude |
+| MCP available | Full functionality |
+| MCP unavailable | MEMORY.md still useful, stale CLAUDE.md |
 | New project | Immediate value after `mind init` |
 
 ---
 
-## Performance Considerations
+## Performance
 
-### File Watching
+### Lazy Processing
 
-- Use OS-native watchers (inotify, FSEvents)
-- Debounce rapid changes (100ms)
-- Ignore .index/ directory
+- Parse MEMORY.md only when `mind_recall()` called
+- Check hash to skip if unchanged
+- No background CPU usage
 
-### Parsing
+### State File
 
-- Parse on change, not on read
-- Cache parsed entities in .index/
-- Incremental updates (diff-based)
+```json
+{
+  "last_activity": 1702400000000,
+  "memory_hash": "a1b2c3d4e5f6",
+  "schema_version": 2
+}
+```
 
-### Embeddings
-
-- Generate on first index, update incrementally
-- Store in SQLite (portable)
-- Lazy load (only when searching)
-
-### CLAUDE.md Injection
-
-- Update only on session boundary
-- Atomic write (temp file + rename)
-- Preserve non-MIND sections
+Used for:
+- Gap detection (30 min threshold)
+- Change detection (hash comparison)
 
 ---
 
-## Security Considerations
+## Security
 
 ### Local Data
 
 - All data stays local by default
 - .index/ is gitignored
-- No network calls without explicit sync
+- No network calls
 
 ### Global Edges
 
-- Community edges could be poisoned
-- Verification count as trust signal
+- Stored in ~/.mind/global_edges.json
 - Local edges always trusted
+- User controls what gets added
 
 ### CLAUDE.md Modification
 
 - Only modify between MIND: markers
 - Preserve user content outside markers
-- Backup before modification
-
----
-
-## Future Considerations
-
-### Potential Enhancements
-
-- Cloud sync (encrypted, optional)
-- Team shared edges
-- IDE plugins (VSCode, Cursor)
-- Voice capture integration
-- Image/screenshot memory
-
-### Platform Dependencies
-
-- MCP can't see conversations (limitation)
-- Claude Code has no hooks (limitation)
-- File watching varies by OS
-
-### Scaling
-
-- Single project: trivial
-- 10 projects: fine
-- 100+ projects: may need selective watching

@@ -1,4 +1,4 @@
-# Mind Design Rationale
+# Mind Design Rationale (v2)
 
 ## Why File-Based Memory?
 
@@ -37,15 +37,15 @@ mind_get_context()
 **Insight:** Claude already writes files constantly. Leverage that.
 
 ```
-project/.mind/MEMORY.md  ← Claude writes here naturally
-project/CLAUDE.md        ← Mind injects context automatically
+project/.mind/MEMORY.md  <- Claude writes here naturally
+project/CLAUDE.md        <- Mind injects context automatically
 ```
 
 | Aspect | Tool-Based | File-Based |
 |--------|------------|------------|
 | Source of truth | Database | .mind/MEMORY.md |
-| MCP tools needed | 10+ | 4 |
-| Session management | Explicit | Inferred |
+| MCP tools needed | 10+ | 8 (focused) |
+| Session management | Explicit | Lazy (mind_recall) |
 | Capture method | Tool calls | File writes |
 | Format | Rigid schemas | Loose parsing |
 | Context delivery | On request | Auto-injected |
@@ -74,7 +74,7 @@ Mind auto-injects context into CLAUDE.md rather than requiring a tool call.
 **Why:**
 - Claude Code reads CLAUDE.md automatically
 - Zero tool calls needed for context
-- Always fresh (updated on session end)
+- Always fresh (updated on recall)
 - Fails gracefully (stale context still useful)
 
 ### 3. Loose Parsing
@@ -82,8 +82,8 @@ Mind auto-injects context into CLAUDE.md rather than requiring a tool call.
 Accept natural language, score confidence:
 
 ```
-"decided JWT because simpler"        → confidence: 0.6
-"**Decided:** Use JWT - simpler"     → confidence: 0.9
+"decided JWT because simpler"        -> confidence: 0.6
+"**Decided:** Use JWT - simpler"     -> confidence: 0.9
 ```
 
 **Why:**
@@ -94,7 +94,7 @@ Accept natural language, score confidence:
 
 ### 4. Multiple Capture Methods
 
-Three ways to capture, all watched:
+Three ways to capture, all parsed:
 - Direct to MEMORY.md
 - Inline comments (`// MEMORY: decided X`)
 - Git commits (keywords in messages)
@@ -104,25 +104,50 @@ Three ways to capture, all watched:
 - Fits different workflows
 - No single point of failure
 
-### 5. Inferred Sessions
+### 5. Lazy Session Detection (v2)
 
-Sessions detected from activity patterns (30 min inactivity = session end).
+Sessions detected lazily via `mind_recall()` instead of a background daemon.
 
 **Why:**
-- No explicit start/end calls to forget
-- Matches natural work patterns
-- Context updates happen automatically
+- No daemon to crash or manage
+- No file watchers consuming resources
+- No platform-specific configs (launchd, systemd)
+- Simpler = more reliable
+- MCP is stateless by design
 
-### 6. Minimal MCP Tools (4)
+### 6. Two-Layer Memory
 
-Only tools that can't be replaced by files:
+Long-term (MEMORY.md) + Short-term (SESSION.md):
+
+**MEMORY.md:**
+- Decisions, problems, learnings
+- Persists forever
+- Git-tracked
+
+**SESSION.md:**
+- Goal, approach, blockers
+- Prevents rabbit holes
+- Cleared on session end
+
+**Why:**
+- Different concerns need different lifespans
+- SESSION.md prevents Claude from losing focus
+- Discoveries get promoted to MEMORY.md automatically
+
+### 7. Focused MCP Tools (8)
+
+Only tools that add value beyond file operations:
 
 | Tool | Why It Can't Be a File |
 |------|------------------------|
-| `mind_search` | Needs semantic search across index |
-| `mind_edges` | Needs pattern matching + global edges |
-| `mind_add_global_edge` | Cross-project, not in MEMORY.md |
-| `mind_status` | Daemon health check |
+| `mind_recall` | Needs lazy session detection |
+| `mind_session` | Structured session state access |
+| `mind_blocker` | Auto-search + logging |
+| `mind_search` | Semantic search across memories |
+| `mind_edges` | Pattern matching + global edges |
+| `mind_checkpoint` | Force reprocessing |
+| `mind_add_global_edge` | Cross-project storage |
+| `mind_status` | Health check |
 
 Everything else goes through MEMORY.md.
 
@@ -149,16 +174,6 @@ decided to use JWT because simpler than sessions
 
 **Accepted because:** Having messy-but-present memory > having perfectly-structured-but-empty memory.
 
-### Daemon Complexity
-
-File-based approach requires a background daemon for:
-- File watching
-- Parsing
-- Context injection
-- Session detection
-
-**Accepted because:** Ops complexity is worth it if memory actually accumulates.
-
 ### Parser Imperfection
 
 Loose parsing will:
@@ -166,10 +181,43 @@ Loose parsing will:
 - Occasionally misinterpret
 - Have false positives
 
-**Accepted because:** 
+**Accepted because:**
 - Confidence scoring flags uncertainty
 - Something captured > nothing captured
 - Users can always write explicitly
+
+### Stale Context Possibility
+
+If `mind_recall()` isn't called, CLAUDE.md context may be stale.
+
+**Accepted because:**
+- CLAUDE.md instructions tell Claude to call it first
+- Stale context is still useful
+- Better than daemon reliability issues
+
+---
+
+## What We Removed (v2)
+
+### Daemon
+
+v1 had a background daemon for file watching and session detection.
+
+**Removed because:**
+- Daemons crash and need restart
+- PID file management is fragile
+- Platform-specific configs (launchd, systemd, Task Scheduler)
+- Resource consumption even when not coding
+- MCP can do lazy detection instead
+
+### Real-Time Context Updates
+
+v1 updated CLAUDE.md immediately on file changes.
+
+**Removed because:**
+- Requires daemon running
+- Same-session context not that important
+- `mind_recall()` can refresh on demand
 
 ---
 
@@ -183,7 +231,7 @@ MCP can't see conversation content. If it could, memory would be truly passive.
 
 ### IDE Hooks
 
-If Claude Code had on-start/on-end hooks, we wouldn't need file watching.
+If Claude Code had on-start/on-end hooks, session detection would be trivial.
 
 **Limitation:** Platform constraint, not a design choice.
 
@@ -204,7 +252,9 @@ We could require `**Decided:**` format everywhere for perfect parsing.
 | Auto-inject context | MIND:CONTEXT in CLAUDE.md |
 | Multiple capture | File, comments, commits |
 | Loose parsing | Natural language, confidence scores |
-| Inferred sessions | Activity-based, no explicit calls |
-| Minimal tools | 4 tools for things files can't do |
+| Lazy sessions | mind_recall() checks timestamps |
+| Two-layer memory | MEMORY.md (long) + SESSION.md (short) |
+| Focused tools | 8 tools for things files can't do |
+| No daemon | Stateless MCP, zero ops |
 
 **The goal:** Memory that accumulates through normal work, not explicit memory management.

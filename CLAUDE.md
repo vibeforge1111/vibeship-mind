@@ -11,6 +11,9 @@ Last active: just now
 
 ## Key (Never Forget)
 - [D] stay file-based - that's our identity vs database-heavy competitors
+- [D] remove daemon entirely - MCP handles everything lazily via mind_recall()
+- [D] add SESSION
+- [D] restructure SESSION
 
 ## Recent Decisions
 - NOT to add: databases, embeddings, workflow commands, episodes, user model - too much friction (2025-12-13)
@@ -22,6 +25,7 @@ Last active: just now
 ## Open Loops
 - [!] Windows console doesn't support Unicode checkmarks (2025-12-13) - unresolved
 - [!] README was too confusing for beginners (2025-12-13) - unresolved
+- [!] s, platform configs) - stateless MCP is more reliable (2025-12-13) - unresolved
 
 ## Gotchas
 - Windows cp1252 encoding -> use ASCII symbols or set PYTHONIOENCODING=utf-8
@@ -30,10 +34,34 @@ Last active: just now
 ## Session History
 - 2025-12-13: Added intelligence from archives: recency, KEY markers, session summaries, context budget, stack-aware edges | productive
 - 2025-12-13: Fixed daemon bugs: async coroutine awaiting, Windows process detection with ctypes | debugging
+- 2025-12-13: Migrated to Mind v2: daemon-free, MCP-only architecture | shipped
+- 2025-12-13: Added within-session memory (SESSION.md) | productive
+- 2025-12-13: Upgraded SESSION.md to goal-oriented structure | shipped
 
 ## Continue From
 Last: File-based memory over database approach - simpler, human-readable, git-trackable
 <!-- MIND:END -->
+
+# CRITICAL: Call mind_recall() FIRST
+
+**At the start of EVERY session, call `mind_recall()` before doing anything else.**
+
+This loads fresh context, detects session gaps, and ensures you have the latest memory state. The MIND:CONTEXT above may be stale - `mind_recall()` gets live data.
+
+## MCP Tools - When to Use
+
+| Tool | When to Use |
+|------|-------------|
+| `mind_recall()` | **FIRST thing every session** - loads fresh context |
+| `mind_session()` | Check current goal, approach, blockers |
+| `mind_blocker(desc)` | When stuck - logs blocker + auto-searches memory for solutions |
+| `mind_search(query)` | When MIND:CONTEXT doesn't have what you need |
+| `mind_edges(intent)` | Before implementing risky code |
+| `mind_checkpoint()` | Force process pending memories |
+| `mind_status()` | Check memory health |
+| `mind_add_global_edge()` | Found a platform gotcha that applies across projects |
+
+---
 
 # IMPORTANT: Write memories as you work
 
@@ -75,29 +103,23 @@ Mind is a file-based memory system for AI coding assistants. The core insight: *
 
 ```
 Source of truth: .mind/MEMORY.md (per project)
+Session tracking: .mind/SESSION.md (goal, approach, blockers)
 Context delivery: MIND:CONTEXT section in CLAUDE.md (auto-injected)
-Daemon: Watches files, parses content, updates context
-MCP: 4 tools (search, edges, add_global_edge, status)
+MCP: 8 tools (recall, session, blocker, search, edges, checkpoint, status, add_global_edge)
 ```
 
 ## Key Files
 
 ```
 src/mind/
-â”œâ”€â”€ cli.py           # CLI commands (init, daemon, add, list, etc.)
-â”œâ”€â”€ daemon.py        # Background file watcher + context updater
-â”œâ”€â”€ watcher.py       # File system watching (watchfiles)
-â”œâ”€â”€ parser.py        # Loose regex extraction from markdown/comments
-â”œâ”€â”€ context.py       # MIND:CONTEXT generation
-â”œâ”€â”€ indexer.py       # Search index (SQLite + embeddings)
-â”œâ”€â”€ storage/
-â”‚   â”œâ”€â”€ sqlite.py    # Database (simplified schema)
-â”‚   â””â”€â”€ embeddings.py # Vector search
-â”œâ”€â”€ mcp/
-â”‚   â””â”€â”€ server.py    # 4 MCP tools
-â””â”€â”€ edges/
-    â”œâ”€â”€ detector.py  # Edge detection logic
-    â””â”€â”€ global_edges.py # Global edge storage
++-- cli.py           # CLI commands (init, add, list, status, etc.)
++-- parser.py        # Loose regex extraction from markdown/comments
++-- context.py       # MIND:CONTEXT generation
++-- detection.py     # Stack detection
++-- storage.py       # Projects registry
++-- templates.py     # File templates
++-- mcp/
+    +-- server.py    # 8 MCP tools (stateless)
 ```
 
 ## Design Principles
@@ -140,11 +162,8 @@ uv run pytest tests/
 # CLI
 uv run mind <command>
 
-# MCP Server
+# MCP Server (for Claude Code integration)
 uv run mind mcp
-
-# Daemon
-uv run mind daemon start
 ```
 
 ## Memory

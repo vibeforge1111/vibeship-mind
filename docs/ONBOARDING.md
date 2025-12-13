@@ -1,65 +1,77 @@
-# Mind Onboarding
+# Mind Onboarding (v2)
 
-## One-Line Install
-
-```bash
-curl -sSL https://mind.vibeship.dev/install | sh
-```
-
-This does everything:
-1. Installs Mind via pip
-2. Initializes current project
-3. Starts daemon
-4. Adds to Claude Code MCP config
-5. Shows first-run guide
-
----
-
-## Manual Install (3 Commands)
+## Quick Install
 
 ```bash
-pip install mind-memory
-mind init
-mind daemon start
+# 1. Clone and install
+git clone https://github.com/anthropics/vibeship-mind.git
+cd vibeship-mind
+uv sync
+
+# 2. Add MCP to Claude Code config
+# See "Claude Code Setup" section below
+
+# 3. Initialize in your project
+cd /path/to/your-project
+uv run --directory /path/to/vibeship-mind mind init
 ```
 
 Done. Start working.
 
 ---
 
+## Claude Code Setup
+
+Add Mind to your MCP config:
+
+**macOS/Linux:** `~/.config/claude/mcp.json`
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "mind": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/vibeship-mind", "run", "mind", "mcp"]
+    }
+  }
+}
+```
+
+Restart Claude Code after adding.
+
+---
+
 ## First-Run Output
 
-After `mind init`, user sees:
+After `mind init`, you'll see:
 
 ```
-✓ Mind initialized for my-project!
+[+] Created .mind/MEMORY.md
+[+] Created .mind/SESSION.md
+[+] Updated CLAUDE.md with MIND:CONTEXT
+[+] Detected stack: sveltekit, typescript, tailwind
+[+] Registered project with Mind
 
-📁 Created:
-   .mind/MEMORY.md     ← Write here as you work
-   CLAUDE.md           ← Context auto-injected here
+Mind initialized! Start working - append notes to .mind/MEMORY.md
 
-🔍 Detected stack: sveltekit, typescript, tailwind
-
-📝 How to capture memory:
-   • Write naturally in .mind/MEMORY.md
-   • Use keywords: decided, problem, learned, fixed
-   • Or quick syntax: MEMORY: decided X because Y
-   • Or inline comments: // MEMORY: decided X
-
-🤖 Mind will automatically:
-   • Watch your files for changes
-   • Extract decisions, issues, learnings
-   • Update CLAUDE.md with fresh context
-   • Build searchable memory
-
-▶️  Start daemon:
-   mind daemon start
-
-📊 Check status anytime:
-   mind daemon status
-
-Ready to build!
+MCP tools available:
+  - mind_recall() : Load session context (call first!)
+  - mind_session() : Get current session state
+  - mind_search() : Search memories
+  - mind_checkpoint() : Force process pending memories
+  - mind_edges() : Check for gotchas
 ```
+
+---
+
+## How It Works
+
+1. **CLAUDE.md tells Claude to call `mind_recall()` first**
+2. **Claude writes to `.mind/MEMORY.md` as it works**
+3. **Next session, `mind_recall()` loads the context**
+
+No daemon. No background processes. Just files and MCP.
 
 ---
 
@@ -69,189 +81,134 @@ MIND:CONTEXT shows proof it's working:
 
 ```markdown
 <!-- MIND:CONTEXT -->
-## Memory: ✓ Active
+## Memory: Active
 Last captured: 5 min ago
-This session: 2 decisions, 1 issue, 1 learning
 
-## Session Context
+## Project State
+- Stack: python, fastapi
+- Goal: Ship v1 dashboard
+- Blocked: None
+
+## Recent Decisions
+- Use JWT for auth (Dec 12) - simpler than sessions
 ...
 ```
 
-If stale:
-
-```markdown
-## Memory: ⚠️ Stale (2 days)
-Run `mind daemon start` to resume capture
-```
-
 ---
 
-## Pre-Populated Example
+## Writing Memory
 
-MEMORY.md starts with one example entry so users see the format:
+Claude writes to `.mind/MEMORY.md` naturally:
 
 ```markdown
-<!-- MIND MEMORY - Append as you work. Write naturally. -->
-
-# my-project
-
-## Project State
-- Goal: (describe your goal)
-- Stack: sveltekit, typescript, tailwind
-- Blocked: None
-
-## Gotchas
-<!-- Add project-specific gotchas here -->
-
----
-
-## Session Log
-
 ## 2024-12-12
 
-**Decided:** Initialize Mind for this project
-- Gives Claude persistent memory across sessions
-- Context appears automatically in CLAUDE.md
+Working on hero section.
 
-Next: Start building!
+decided: CSS animations over Three.js - simpler, no deps
+problem: Safari gradient - tried standard CSS, fixed with -webkit
+learned: Safari needs vendor prefixes for backdrop-filter in 2024
+
+Next: implement node connections
+```
+
+**Keywords that get parsed:**
+- `decided`, `chose`, `going with` - Decisions
+- `problem`, `bug`, `stuck`, `blocked` - Issues
+- `learned`, `TIL`, `gotcha`, `realized` - Learnings
+- `KEY`, `important` - Never-fade items
 
 ---
 
-<!-- 
-Your turn! Add entries as you work:
+## Session Tracking
 
-**Decided:** Use X because Y
-**Problem:** Something isn't working
-**Learned:** Discovered that X does Y
-**Fixed:** Resolved the issue by doing Z
+`.mind/SESSION.md` keeps you focused:
 
-Or quick syntax:
-MEMORY: decided JWT because simpler
-MEMORY: problem - Safari cookies broken
-MEMORY: learned - ITP blocks cross-domain
--->
+```markdown
+# Session: 2024-12-13
+
+## The Goal
+User can upload images and see them in their gallery
+
+## Current Approach
+Using multer for uploads. Pivot if: memory issues with large files
+
+## Blockers
+- Image resize quality is poor
+
+## Discoveries
+- multer stores files in /tmp by default
 ```
+
+When you add a blocker, use `mind_blocker()` to auto-search memory for solutions.
 
 ---
 
-## Install Script
+## MCP Tools
 
-```bash
-#!/bin/bash
-# install.sh - One-line Mind installer
+| Tool | When to Use |
+|------|-------------|
+| `mind_recall()` | **FIRST every session** |
+| `mind_session()` | Feeling lost or off-track |
+| `mind_blocker()` | When stuck on something |
+| `mind_search()` | Need details not in context |
+| `mind_edges()` | Before risky code |
+| `mind_checkpoint()` | Force process memories |
 
-set -e
-
-echo "🧠 Installing Mind..."
-
-# Check Python
-if ! command -v python3 &> /dev/null; then
-    echo "❌ Python 3 required. Install from python.org"
-    exit 1
-fi
-
-# Install Mind
-pip install mind-memory --quiet
-
-# Initialize if in a project directory
-if [ -f "package.json" ] || [ -f "pyproject.toml" ] || [ -f "Cargo.toml" ] || [ -f "go.mod" ]; then
-    echo "📁 Detected project directory, initializing..."
-    mind init
-fi
-
-# Start daemon
-echo "🚀 Starting daemon..."
-mind daemon start
-
-# Add to Claude Code MCP config
-CLAUDE_CONFIG="$HOME/.config/claude/mcp.json"
-if [ -f "$CLAUDE_CONFIG" ]; then
-    echo "⚙️  Adding to Claude Code config..."
-    # Use jq if available, otherwise manual instructions
-    if command -v jq &> /dev/null; then
-        jq '.mcpServers.mind = {"command": "mind", "args": ["mcp"]}' "$CLAUDE_CONFIG" > tmp.json && mv tmp.json "$CLAUDE_CONFIG"
-        echo "✓ Added to MCP config"
-    else
-        echo "📝 Add to $CLAUDE_CONFIG manually:"
-        echo '   "mind": {"command": "mind", "args": ["mcp"]}'
-    fi
-else
-    echo "📝 Add to Claude Code MCP config:"
-    echo '   "mind": {"command": "mind", "args": ["mcp"]}'
-fi
-
-echo ""
-echo "✅ Mind installed!"
-echo ""
-echo "Commands:"
-echo "  mind init          - Initialize in a project"
-echo "  mind daemon status - Check if running"
-echo "  mind search        - Search memories"
-echo ""
-echo "Start working - memory accumulates automatically."
-```
+Most sessions: Just `mind_recall()` at start, then work normally.
 
 ---
 
-## Claude Code MCP Config
-
-Add to `~/.config/claude/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "mind": {
-      "command": "mind",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-Or if using uv:
-
-```json
-{
-  "mcpServers": {
-    "mind": {
-      "command": "uv",
-      "args": ["--directory", "/path/to/mind", "run", "mind", "mcp"]
-    }
-  }
-}
-```
-
----
-
-## Troubleshooting First Run
-
-### "Daemon not running"
-
-```bash
-mind daemon start
-mind daemon status  # Verify
-```
+## Troubleshooting
 
 ### "MIND:CONTEXT not appearing"
 
 ```bash
-mind index          # Force reindex
-mind context        # Check what would be generated
+# Check CLAUDE.md exists
+cat CLAUDE.md | head -20
+
+# Reinitialize
+uv run mind init
 ```
 
-### "Nothing being captured"
+### "mind_recall returns old data"
+
+```bash
+# Force refresh
+# In Claude: mind_recall(force_refresh=True)
+
+# Or checkpoint
+# In Claude: mind_checkpoint()
+```
+
+### "Search returns nothing"
 
 Check MEMORY.md has content with keywords:
 - decided, chose, going with
 - problem, issue, bug, stuck
 - learned, discovered, realized
 
-### "Search returns nothing"
+### "MCP not connecting"
 
-```bash
-mind daemon status  # Is daemon running?
-mind index          # Rebuild index
-```
+1. Check config path is correct
+2. Check `uv` is available in PATH
+3. Restart Claude Code
+4. Check MCP logs
+
+---
+
+## Success Indicators
+
+**It's working if:**
+- CLAUDE.md has MIND:CONTEXT section
+- `mind_recall()` returns context
+- `mind_search("anything")` returns results
+- Claude references past decisions without being told
+
+**Something's wrong if:**
+- No MIND:CONTEXT in CLAUDE.md (run `mind init`)
+- mind_recall returns empty (check MEMORY.md has content)
+- Search returns nothing (check keywords in MEMORY.md)
 
 ---
 
@@ -259,23 +216,32 @@ mind index          # Rebuild index
 
 | Time | What Happens |
 |------|--------------|
-| Day 1 | Install, init, start daemon |
-| Day 2 | Notice MIND:CONTEXT appearing |
+| Day 1 | Install, init, start using |
+| Day 2 | Notice context appearing |
 | Week 1 | Start writing more explicitly |
-| Week 2 | Use search occasionally |
+| Week 2 | Use search and blocker tools |
 | Month 1 | Muscle memory, automatic |
 
 ---
 
-## Success Indicators
+## Quick Reference
 
-**It's working if:**
-- CLAUDE.md has fresh MIND:CONTEXT
-- `mind daemon status` shows "Running"
-- `mind search "anything"` returns results
-- Claude references past decisions without being told
+```bash
+# Initialize
+uv run mind init
 
-**Something's wrong if:**
-- MIND:CONTEXT is stale (check daemon)
-- Claude keeps asking same questions (check MEMORY.md has content)
-- Search returns nothing (run `mind index`)
+# Check health
+uv run mind doctor
+
+# Parse and show entities
+uv run mind parse
+
+# Show status
+uv run mind status
+```
+
+In Claude Code:
+- `mind_recall()` - Always first
+- `mind_session()` - When lost
+- `mind_blocker("stuck on X")` - When stuck
+- `mind_search("auth")` - Find memories

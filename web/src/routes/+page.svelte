@@ -558,7 +558,7 @@ Done.`,
 
 <section class="get-started-cta">
 	<h2>Ready to Give Claude a Mind?</h2>
-	<p>3 commands + 2 prompts. Zero friction.</p>
+	<p>3 commands + 1 prompt. Zero friction.</p>
 
 	<div class="install-steps">
 		<div class="install-step">
@@ -574,13 +574,6 @@ Done.`,
 			<div class="step-label">2. Tell Claude Code to connect</div>
 			<div class="prompt-box">
 				<p>"Add Mind MCP server from C:/path/to/vibeship-mind"</p>
-			</div>
-		</div>
-
-		<div class="install-step">
-			<div class="step-label">3. Tell Claude to use it</div>
-			<div class="prompt-box">
-				<p>"Call mind_recall() at the start of every session"</p>
 			</div>
 		</div>
 	</div>

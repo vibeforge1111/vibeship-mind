@@ -194,3 +194,5 @@ learned: Reminder lifecycle: created -> due -> surfaced -> work/snooze -> done/r
 - Types: "next session" (fires on recall), "absolute" (fires when date passed), "done"
 
 **Phase B (future):** Context-triggered reminders - "remind me when we work on auth"
+**Shipped:** Context-matching reminders (Phase B) - 'when I mention X' triggers that surface in mind_recall output
+**Learned:** Simple approach for context reminders - just show keywords to Claude and let it match naturally vs complex mid-session checking

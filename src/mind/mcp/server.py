@@ -232,9 +232,28 @@ def parse_when(when_str: str) -> tuple[str, str]:
     - "tomorrow" -> (today+1, "absolute")
     - "in X days/hours/weeks" -> (calculated, "absolute")
     - "2025-12-20" or "December 20" -> (parsed, "absolute")
+    - "when I mention X" -> (keywords, "context")
+    - "when we work on X" -> (keywords, "context")
+    - "when X comes up" -> (keywords, "context")
     """
     when_lower = when_str.lower().strip()
     today = date.today()
+
+    # Context-based triggers: "when I mention X", "when we work on X", "when X comes up"
+    context_patterns = [
+        r"when\s+i\s+mention\s+(.+)",
+        r"when\s+we\s+(?:work\s+on|discuss|touch)\s+(.+)",
+        r"when\s+(.+?)\s+comes\s+up",
+    ]
+    for pattern in context_patterns:
+        match = re.match(pattern, when_lower)
+        if match:
+            keywords_raw = match.group(1).strip()
+            # Normalize: "auth, login" or "auth and login" -> "auth,login"
+            # Split on comma, "and", or whitespace (but not within words)
+            keywords = re.split(r"\s*,\s*|\s+and\s+", keywords_raw)
+            keywords = [k.strip() for k in keywords if k.strip()]
+            return ",".join(keywords), "context"
 
     # Next session
     if "next session" in when_lower:
@@ -384,6 +403,12 @@ def get_due_reminders(project_path: Path) -> list[dict]:
                 due_reminders.append(r)
 
     return due_reminders
+
+
+def get_context_reminders(project_path: Path) -> list[dict]:
+    """Get all context-triggered reminders (not done)."""
+    reminders = parse_reminders(project_path)
+    return [r for r in reminders if r["type"] == "context" and not r["done"]]
 
 
 def promote_reminder_to_memory(project_path: Path, reminder: dict) -> None:
@@ -752,7 +777,7 @@ def create_server() -> Server:
             ),
             Tool(
                 name="mind_remind",
-                description="Set a reminder for later. Use for 'remind me to...', 'don't forget to...', etc. Supports 'next session', 'tomorrow', 'in 3 days', specific dates.",
+                description="Set a reminder for later. Use for 'remind me to...', 'don't forget to...', etc. Supports 'next session', 'tomorrow', 'in 3 days', specific dates, OR context triggers like 'when I mention auth'.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -762,7 +787,7 @@ def create_server() -> Server:
                         },
                         "when": {
                             "type": "string",
-                            "description": "When to remind: 'next session', 'tomorrow', 'in 3 days', '2025-12-20', etc.",
+                            "description": "When to remind: 'next session', 'tomorrow', 'in 3 days', '2025-12-20', OR 'when I mention auth', 'when we work on database', etc.",
                         },
                     },
                     "required": ["message", "when"],
@@ -867,29 +892,40 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
 
     # Check for due reminders and inject into context
     due_reminders = get_due_reminders(project_path)
-    reminders_section = None
-    if due_reminders:
-        reminders_section = []
-        for r in due_reminders:
-            reminders_section.append(r["message"])
+    context_reminders = get_context_reminders(project_path)
 
-        # Inject into context after "## Memory: Active" line
-        if "## Memory: Active" in context:
-            # Find where to insert (after the "Last captured" line)
-            lines = context.split("\n")
-            insert_idx = None
-            for i, line in enumerate(lines):
-                if line.startswith("Last captured:"):
-                    insert_idx = i + 1
-                    break
+    # Find insertion point for reminders (after "Last captured" or "## Memory: Active")
+    def find_insert_index(lines):
+        for i, line in enumerate(lines):
+            if line.startswith("Last captured:"):
+                return i + 1
+        for i, line in enumerate(lines):
+            if line.startswith("## Memory: Active"):
+                return i + 1
+        return 1  # After first line if nothing found
 
-            if insert_idx:
-                reminder_text = "\n## Reminders Due\n"
-                reminder_text += f"You have {len(due_reminders)} reminder(s) for this session:\n"
-                for msg in reminders_section:
-                    reminder_text += f"- {msg}\n"
-                lines.insert(insert_idx, reminder_text)
-                context = "\n".join(lines)
+    if due_reminders or context_reminders:
+        lines = context.split("\n")
+        insert_idx = find_insert_index(lines)
+        reminder_sections = []
+
+        if due_reminders:
+            reminder_text = "\n## Reminders Due\n"
+            reminder_text += f"You have {len(due_reminders)} reminder(s) for this session:\n"
+            for r in due_reminders:
+                reminder_text += f"- {r['message']}\n"
+            reminder_sections.append(reminder_text)
+
+        if context_reminders:
+            context_text = "\n## Context Reminders\n"
+            context_text += "Mention these when relevant keywords come up:\n"
+            for r in context_reminders:
+                context_text += f"- \"{r['message']}\" -> triggers on: {r['due']}\n"
+            reminder_sections.append(context_text)
+
+        for section in reversed(reminder_sections):
+            lines.insert(insert_idx, section)
+        context = "\n".join(lines)
 
     # Update state
     state["last_activity"] = now
@@ -924,6 +960,11 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
             "type": r["type"],
             "index": r["index"],
         } for r in due_reminders] if due_reminders else [],
+        "context_reminders": [{
+            "message": r["message"],
+            "keywords": r["due"],  # For context type, 'due' field holds keywords
+            "index": r["index"],
+        } for r in context_reminders] if context_reminders else [],
         "session_info": {
             "last_session": datetime.fromtimestamp(state["last_activity"] / 1000).isoformat() if state.get("last_activity") else None,
             "gap_detected": gap_detected,

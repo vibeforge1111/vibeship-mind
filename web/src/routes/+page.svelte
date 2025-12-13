@@ -564,6 +564,7 @@ Done.`,
 		<div class="install-step">
 			<div class="step-label">1. Install Mind</div>
 			<div class="install-preview">
+				<button class="copy-btn" onclick="navigator.clipboard.writeText('git clone https://github.com/vibeforge1111/vibeship-mind.git\ncd vibeship-mind\nuv sync\nuv run mind init'); this.textContent = 'Copied!'; setTimeout(() => this.textContent = 'Copy', 2000)">Copy</button>
 				<code>git clone https://github.com/vibeforge1111/vibeship-mind.git</code>
 				<code>cd vibeship-mind</code>
 				<code>uv sync</code>
@@ -574,6 +575,7 @@ Done.`,
 		<div class="install-step">
 			<div class="step-label">2. Tell Claude Code to connect</div>
 			<div class="prompt-box">
+				<button class="copy-btn" onclick="navigator.clipboard.writeText('Add Mind MCP server to my config'); this.textContent = 'Copied!'; setTimeout(() => this.textContent = 'Copy', 2000)">Copy</button>
 				<p>Add Mind MCP server to my config</p>
 			</div>
 			<div class="step-note">Then in any project: "Initialize Mind here"</div>
@@ -1050,6 +1052,32 @@ Done.`,
 		background: var(--terminal-bg);
 		border: 1px solid var(--green-dim);
 		box-shadow: 0 0 12px rgba(0, 196, 154, 0.15);
+		position: relative;
+	}
+
+	.copy-btn {
+		position: absolute;
+		top: var(--space-2);
+		right: var(--space-2);
+		padding: var(--space-1) var(--space-2);
+		font-family: var(--font-mono);
+		font-size: var(--text-xs);
+		color: var(--terminal-muted);
+		background: transparent;
+		border: 1px solid var(--terminal-border);
+		cursor: pointer;
+		opacity: 0;
+		transition: all var(--transition-fast);
+	}
+
+	.install-preview:hover .copy-btn,
+	.prompt-box:hover .copy-btn {
+		opacity: 1;
+	}
+
+	.copy-btn:hover {
+		color: var(--green-dim);
+		border-color: var(--green-dim);
 	}
 
 	.install-preview code {
@@ -1067,6 +1095,7 @@ Done.`,
 	}
 
 	.prompt-box {
+		position: relative;
 		padding: var(--space-3) var(--space-4);
 		background: var(--terminal-bg);
 		border: 1px solid var(--green-dim);

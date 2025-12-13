@@ -196,3 +196,7 @@ learned: Reminder lifecycle: created -> due -> surfaced -> work/snooze -> done/r
 **Phase B (future):** Context-triggered reminders - "remind me when we work on auth"
 **Shipped:** Context-matching reminders (Phase B) - 'when I mention X' triggers that surface in mind_recall output
 **Learned:** Simple approach for context reminders - just show keywords to Claude and let it match naturally vs complex mid-session checking
+
+decided: skip Claude Code hooks for memory automation - adds complexity without value. Commit messages don't capture "why". Real value is in-conversation logging via mind_log()
+decided: Mind's real purpose: not just a dev tool, but substrate for AI persistent identity. Memory = facts, Session = raw experience, Self-Improvement = meta-learning patterns. The md files aren't documentation - they're becoming.
+decided: Simplified SESSION.md from 6 sections to 4: Experience, Blockers, Rejected, Assumptions - removed goal, approach, discoveries, working_assumptions

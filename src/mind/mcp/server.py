@@ -1,4 +1,4 @@
-"""Mind MCP server - 14 tools for AI memory (v2: daemon-free, stateless)."""
+"""Mind MCP server - 11 tools for AI memory (v2: daemon-free, stateless)."""
 
 import hashlib
 import json
@@ -66,15 +66,14 @@ def parse_session_section(content: str, section_name: str) -> list[str]:
 def extract_promotable_learnings(session_content: str) -> list[dict]:
     """Extract items from SESSION.md worth promoting to MEMORY.md.
 
-    Promotion rules (v2 goal-oriented structure):
-    - "Rejected Approaches" with strategic reasoning -> decision
-    - "Discoveries" with tech patterns or file paths -> learning
-    - "Blockers" that were resolved -> gotcha (if tech-specific)
+    Promotion rules (simplified structure):
+    - "Rejected" with reasoning (contains " - ") -> decision
+    - "Experience" with tech patterns, paths, or insights -> learning
     """
     learnings = []
 
-    # "Rejected Approaches" become decisions (strategic, not tactical)
-    rejected_items = parse_session_section(session_content, "Rejected Approaches")
+    # "Rejected" items become decisions
+    rejected_items = parse_session_section(session_content, "Rejected")
     for item in rejected_items:
         # Only promote if it has reasoning (contains " - " separator)
         if " - " in item:
@@ -83,9 +82,9 @@ def extract_promotable_learnings(session_content: str) -> list[dict]:
                 "content": f"decided against: {item}",
             })
 
-    # "Discoveries" items with tech patterns or file paths persist
-    discovered_items = parse_session_section(session_content, "Discoveries")
-    for item in discovered_items:
+    # "Experience" items with tech patterns or insights persist
+    experience_items = parse_session_section(session_content, "Experience")
+    for item in experience_items:
         has_path = bool(re.search(r'[/\\][\w.-]+\.\w+|`[^`]+`', item))
         has_tech = bool(re.search(
             r'\b(Safari|Chrome|Firefox|Windows|Linux|macOS|iOS|Android|'
@@ -95,14 +94,14 @@ def extract_promotable_learnings(session_content: str) -> list[dict]:
             r'bcrypt|hash|SSL|TLS|HTTP|HTTPS)\b',
             item, re.IGNORECASE
         ))
-        has_structure = bool(re.search(
-            r'\b(table|column|field|endpoint|middleware|component|'
-            r'function|class|module|directory|file|config)\b',
+        has_insight = bool(re.search(
+            r'\b(realized|learned|discovered|turns out|gotcha|'
+            r'important|key|critical|always|never)\b',
             item, re.IGNORECASE
         ))
         has_arrow = '->' in item or '=>' in item
 
-        if has_path or has_tech or has_structure or has_arrow:
+        if has_path or has_tech or has_insight or has_arrow:
             learnings.append({
                 "type": "learning",
                 "content": f"learned: {item}",
@@ -857,63 +856,21 @@ def create_server() -> Server:
             ),
             Tool(
                 name="mind_log",
-                description="Log a memory entry. Use this to record decisions, learnings, problems, and progress. Call this proactively as you work - don't wait until the end.",
+                description="Log to session or memory. Routes by type: experience/blocker/assumption/rejected -> SESSION.md (ephemeral), decision/learning/problem/progress -> MEMORY.md (permanent). Call proactively as you work.",
                 inputSchema={
                     "type": "object",
                     "properties": {
                         "message": {
                             "type": "string",
-                            "description": "What to log (e.g., 'decided X because Y', 'learned that X', 'problem: X', 'fixed X')",
+                            "description": "What to log",
                         },
                         "type": {
                             "type": "string",
-                            "enum": ["decision", "learning", "problem", "progress"],
-                            "description": "Type of memory entry",
+                            "enum": ["experience", "blocker", "assumption", "rejected", "decision", "learning", "problem", "progress"],
+                            "description": "Type determines destination: experience/blocker/assumption/rejected -> SESSION, decision/learning/problem/progress -> MEMORY",
                         },
                     },
                     "required": ["message"],
-                },
-            ),
-            Tool(
-                name="mind_session_goal",
-                description="Set the session goal. Use at the start of a task to clarify what success looks like for the user.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "goal": {
-                            "type": "string",
-                            "description": "The user outcome (e.g., 'User can upload images and see them in gallery')",
-                        },
-                    },
-                    "required": ["goal"],
-                },
-            ),
-            Tool(
-                name="mind_session_approach",
-                description="Set the current approach. Include what you're trying and when to pivot.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "approach": {
-                            "type": "string",
-                            "description": "What you're trying now (e.g., 'Using multer for uploads. Pivot if: memory issues')",
-                        },
-                    },
-                    "required": ["approach"],
-                },
-            ),
-            Tool(
-                name="mind_session_discovery",
-                description="Log a discovery during the session. Useful findings that might be promoted to permanent memory.",
-                inputSchema={
-                    "type": "object",
-                    "properties": {
-                        "discovery": {
-                            "type": "string",
-                            "description": "What you discovered (e.g., 'The auth middleware runs before CORS')",
-                        },
-                    },
-                    "required": ["discovery"],
                 },
             ),
         ]
@@ -944,12 +901,6 @@ def create_server() -> Server:
             return await handle_reminders(arguments)
         elif name == "mind_log":
             return await handle_log(arguments)
-        elif name == "mind_session_goal":
-            return await handle_session_goal(arguments)
-        elif name == "mind_session_approach":
-            return await handle_session_approach(arguments)
-        elif name == "mind_session_discovery":
-            return await handle_session_discovery(arguments)
         else:
             return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
@@ -1066,12 +1017,10 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
     session_state = None
     if session_content:
         session_state = {
-            "goal": parse_session_section(session_content, "The Goal"),
-            "current_approach": parse_session_section(session_content, "Current Approach"),
+            "experience": parse_session_section(session_content, "Experience"),
             "blockers": parse_session_section(session_content, "Blockers"),
-            "rejected_approaches": parse_session_section(session_content, "Rejected Approaches"),
-            "working_assumptions": parse_session_section(session_content, "Working Assumptions"),
-            "discoveries": parse_session_section(session_content, "Discoveries"),
+            "rejected": parse_session_section(session_content, "Rejected"),
+            "assumptions": parse_session_section(session_content, "Assumptions"),
         }
 
     output = {
@@ -1276,7 +1225,7 @@ async def handle_add_global_edge(args: dict[str, Any]) -> list[TextContent]:
 
 
 async def handle_session(args: dict[str, Any]) -> list[TextContent]:
-    """Handle mind_session tool - get current session state (v2 goal-oriented)."""
+    """Handle mind_session tool - get current session state."""
     project_path_str = args.get("project_path")
 
     if project_path_str:
@@ -1294,14 +1243,12 @@ async def handle_session(args: dict[str, Any]) -> list[TextContent]:
             "session": None,
         }, indent=2))]
 
-    # Parse all sections (v2 goal-oriented structure)
+    # Parse all sections (simplified structure)
     session_state = {
-        "goal": parse_session_section(session_content, "The Goal"),
-        "current_approach": parse_session_section(session_content, "Current Approach"),
+        "experience": parse_session_section(session_content, "Experience"),
         "blockers": parse_session_section(session_content, "Blockers"),
-        "rejected_approaches": parse_session_section(session_content, "Rejected Approaches"),
-        "working_assumptions": parse_session_section(session_content, "Working Assumptions"),
-        "discoveries": parse_session_section(session_content, "Discoveries"),
+        "rejected": parse_session_section(session_content, "Rejected"),
+        "assumptions": parse_session_section(session_content, "Assumptions"),
     }
 
     # Count items
@@ -1312,12 +1259,7 @@ async def handle_session(args: dict[str, Any]) -> list[TextContent]:
         "stats": {
             "total_items": total_items,
             "blockers_count": len(session_state["blockers"]),
-            "discoveries_count": len(session_state["discoveries"]),
-        },
-        "workflow": {
-            "stuck": "Add to Blockers (triggers memory search), check Working Assumptions, check pivot condition",
-            "before_proposing": "Check Rejected Approaches - don't re-propose strategic rejects",
-            "lost": "Check The Goal - are you still working toward user outcome?",
+            "experience_count": len(session_state["experience"]),
         },
     }
 
@@ -1516,9 +1458,9 @@ async def handle_reminders(args: dict[str, Any]) -> list[TextContent]:
 
 
 async def handle_log(args: dict[str, Any]) -> list[TextContent]:
-    """Handle mind_log tool - append entry to MEMORY.md."""
+    """Handle mind_log tool - route to SESSION.md or MEMORY.md based on type."""
     message = args.get("message", "")
-    entry_type = args.get("type", "general")
+    entry_type = args.get("type", "experience")
 
     if not message:
         return [TextContent(type="text", text="Error: message is required")]
@@ -1527,114 +1469,58 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
     if not project_path:
         return [TextContent(type="text", text="Error: No Mind project found")]
 
-    # Format based on type
-    type_prefixes = {
+    # Route by type:
+    # - SESSION.md (ephemeral): experience, blocker, assumption, rejected
+    # - MEMORY.md (permanent): decision, learning, problem, progress
+    session_types = {"experience", "blocker", "assumption", "rejected"}
+    memory_types = {"decision", "learning", "problem", "progress"}
+
+    # Prefixes for memory entries
+    memory_prefixes = {
         "decision": "decided:",
         "learning": "learned:",
         "problem": "problem:",
         "progress": "fixed:",
     }
 
-    # Add prefix if message doesn't already have one
-    prefix = type_prefixes.get(entry_type, "")
-    if prefix and not any(message.lower().startswith(p) for p in type_prefixes.values()):
-        formatted = f"{prefix} {message}"
-    else:
-        formatted = message
+    if entry_type in session_types:
+        # Write to SESSION.md
+        session_file = get_session_file(project_path)
+        if not session_file.exists():
+            clear_session_file(project_path)
 
-    success = append_memory_entry(project_path, formatted, entry_type)
+        # Map type to section
+        section_map = {
+            "experience": "Experience",
+            "blocker": "Blockers",
+            "assumption": "Assumptions",
+            "rejected": "Rejected",
+        }
+        section = section_map.get(entry_type, "Experience")
+        success = update_session_section(project_path, section, message, append=True)
+        target = "SESSION.md"
+    else:
+        # Write to MEMORY.md
+        prefix = memory_prefixes.get(entry_type, "")
+        if prefix and not any(message.lower().startswith(p) for p in memory_prefixes.values()):
+            formatted = f"{prefix} {message}"
+        else:
+            formatted = message
+        success = append_memory_entry(project_path, formatted, entry_type)
+        target = "MEMORY.md"
+        message = formatted if entry_type in memory_types else message
 
     if success:
         output = {
             "success": True,
-            "logged": formatted,
+            "logged": message,
             "type": entry_type,
+            "target": target,
         }
     else:
         output = {
             "success": False,
-            "error": "Failed to write to MEMORY.md",
-        }
-
-    return [TextContent(type="text", text=json.dumps(output, indent=2))]
-
-
-async def handle_session_goal(args: dict[str, Any]) -> list[TextContent]:
-    """Handle mind_session_goal tool - set the session goal."""
-    goal = args.get("goal", "")
-
-    if not goal:
-        return [TextContent(type="text", text="Error: goal is required")]
-
-    project_path = get_current_project()
-    if not project_path:
-        return [TextContent(type="text", text="Error: No Mind project found")]
-
-    success = update_session_section(project_path, "The Goal", goal, append=False)
-
-    if success:
-        output = {
-            "success": True,
-            "goal_set": goal,
-        }
-    else:
-        output = {
-            "success": False,
-            "error": "Failed to update SESSION.md - section not found",
-        }
-
-    return [TextContent(type="text", text=json.dumps(output, indent=2))]
-
-
-async def handle_session_approach(args: dict[str, Any]) -> list[TextContent]:
-    """Handle mind_session_approach tool - set current approach."""
-    approach = args.get("approach", "")
-
-    if not approach:
-        return [TextContent(type="text", text="Error: approach is required")]
-
-    project_path = get_current_project()
-    if not project_path:
-        return [TextContent(type="text", text="Error: No Mind project found")]
-
-    success = update_session_section(project_path, "Current Approach", approach, append=False)
-
-    if success:
-        output = {
-            "success": True,
-            "approach_set": approach,
-        }
-    else:
-        output = {
-            "success": False,
-            "error": "Failed to update SESSION.md - section not found",
-        }
-
-    return [TextContent(type="text", text=json.dumps(output, indent=2))]
-
-
-async def handle_session_discovery(args: dict[str, Any]) -> list[TextContent]:
-    """Handle mind_session_discovery tool - add a discovery."""
-    discovery = args.get("discovery", "")
-
-    if not discovery:
-        return [TextContent(type="text", text="Error: discovery is required")]
-
-    project_path = get_current_project()
-    if not project_path:
-        return [TextContent(type="text", text="Error: No Mind project found")]
-
-    success = update_session_section(project_path, "Discoveries", discovery, append=True)
-
-    if success:
-        output = {
-            "success": True,
-            "discovery_added": discovery,
-        }
-    else:
-        output = {
-            "success": False,
-            "error": "Failed to update SESSION.md - section not found",
+            "error": f"Failed to write to {target}",
         }
 
     return [TextContent(type="text", text=json.dumps(output, indent=2))]

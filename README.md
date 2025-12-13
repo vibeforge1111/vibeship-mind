@@ -77,6 +77,9 @@ Add Mind as an MCP server to give Claude memory tools:
 | `mind_edges(intent)` | Check for gotchas before risky code |
 | `mind_checkpoint()` | Force process pending memories |
 | `mind_status()` | Check memory health |
+| `mind_add_global_edge()` | Add cross-project gotcha (platform/language issues) |
+| `mind_remind(msg, when)` | Set reminder - time or context-based |
+| `mind_reminders()` | List pending reminders |
 
 ---
 
@@ -93,6 +96,23 @@ Add Mind as an MCP server to give Claude memory tools:
 - **Discoveries** - Gets promoted to MEMORY.md on session end
 
 When a new session starts (30 min gap), important learnings get promoted from SESSION.md to MEMORY.md automatically.
+
+---
+
+## Reminders
+
+Mind supports two types of reminders:
+
+**Time-based:**
+- `"tomorrow"`, `"in 3 days"`, `"next session"`, `"2025-12-20"`
+
+**Context-based:**
+- `"when I mention auth"` - triggers when relevant keywords come up
+- `"when we work on database"` - Claude sees keywords and surfaces reminder naturally
+
+Example: *"Remind me to check the security audit when we work on auth"*
+
+Reminders are stored in `.mind/REMINDERS.md` and shown in `mind_recall()` output.
 
 ---
 
@@ -150,6 +170,7 @@ your-project/
 ├── .mind/
 │   ├── MEMORY.md     ← Long-term memory (persists)
 │   ├── SESSION.md    ← Short-term focus (cleared each session)
+│   ├── REMINDERS.md  ← Time and context-based reminders
 │   └── state.json    ← Timestamps for session detection
 └── CLAUDE.md         ← Mind injects context here
 ```

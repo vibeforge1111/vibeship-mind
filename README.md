@@ -14,12 +14,14 @@ Mind fixes both problems with two-layer memory:
 
 **2-prompt install.** Clone the repo, tell Claude to add the MCP server. Done.
 
-**Fully automated.** No commands to run during or after work:
+**Fully automated.** Memory just works - no commands required:
 - Claude writes memories as it works
 - Session gaps auto-detected (30 min)
 - Learnings auto-promoted to long-term memory
 - Context auto-injected into CLAUDE.md
 - Reminders auto-surface when due or when keywords match
+
+Optional tools like `mind_blocker()` and `mind_remind()` are there when you want them, but the core memory flow runs hands-free.
 
 **Two-layer memory:**
 - Cross-session recall (MEMORY.md)

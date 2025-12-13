@@ -53,13 +53,11 @@
 	}
 
 	.nav-content {
-		max-width: 900px;
-		margin: 0 auto;
 		height: 100%;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 0 var(--space-4);
+		padding: 0 var(--space-6);
 	}
 
 	.logo {

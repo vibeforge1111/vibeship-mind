@@ -81,29 +81,30 @@ Add Mind as an MCP server to give Claude memory tools:
 
 ---
 
-## MCP Tools
+## MCP Tools (11 total)
+
+**Core:**
+| Tool | What it does |
+|------|--------------|
+| `mind_recall()` | Load session context - CALL FIRST every session |
+| `mind_log(msg, type)` | Log to session or memory (routes by type) |
+
+**Type routing for `mind_log()`:**
+- SESSION.md: `experience`, `blocker`, `assumption`, `rejected`
+- MEMORY.md: `decision`, `learning`, `problem`, `progress`
 
 **Reading:**
 | Tool | What it does |
 |------|--------------|
-| `mind_recall()` | Load session context - CALL FIRST every session |
-| `mind_session()` | Check current session state (goal, approach, blockers) |
+| `mind_session()` | Check current session state |
 | `mind_search(query)` | Search past memories |
 | `mind_status()` | Check memory health |
 | `mind_reminders()` | List pending reminders |
 
-**Writing (the automation magic):**
+**Actions:**
 | Tool | What it does |
 |------|--------------|
-| `mind_log(msg, type)` | Log decision/learning/problem/progress to MEMORY.md |
-| `mind_session_goal(goal)` | Set session goal |
-| `mind_session_approach(text)` | Set current approach |
-| `mind_session_discovery(text)` | Add a discovery |
 | `mind_blocker(desc)` | Log blocker + auto-search memory for solutions |
-
-**Other:**
-| Tool | What it does |
-|------|--------------|
 | `mind_remind(msg, when)` | Set reminder - time or context-based |
 | `mind_edges(intent)` | Check for gotchas before risky code |
 | `mind_checkpoint()` | Force process pending memories |
@@ -113,17 +114,17 @@ Add Mind as an MCP server to give Claude memory tools:
 
 ## How It Works
 
-**Long-term (MEMORY.md):** Claude writes decisions, problems, learnings. Next session, `mind_recall()` loads context so Claude knows what happened before.
+**Long-term (MEMORY.md):** Permanent knowledge - decisions, learnings, problems, progress. `mind_recall()` loads this as context each session.
 
-**Short-term (SESSION.md):** Goal-oriented session tracking:
-- **The Goal** - User outcome (not technical task)
-- **Current Approach** - What you're trying + when to pivot
-- **Blockers** - When stuck, triggers memory search
-- **Rejected Approaches** - Strategic decisions with WHY
-- **Working Assumptions** - Question these when stuck
-- **Discoveries** - Gets promoted to MEMORY.md on session end
+**Short-term (SESSION.md):** Working memory buffer:
+- **Experience** - Raw moments, thoughts, what's happening
+- **Blockers** - Things stopping progress
+- **Rejected** - What didn't work and why
+- **Assumptions** - What you're assuming true
 
-When a new session starts (30 min gap), important learnings get promoted from SESSION.md to MEMORY.md automatically.
+When a new session starts (30 min gap), valuable items get promoted from SESSION.md to MEMORY.md automatically.
+
+See [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md) for the full architecture.
 
 ---
 
@@ -188,27 +189,6 @@ uv --directory /path/to/vibeship-mind run mind status
 - "What are we building again?" → Drifts into rabbit holes
 
 **Mind fixes both.** Two layers of memory, zero friction.
-
----
-
-## Claude Code Hooks (Optional)
-
-For fully automated memory capture, add these hooks to your `.claude/settings.json`:
-
-```json
-{
-  "hooks": {
-    "SessionStart": [{"matcher": "*", "hooks": [{"type": "command", "command": "bash ./hooks/session-start.sh"}]}],
-    "PostToolUse": [{"matcher": "Bash", "hooks": [{"type": "command", "command": "bash ./hooks/post-commit.sh"}]}],
-    "Stop": [{"matcher": "*", "hooks": [{"type": "command", "command": "bash ./hooks/session-end.sh"}]}]
-  }
-}
-```
-
-Copy the hooks from `vibeship-mind/hooks/` to your project. They:
-- **SessionStart:** Remind Claude to call `mind_recall()`
-- **PostToolUse (git commit):** Prompt to log decisions/learnings
-- **Stop:** Prompt to summarize the session
 
 ---
 

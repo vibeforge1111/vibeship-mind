@@ -464,17 +464,6 @@ def update_session_section(project_path: Path, section_name: str, content: str, 
     return True
 
 
-def promote_reminder_to_memory(project_path: Path, reminder: dict) -> None:
-    """Promote a completed reminder to MEMORY.md."""
-    memory_file = project_path / ".mind" / "MEMORY.md"
-    if not memory_file.exists():
-        return
-
-    content = memory_file.read_text(encoding="utf-8")
-    addition = f"\n\nreminder completed: {reminder['message']}"
-    memory_file.write_text(content + addition, encoding="utf-8")
-
-
 def get_current_project() -> Optional[Path]:
     """Get the current project path from CWD."""
     cwd = Path.cwd()

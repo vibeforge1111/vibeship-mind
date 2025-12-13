@@ -138,12 +138,16 @@
 </section>
 
 <section class="tools">
-	<h2>10 MCP Tools</h2>
+	<h2>11 MCP Tools</h2>
 
 	<div class="tools-grid">
 		<div class="tool">
 			<code>mind_recall()</code>
 			<span>Load context - call first</span>
+		</div>
+		<div class="tool">
+			<code>mind_log()</code>
+			<span>Log to session or memory</span>
 		</div>
 		<div class="tool">
 			<code>mind_session()</code>
@@ -156,10 +160,6 @@
 		<div class="tool">
 			<code>mind_search()</code>
 			<span>Search memories</span>
-		</div>
-		<div class="tool">
-			<code>mind_edges()</code>
-			<span>Check for gotchas</span>
 		</div>
 		<div class="tool">
 			<code>mind_remind()</code>

@@ -12,11 +12,24 @@ Mind fixes both problems with two-layer memory:
 
 ## Why Mind?
 
-- **Two-layer memory** - Cross-session recall + within-session focus
-- **Zero friction** - Claude writes to files, MCP reads them lazily
-- **No daemon** - Stateless MCP-only architecture (v2)
-- **Readable** - Plain `.md` files you can open anytime
-- **Open source** - See exactly how it works
+**2-prompt install.** Clone the repo, tell Claude to add the MCP server. Done.
+
+**Fully automated.** No commands to run during or after work:
+- Claude writes memories as it works
+- Session gaps auto-detected (30 min)
+- Learnings auto-promoted to long-term memory
+- Context auto-injected into CLAUDE.md
+- Reminders auto-surface when due or when keywords match
+
+**Two-layer memory:**
+- Cross-session recall (MEMORY.md)
+- Within-session focus (SESSION.md)
+
+**Zero friction.** Claude writes to files, MCP reads them lazily. No database, no cloud, no sync issues.
+
+**Human-readable.** Plain `.md` files you can open, edit, or git-track anytime.
+
+**Open source.** See exactly how it works. No black box.
 
 ---
 

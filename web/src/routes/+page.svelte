@@ -558,7 +558,7 @@ Done.`,
 
 <section class="get-started-cta">
 	<h2>Ready to Give Claude a Mind?</h2>
-	<p>2 commands + 1 prompt. Zero friction.</p>
+	<p>3 commands + 1 prompt. Zero friction.</p>
 
 	<div class="install-steps">
 		<div class="install-step">
@@ -566,6 +566,7 @@ Done.`,
 			<div class="install-preview">
 				<code>git clone https://github.com/vibeforge1111/vibeship-mind.git</code>
 				<code>cd vibeship-mind && uv sync</code>
+				<code>uv run mind init</code>
 			</div>
 		</div>
 

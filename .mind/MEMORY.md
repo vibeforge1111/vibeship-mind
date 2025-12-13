@@ -204,3 +204,7 @@ fixed: cleaned up codebase: HOW_IT_WORKS.md added, outdated docs archived, hooks
 fixed: implemented maintainability system - CHANGELOG.md, semantic versioning (v2.0.0), feature flags (config.py), layered docs structure
 fixed: added mind_reminder_done tool + auto-mark for next session reminders - v2.1.0 shipped
 decided: Consolidated docs: merged DESIGN_RATIONALE into ARCHITECTURE, archived PARSER.md, deleted obsolete CLI/IMPLEMENTATION/ONBOARDING. Added version banners (doc-version + last-updated) to all docs. Set 30-day periodic review reminder.
+fixed: Updated website: get-started page, theme colors (light mode blue-tinted green #0d847a, dark mode bright #00C49A), smaller navbar/logo
+learned: Light mode green needs more blue tint for readability - #0a8a6a was too pure green
+learned: Theme variables need explicit overrides in both light AND dark mode sections - dark mode was falling back to root which got overwritten by light mode
+decided: SESSION.md should be used for stream-of-consciousness logging, MEMORY.md for important permanent stuff only

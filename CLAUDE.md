@@ -62,11 +62,20 @@ This loads fresh context, detects session gaps, and ensures you have the latest 
 ### Writing Tools (USE THESE PROACTIVELY!)
 | Tool | When to Use |
 |------|-------------|
-| `mind_log(msg, type)` | **After every decision, learning, problem, or fix** |
-| `mind_session_goal(goal)` | At start of task - what does success look like? |
-| `mind_session_approach(text)` | When you decide how to tackle something |
-| `mind_session_discovery(text)` | When you discover something useful |
+| `mind_log(msg, type)` | **Log frequently! See types below** |
 | `mind_blocker(desc)` | When stuck - logs + auto-searches memory |
+
+**SESSION.md types (ephemeral - log liberally, gets cleared between sessions):**
+- `type="experience"` - What's happening right now, raw thoughts, observations
+- `type="blocker"` - What's blocking progress
+- `type="assumption"` - What you're assuming to be true
+- `type="rejected"` - Approaches that didn't work and why
+
+**MEMORY.md types (permanent - important stuff only):**
+- `type="decision"` - Choices made and why
+- `type="learning"` - Discoveries, gotchas, TILs
+- `type="problem"` - Issues encountered
+- `type="progress"` - What got fixed/shipped
 
 ### Other Tools
 | Tool | When to Use |
@@ -78,10 +87,19 @@ This loads fresh context, detects session gaps, and ensures you have the latest 
 
 ---
 
-# IMPORTANT: Use mind_log() as you work
+# IMPORTANT: Log to SESSION.md frequently!
 
-**Don't write to files manually. Use the tools:**
+SESSION.md is ephemeral - it gets cleared between sessions. **Log liberally.** Don't worry about clutter. Valuable items get promoted to MEMORY.md automatically.
 
+**During work, log your stream of consciousness:**
+```
+mind_log("trying the flex approach for layout", type="experience")
+mind_log("user wants it to match vibeship.co style", type="experience")
+mind_log("assuming the API returns JSON", type="assumption")
+mind_log("grid didn't work - items overlapped on mobile", type="rejected")
+```
+
+**Only use MEMORY.md types for important permanent stuff:**
 ```
 mind_log("chose SvelteKit over Next.js - simpler routing", type="decision")
 mind_log("Safari doesn't support :has() in older versions", type="learning")
@@ -89,15 +107,7 @@ mind_log("build failing with unclear error", type="problem")
 mind_log("resolved build by updating vite config", type="progress")
 ```
 
-**Call these proactively:**
-- Made a choice? → `mind_log(..., type="decision")`
-- Discovered something? → `mind_log(..., type="learning")`
-- Hit a problem? → `mind_log(..., type="problem")`
-- Fixed something? → `mind_log(..., type="progress")`
-
-**At session start:**
-- `mind_session_goal("User can upload images and see them in gallery")`
-- `mind_session_approach("Using multer for uploads. Pivot if: memory issues")`
+**Rule of thumb:** If in doubt, use `type="experience"`. It's free - SESSION.md gets cleared anyway.
 
 ---
 
@@ -111,9 +121,9 @@ Mind is a file-based memory system for AI coding assistants. The core insight: *
 
 ```
 Source of truth: .mind/MEMORY.md (per project)
-Session tracking: .mind/SESSION.md (goal, approach, blockers)
+Session tracking: .mind/SESSION.md (ephemeral, cleared between sessions)
 Context delivery: MIND:CONTEXT section in CLAUDE.md (auto-injected)
-MCP: 8 tools (recall, session, blocker, search, edges, checkpoint, status, add_global_edge)
+MCP: 12 tools (recall, log, session, blocker, search, remind, reminders, reminder_done, edges, checkpoint, status, add_global_edge)
 ```
 
 ## Key Files
@@ -127,7 +137,7 @@ src/mind/
 +-- storage.py       # Projects registry
 +-- templates.py     # File templates
 +-- mcp/
-    +-- server.py    # 8 MCP tools (stateless)
+    +-- server.py    # 12 MCP tools (stateless)
 ```
 
 ## Design Principles

@@ -208,3 +208,9 @@ fixed: Updated website: get-started page, theme colors (light mode blue-tinted g
 learned: Light mode green needs more blue tint for readability - #0a8a6a was too pure green
 learned: Theme variables need explicit overrides in both light AND dark mode sections - dark mode was falling back to root which got overwritten by light mode
 decided: SESSION.md should be used for stream-of-consciousness logging, MEMORY.md for important permanent stuff only
+fixed: Shipped interactive tool explorer with Geist Sans font - terminal on top, plain English explanation below
+learned: Website polish: opacity 0.93 is the sweet spot for dark mode text readability - not too dim, not too harsh
+learned: Hand-drawn underline effect: use gradient fade on both ends + skew + slight rotation for organic feel
+learned: Claude's brand color is coral/orange #D97757 - use for subtle visual connection to Claude
+learned: Hero subtitle should focus on: what it is, what it stores, and ease of install - not technical details like "markdown files"
+fixed: Fixed session premature clearing bug: added touch_activity() to mind_log, mind_blocker, mind_session, mind_search - any Mind tool usage now keeps the session alive

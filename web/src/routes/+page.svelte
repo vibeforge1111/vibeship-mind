@@ -342,101 +342,99 @@ Done.`,
 
 <section class="how-it-works">
 	<h2>How It Works</h2>
+	<p class="section-subtitle">MCP tools run locally, filtering what's worth remembering into the right place.</p>
 
-	<div class="architecture-diagram">
-		<div class="diagram-box project-box">
-			<div class="diagram-label">YOUR PROJECT</div>
-			<div class="diagram-inner">
-				<div class="diagram-row">
-					<div class="diagram-box small claude-box">
-						<span>CLAUDE.md</span>
-						<span class="small-text">context</span>
+	<div class="architecture-flow">
+		<!-- Claude Code -->
+		<div class="arch-box claude-code-box">
+			<div class="arch-label">Claude Code</div>
+			<div class="arch-desc">Working on your project</div>
+		</div>
+
+		<div class="arch-connector">
+			<span class="connector-line"></span>
+			<span class="connector-label">calls MCP tools</span>
+		</div>
+
+		<!-- MCP Tools -->
+		<div class="arch-box mcp-box">
+			<div class="arch-label">Mind MCP Server</div>
+			<div class="mcp-tools-grid">
+				<code>mind_recall()</code>
+				<code>mind_log()</code>
+				<code>mind_search()</code>
+				<code>mind_blocker()</code>
+				<code>mind_remind()</code>
+				<code>mind_edges()</code>
+			</div>
+			<div class="arch-desc">12 commands Claude can call when needed</div>
+		</div>
+
+		<div class="arch-connector">
+			<span class="connector-line"></span>
+			<span class="connector-label">filters &amp; routes</span>
+		</div>
+
+		<!-- Storage Layer -->
+		<div class="arch-box storage-box">
+			<div class="arch-label">.mind/ folder</div>
+			<div class="storage-split">
+				<div class="storage-side long-term">
+					<div class="storage-header">Long-term Memory</div>
+					<div class="storage-file">MEMORY.md</div>
+					<div class="storage-items">
+						<span>decisions</span>
+						<span>learnings</span>
+						<span>problems solved</span>
 					</div>
-					<div class="arrow-left">&#8592;</div>
-					<div class="diagram-box small mind-box">
-						<span>Mind</span>
-						<span class="small-text">MCP</span>
-					</div>
+					<div class="storage-note">Persists forever. Worth remembering.</div>
 				</div>
-				<div class="arrow-down">&#8595;</div>
-				<div class="diagram-box files-box">
-					<div class="diagram-label">.mind/</div>
-					<div class="files-row">
-						<div class="file-box">
-							<span>MEMORY.md</span>
-							<span class="small-text">permanent</span>
-						</div>
-						<div class="file-box">
-							<span>SESSION.md</span>
-							<span class="small-text">working</span>
-						</div>
+				<div class="storage-divider"></div>
+				<div class="storage-side short-term">
+					<div class="storage-header">Short-term Memory</div>
+					<div class="storage-file">SESSION.md</div>
+					<div class="storage-items">
+						<span>experiences</span>
+						<span>assumptions</span>
+						<span>current blockers</span>
 					</div>
+					<div class="storage-note">Clears on session end. Working memory.</div>
 				</div>
 			</div>
+		</div>
+
+		<div class="arch-connector">
+			<span class="connector-line"></span>
+			<span class="connector-label">injects context</span>
+		</div>
+
+		<!-- Context Output -->
+		<div class="arch-box context-box">
+			<div class="arch-label">CLAUDE.md</div>
+			<div class="arch-desc">Fresh context loaded every session</div>
 		</div>
 	</div>
 
 	<div class="flow-section">
-		<h3>Two-Layer Memory</h3>
-		<div class="memory-layers">
-			<div class="layer memory-layer">
-				<div class="layer-header">MEMORY.md <span class="tag">permanent</span></div>
-				<div class="layer-content">
-					<div class="layer-item"><code>decision</code> "decided X because Y"</div>
-					<div class="layer-item"><code>learning</code> "learned that X"</div>
-					<div class="layer-item"><code>problem</code> "problem: X"</div>
-					<div class="layer-item"><code>progress</code> "fixed: X"</div>
-				</div>
+		<h3>The Filtering Logic</h3>
+		<p class="flow-explanation">
+			When Claude logs something, Mind decides where it goes based on whether it's useful long-term:
+		</p>
+		<div class="filter-examples">
+			<div class="filter-example">
+				<div class="filter-input">"We decided to use Zustand for state"</div>
+				<div class="filter-arrow">→</div>
+				<div class="filter-output memory">MEMORY.md <span class="why">future sessions need this</span></div>
 			</div>
-			<div class="promote-arrow">
-				<span>&#8593;</span>
-				<span class="small-text">promotes on session gap</span>
+			<div class="filter-example">
+				<div class="filter-input">"Trying the flexbox approach now"</div>
+				<div class="filter-arrow">→</div>
+				<div class="filter-output session">SESSION.md <span class="why">only matters right now</span></div>
 			</div>
-			<div class="layer session-layer">
-				<div class="layer-header">SESSION.md <span class="tag">ephemeral</span></div>
-				<div class="layer-content">
-					<div class="layer-item"><code>experience</code> raw moments, thoughts</div>
-					<div class="layer-item"><code>blocker</code> things stopping progress</div>
-					<div class="layer-item"><code>rejected</code> what didn't work</div>
-					<div class="layer-item"><code>assumption</code> what I'm assuming</div>
-				</div>
-			</div>
-		</div>
-	</div>
-
-	<div class="flow-section">
-		<h3>Session Flow</h3>
-		<div class="session-flow">
-			<div class="flow-step">
-				<div class="flow-icon">[&gt;</div>
-				<div class="flow-text">
-					<strong>Start</strong>
-					<span>mind_recall()</span>
-				</div>
-			</div>
-			<div class="flow-arrow">-&gt;</div>
-			<div class="flow-step">
-				<div class="flow-icon">[?]</div>
-				<div class="flow-text">
-					<strong>Gap &gt; 30min?</strong>
-					<span>promote + clear</span>
-				</div>
-			</div>
-			<div class="flow-arrow">-&gt;</div>
-			<div class="flow-step">
-				<div class="flow-icon">[+]</div>
-				<div class="flow-text">
-					<strong>Work</strong>
-					<span>mind_log()</span>
-				</div>
-			</div>
-			<div class="flow-arrow">-&gt;</div>
-			<div class="flow-step">
-				<div class="flow-icon">[~]</div>
-				<div class="flow-text">
-					<strong>Next session</strong>
-					<span>repeat</span>
-				</div>
+			<div class="filter-example">
+				<div class="filter-input">"Safari doesn't support :has() in older versions"</div>
+				<div class="filter-arrow">→</div>
+				<div class="filter-output memory">MEMORY.md <span class="why">gotcha worth keeping</span></div>
 			</div>
 		</div>
 	</div>
@@ -1048,87 +1046,231 @@ Done.`,
 		color: var(--text-secondary);
 	}
 
-	/* Architecture Diagram */
-	.architecture-diagram {
-		display: flex;
-		justify-content: center;
-		margin-bottom: var(--space-8);
-	}
-
-	.diagram-box {
-		border: 1px solid var(--border);
-		background: var(--bg-secondary);
-		padding: var(--space-4);
-	}
-
-	.project-box {
-		max-width: 500px;
-		width: 100%;
-	}
-
-	.diagram-label {
-		font-size: var(--text-xs);
-		color: var(--text-tertiary);
-		text-transform: uppercase;
-		letter-spacing: 0.05em;
-		margin-bottom: var(--space-3);
-		text-align: center;
-	}
-
-	.diagram-inner {
+	/* Architecture Flow */
+	.architecture-flow {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: var(--space-3);
+		gap: 0;
+		max-width: 600px;
+		margin: 0 auto var(--space-8);
 	}
 
-	.diagram-row {
-		display: flex;
-		align-items: center;
-		gap: var(--space-3);
-	}
-
-	.diagram-box.small {
-		padding: var(--space-3);
-		text-align: center;
-		min-width: 100px;
-	}
-
-	.claude-box {
-		border-color: var(--text-tertiary);
-	}
-
-	.mind-box {
-		border-color: var(--green-dim);
-		background: rgba(0, 255, 136, 0.05);
-	}
-
-	.files-box {
+	.arch-box {
 		width: 100%;
+		border: 1px solid var(--border);
+		background: var(--bg-secondary);
+		padding: var(--space-4);
+		text-align: center;
+	}
+
+	.arch-label {
+		font-family: var(--font-mono);
+		font-size: var(--text-base);
+		color: var(--text-primary);
+		margin-bottom: var(--space-2);
+	}
+
+	.arch-desc {
+		font-size: var(--text-sm);
+		color: var(--text-tertiary);
+	}
+
+	.claude-code-box {
+		border-color: #D97757;
+		background: rgba(217, 119, 87, 0.05);
+	}
+
+	.claude-code-box .arch-label {
+		color: #D97757;
+	}
+
+	.mcp-box {
+		border-color: var(--green-dim);
+		background: rgba(0, 196, 154, 0.05);
+	}
+
+	.mcp-box .arch-label {
+		color: var(--green-dim);
+	}
+
+	.mcp-tools-grid {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-2);
+		justify-content: center;
+		margin: var(--space-3) 0;
+	}
+
+	.mcp-tools-grid code {
+		font-size: var(--text-xs);
+		color: var(--green-dim);
+		background: var(--bg-primary);
+		padding: var(--space-1) var(--space-2);
+		border: 1px solid var(--border);
+	}
+
+	.storage-box {
 		background: var(--bg-primary);
 	}
 
-	.files-row {
+	.storage-split {
 		display: flex;
-		gap: var(--space-3);
-		justify-content: center;
+		gap: var(--space-4);
+		margin-top: var(--space-3);
 	}
 
-	.file-box {
-		padding: var(--space-2) var(--space-3);
+	.storage-side {
+		flex: 1;
+		padding: var(--space-3);
 		border: 1px dashed var(--border);
+	}
+
+	.storage-side.long-term {
+		border-color: var(--green-dim);
+	}
+
+	.storage-side.short-term {
+		border-color: var(--green-dim);
+	}
+
+	.storage-header {
+		font-size: var(--text-xs);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		margin-bottom: var(--space-2);
+	}
+
+	.long-term .storage-header {
+		color: var(--green-dim);
+	}
+
+	.short-term .storage-header {
+		color: var(--green-dim);
+	}
+
+	.storage-file {
+		font-family: var(--font-mono);
+		font-size: var(--text-sm);
+		color: var(--text-primary);
+		margin-bottom: var(--space-2);
+	}
+
+	.storage-items {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-1);
+		margin-bottom: var(--space-2);
+	}
+
+	.storage-items span {
+		font-size: var(--text-xs);
+		color: var(--text-secondary);
+	}
+
+	.storage-note {
+		font-size: var(--text-xs);
+		color: var(--text-tertiary);
+		font-style: italic;
+	}
+
+	.storage-divider {
+		width: 1px;
+		background: var(--border);
+	}
+
+	.context-box {
+		border-color: var(--text-tertiary);
+	}
+
+	.arch-connector {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding: var(--space-2) 0;
+	}
+
+	.connector-line {
+		width: 2px;
+		height: 20px;
+		background: var(--border);
+	}
+
+	.connector-label {
+		font-size: var(--text-xs);
+		color: var(--text-tertiary);
+		margin-top: var(--space-1);
+	}
+
+	/* Filter Examples */
+	.flow-explanation {
 		text-align: center;
+		color: var(--text-secondary);
+		margin-bottom: var(--space-4);
+		font-size: var(--text-sm);
+	}
+
+	.filter-examples {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-3);
+		max-width: 600px;
+		margin: 0 auto;
+	}
+
+	.filter-example {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		padding: var(--space-3);
+		background: var(--bg-secondary);
+		border: 1px solid var(--border);
+	}
+
+	.filter-input {
+		flex: 1;
+		font-size: var(--text-sm);
+		color: var(--text-secondary);
+		font-style: italic;
+	}
+
+	.filter-arrow {
+		color: var(--text-tertiary);
+		font-size: var(--text-lg);
+		flex-shrink: 0;
+		margin-left: 5px;
+	}
+
+	.filter-output {
+		font-family: var(--font-mono);
+		font-size: var(--text-sm);
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		min-width: 140px;
+		text-align: left;
+		margin-left: 5px;
+	}
+
+	.filter-output.memory {
+		color: var(--green-dim);
+	}
+
+	.filter-output.session {
+		color: var(--green-dim);
+	}
+
+	.filter-output .why {
+		font-family: var(--font-sans);
+		font-size: var(--text-xs);
+		color: var(--text-tertiary);
+		font-style: italic;
 	}
 
 	.small-text {
 		display: block;
 		font-size: var(--text-xs);
 		color: var(--text-tertiary);
-	}
-
-	.arrow-left, .arrow-down {
-		color: var(--green-dim);
-		font-size: var(--text-lg);
 	}
 
 	/* Flow Sections */
@@ -1141,127 +1283,6 @@ Done.`,
 		margin-bottom: var(--space-4);
 		font-family: var(--font-mono);
 		color: var(--green-dim);
-	}
-
-	/* Memory Layers */
-	.memory-layers {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		gap: var(--space-2);
-		max-width: 500px;
-		margin: 0 auto;
-	}
-
-	.layer {
-		width: 100%;
-		border: 1px solid var(--border);
-		background: var(--bg-secondary);
-	}
-
-	.layer-header {
-		padding: var(--space-2) var(--space-3);
-		border-bottom: 1px solid var(--border);
-		font-family: var(--font-mono);
-		font-size: var(--text-sm);
-		display: flex;
-		align-items: center;
-		gap: var(--space-2);
-	}
-
-	.memory-layer .layer-header {
-		color: var(--green-dim);
-	}
-
-	.session-layer .layer-header {
-		color: var(--text-secondary);
-	}
-
-	.tag {
-		font-size: var(--text-xs);
-		padding: 2px 6px;
-		border: 1px solid currentColor;
-		opacity: 0.6;
-	}
-
-	.layer-content {
-		padding: var(--space-3);
-		display: grid;
-		grid-template-columns: 1fr 1fr;
-		gap: var(--space-2);
-	}
-
-	.layer-item {
-		font-size: var(--text-sm);
-		color: var(--text-secondary);
-	}
-
-	.layer-item code {
-		color: var(--green-dim);
-		background: transparent;
-		padding: 0;
-		margin-right: var(--space-1);
-	}
-
-	.promote-arrow {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		color: var(--text-tertiary);
-		padding: var(--space-2) 0;
-	}
-
-	.promote-arrow span:first-child {
-		font-size: var(--text-lg);
-		color: var(--green-dim);
-	}
-
-	/* Session Flow */
-	.session-flow {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: var(--space-2);
-		flex-wrap: wrap;
-	}
-
-	.flow-step {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		padding: var(--space-3);
-		background: var(--bg-secondary);
-		border: 1px solid var(--border);
-		min-width: 100px;
-	}
-
-	.flow-icon {
-		font-family: var(--font-mono);
-		font-size: var(--text-base);
-		color: var(--green-dim);
-		margin-bottom: var(--space-1);
-	}
-
-	.flow-text {
-		text-align: center;
-	}
-
-	.flow-text strong {
-		display: block;
-		font-size: var(--text-sm);
-		color: var(--text-primary);
-	}
-
-	.flow-text span {
-		font-size: var(--text-xs);
-		color: var(--green-dim);
-		font-family: var(--font-mono);
-	}
-
-	.flow-arrow {
-		font-family: var(--font-mono);
-		color: var(--text-tertiary);
-		font-size: var(--text-base);
 	}
 
 	/* Mobile */
@@ -1287,29 +1308,22 @@ Done.`,
 			grid-template-columns: 1fr;
 		}
 
-		.diagram-row {
+		.storage-split {
 			flex-direction: column;
 		}
 
-		.arrow-left {
-			transform: rotate(-90deg);
+		.storage-divider {
+			width: 100%;
+			height: 1px;
 		}
 
-		.layer-content {
-			grid-template-columns: 1fr;
-		}
-
-		.session-flow {
+		.filter-example {
 			flex-direction: column;
+			text-align: center;
 		}
 
-		.flow-arrow {
+		.filter-arrow {
 			transform: rotate(90deg);
-		}
-
-		.files-row {
-			flex-direction: column;
-			align-items: center;
 		}
 	}
 </style>

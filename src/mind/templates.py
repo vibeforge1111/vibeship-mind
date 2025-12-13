@@ -48,66 +48,37 @@ This project uses Mind for persistent memory across sessions.
 
 1. **Session Start**: ALWAYS call `mind_recall()` before responding to the first message. This loads context from previous sessions.
 
-2. **Long-Term Memory** (`.mind/MEMORY.md`): When you make decisions, hit issues, or learn gotchas, append directly:
-   - `decided X because Y` - for decisions
-   - `problem: X` - for issues
-   - `learned that X` / `TIL: X` - for learnings
-   - `gotcha: X` - for things that will bite again
-   - `KEY: X` or `important: X` - for things that should never fade
+2. **During Work**: Use `mind_log(message, type)` to capture what happens:
+   - `mind_log("chose X over Y - simpler", type="decision")` → MEMORY.md
+   - `mind_log("API returns 500 on large payloads", type="problem")` → MEMORY.md
+   - `mind_log("Safari needs vendor prefix for X", type="learning")` → MEMORY.md
+   - `mind_log("resolved by increasing timeout", type="progress")` → MEMORY.md
+   - `mind_log("working on auth flow", type="experience")` → SESSION.md
+   - `mind_log("build keeps failing", type="blocker")` → SESSION.md
+   - `mind_log("tried Redis - too complex", type="rejected")` → SESSION.md
+   - `mind_log("assuming user has stable internet", type="assumption")` → SESSION.md
 
 3. **Session End**: Summarize with `## DATE | what happened | mood: X`
 
-### Session Memory Protocol (`.mind/SESSION.md`)
+### Two-Layer Memory
 
-Maintain `.mind/SESSION.md` during work to stay focused and avoid loops.
+**MEMORY.md** (permanent, cross-session):
+- Decisions, learnings, problems, progress
+- Use types: `decision`, `learning`, `problem`, `progress`
 
-**The Goal** (set first, check often):
-- Write the USER OUTCOME, not the technical task
-- "User can X" not "Implement Y endpoint"
-- Check this when you feel lost - are you still working toward it?
-
-**Current Approach** (update as you pivot):
-- What you're trying NOW + when to pivot
-- Format: "Doing X. Pivot if: Y"
-- When pivot condition hits, update approach, don't just keep trying
-
-**Blockers** (triggers memory search):
-- When you add a blocker, call `mind_blocker(description)`
-- This auto-searches memory for solutions you might have forgotten
-- If no solutions found, this is where you zoom out and ask user
-
-**Rejected Approaches** (strategic, with WHY):
-- Not "X didn't work" - that's tactical, it goes in memory
-- This is "We're not doing X because [fundamental reason]"
-- Check before proposing - don't re-propose rejected strategies
-
-**Working Assumptions** (question when stuck):
-- Things you're assuming true
-- When stuck, review these - one might be wrong
-- Invalidating an assumption = progress, not failure
-
-**Discoveries** (promoted on session end):
-- Useful findings during this session
-- Tech patterns and file paths get promoted to MEMORY.md automatically
-
-### Workflow
-
-1. Start: Set The Goal (user outcome)
-2. Plan: Set Current Approach with pivot condition
-3. Work: Add discoveries as you go
-4. Stuck?
-   - Add to Blockers (triggers memory search)
-   - Check Working Assumptions (one might be wrong)
-   - Check Current Approach pivot condition (time to pivot?)
-5. Pivot: Update Current Approach, add to Rejected if strategic
-6. Done: Discoveries get promoted to MEMORY.md
+**SESSION.md** (ephemeral, within-session):
+- Raw experience, blockers, rejected approaches, assumptions
+- Use types: `experience`, `blocker`, `rejected`, `assumption`
+- Valuable items get promoted to MEMORY.md on session gap (>30 min)
 
 ### Tools Available
 
 - `mind_recall()` - Load session context (CALL FIRST!)
+- `mind_log(msg, type)` - Log to session or memory (routes by type)
 - `mind_session()` - Get current session state
 - `mind_blocker(description)` - Log blocker + auto-search memory for solutions
 - `mind_search(query)` - Find specific memories
+- `mind_remind(msg, when)` - Set time or context reminder
 - `mind_checkpoint()` - Force process pending memories
 - `mind_edges(intent)` - Check for gotchas before coding
 - `mind_status()` - Check memory health

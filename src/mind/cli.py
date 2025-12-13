@@ -11,6 +11,7 @@ from .context import update_claude_md
 from .detection import detect_stack
 from .parser import InlineScanner, Parser
 from .storage import ProjectsRegistry
+from .config import create_default_config
 from .templates import GITIGNORE_CONTENT, MEMORY_TEMPLATE, SESSION_TEMPLATE
 
 
@@ -60,6 +61,14 @@ def init(path: str):
         click.echo("[+] Created .mind/SESSION.md")
     else:
         click.echo("[.] .mind/SESSION.md already exists (preserved)")
+
+    # Create config.json (don't overwrite if exists)
+    config_file = mind_dir / "config.json"
+    if not config_file.exists():
+        create_default_config(project_path)
+        click.echo("[+] Created .mind/config.json")
+    else:
+        click.echo("[.] .mind/config.json already exists (preserved)")
 
     # Update CLAUDE.md
     update_claude_md(project_path, stack)

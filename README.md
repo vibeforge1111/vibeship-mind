@@ -200,6 +200,7 @@ your-project/
 │   ├── MEMORY.md     ← Long-term memory (persists)
 │   ├── SESSION.md    ← Short-term focus (cleared each session)
 │   ├── REMINDERS.md  ← Time and context-based reminders
+│   ├── config.json   ← Feature flags for experiments
 │   └── state.json    ← Timestamps for session detection
 └── CLAUDE.md         ← Mind injects context here
 ```

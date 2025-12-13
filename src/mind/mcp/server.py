@@ -1,4 +1,4 @@
-"""Mind MCP server - 11 tools for AI memory (v2: daemon-free, stateless)."""
+"""Mind MCP server - 12 tools for AI memory (v2: daemon-free, stateless)."""
 
 import hashlib
 import json
@@ -862,6 +862,20 @@ def create_server() -> Server:
                     "required": ["message"],
                 },
             ),
+            Tool(
+                name="mind_reminder_done",
+                description="Mark a reminder as done. Use after completing a reminded task. 'next session' reminders are auto-marked when surfaced.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "index": {
+                            "type": "integer",
+                            "description": "Index of reminder to mark done (from mind_reminders output)",
+                        },
+                    },
+                    "required": ["index"],
+                },
+            ),
         ]
 
     @server.call_tool()
@@ -890,6 +904,8 @@ def create_server() -> Server:
             return await handle_reminders(arguments)
         elif name == "mind_log":
             return await handle_log(arguments)
+        elif name == "mind_reminder_done":
+            return await handle_reminder_done(arguments)
         else:
             return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
@@ -956,6 +972,11 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
     # Check for due reminders and inject into context
     due_reminders = get_due_reminders(project_path)
     context_reminders = get_context_reminders(project_path)
+
+    # Auto-mark "next session" reminders as done (they've now been surfaced)
+    for r in due_reminders:
+        if r["type"] == "next session":
+            mark_reminder_done(project_path, r["index"])
 
     # Find insertion point for reminders (after "Last captured" or "## Memory: Active")
     def find_insert_index(lines):
@@ -1510,6 +1531,52 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
         output = {
             "success": False,
             "error": f"Failed to write to {target}",
+        }
+
+    return [TextContent(type="text", text=json.dumps(output, indent=2))]
+
+
+async def handle_reminder_done(args: dict[str, Any]) -> list[TextContent]:
+    """Handle mind_reminder_done tool - mark a reminder as done."""
+    index = args.get("index")
+
+    if index is None:
+        return [TextContent(type="text", text="Error: index is required")]
+
+    project_path = get_current_project()
+    if not project_path:
+        return [TextContent(type="text", text="Error: No Mind project found")]
+
+    # Get reminder info before marking
+    reminders = parse_reminders(project_path)
+    reminder_info = None
+    for r in reminders:
+        if r["index"] == index:
+            reminder_info = r
+            break
+
+    if not reminder_info:
+        return [TextContent(type="text", text=f"Error: No reminder found at index {index}")]
+
+    if reminder_info["done"]:
+        return [TextContent(type="text", text=json.dumps({
+            "success": False,
+            "error": "Reminder already marked as done",
+            "reminder": reminder_info["message"],
+        }, indent=2))]
+
+    success = mark_reminder_done(project_path, index)
+
+    if success:
+        output = {
+            "success": True,
+            "marked_done": reminder_info["message"],
+            "index": index,
+        }
+    else:
+        output = {
+            "success": False,
+            "error": "Failed to mark reminder as done",
         }
 
     return [TextContent(type="text", text=json.dumps(output, indent=2))]

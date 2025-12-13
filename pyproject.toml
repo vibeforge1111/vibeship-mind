@@ -1,6 +1,6 @@
 [project]
 name = "mind-memory"
-version = "2.0.0"
+version = "2.1.0"
 description = "File-based memory system for AI coding assistants"
 readme = "README.md"
 requires-python = ">=3.11"

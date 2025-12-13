@@ -5,6 +5,17 @@ All notable changes to Mind will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-12-13
+
+### Added
+- `mind_reminder_done` tool - Mark reminders as done manually
+- Auto-mark "next session" reminders when surfaced in `mind_recall()`
+
+### Changed
+- Now 12 MCP tools (was 11)
+
+---
+
 ## [2.0.0] - 2025-12-13
 
 ### Added

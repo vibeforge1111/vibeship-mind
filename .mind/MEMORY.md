@@ -200,3 +200,5 @@ learned: Reminder lifecycle: created -> due -> surfaced -> work/snooze -> done/r
 decided: skip Claude Code hooks for memory automation - adds complexity without value. Commit messages don't capture "why". Real value is in-conversation logging via mind_log()
 decided: Mind's real purpose: not just a dev tool, but substrate for AI persistent identity. Memory = facts, Session = raw experience, Self-Improvement = meta-learning patterns. The md files aren't documentation - they're becoming.
 decided: Simplified SESSION.md from 6 sections to 4: Experience, Blockers, Rejected, Assumptions - removed goal, approach, discoveries, working_assumptions
+fixed: cleaned up codebase: HOW_IT_WORKS.md added, outdated docs archived, hooks folder removed, unused code removed, website updated
+fixed: implemented maintainability system - CHANGELOG.md, semantic versioning (v2.0.0), feature flags (config.py), layered docs structure

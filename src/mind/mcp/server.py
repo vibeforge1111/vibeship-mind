@@ -25,6 +25,9 @@ from ..self_improve import (
     format_intuitions_for_context,
     SelfImproveData,
     Intuition,
+    reinforce_pattern,
+    get_confidence_stats,
+    filter_by_confidence,
 )
 
 
@@ -903,7 +906,7 @@ def create_server() -> Server:
             ),
             Tool(
                 name="mind_log",
-                description="Log to session or memory. Routes by type: experience/blocker/assumption/rejected -> SESSION.md (ephemeral), decision/learning/problem/progress -> MEMORY.md (permanent). Call proactively as you work.",
+                description="Log to session or memory. Routes by type: experience/blocker/assumption/rejected -> SESSION.md (ephemeral), decision/learning/problem/progress -> MEMORY.md (permanent), reinforce -> boosts pattern confidence. Call proactively as you work.",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -913,8 +916,8 @@ def create_server() -> Server:
                         },
                         "type": {
                             "type": "string",
-                            "enum": ["experience", "blocker", "assumption", "rejected", "decision", "learning", "problem", "progress"],
-                            "description": "Type determines destination: experience/blocker/assumption/rejected -> SESSION, decision/learning/problem/progress -> MEMORY",
+                            "enum": ["experience", "blocker", "assumption", "rejected", "decision", "learning", "problem", "progress", "reinforce"],
+                            "description": "Type determines destination: experience/blocker/assumption/rejected -> SESSION, decision/learning/problem/progress -> MEMORY, reinforce -> boosts pattern confidence",
                         },
                     },
                     "required": ["message"],
@@ -1657,6 +1660,21 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
     project_path = get_current_project()
     if not project_path:
         return [TextContent(type="text", text="Error: No Mind project found")]
+
+    # Handle reinforce type specially - boosts pattern confidence
+    if entry_type == "reinforce":
+        result = reinforce_pattern(message)
+        touch_activity(project_path)
+        output = {
+            "success": result["success"],
+            "action": "reinforced",
+            "pattern": message,
+            "pattern_hash": result.get("pattern_hash"),
+            "reinforcement_count": result.get("reinforcement_count"),
+            "new_confidence": result.get("new_confidence"),
+        }
+        msg = f"Pattern reinforced! Confidence: {result.get('new_confidence', 0):.0%}"
+        return [TextContent(type="text", text=mindful_response("reinforce", output, msg))]
 
     # Route by type:
     # - SESSION.md (ephemeral): experience, blocker, assumption, rejected

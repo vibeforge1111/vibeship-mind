@@ -66,6 +66,7 @@ ACTION_EMOTIONS = {
     "new_session": "shy",
     "idle": "idle",
     "sleepy": "sleepy",
+    "reinforce": "success",  # Pattern reinforcement
 }
 
 # ASCII fallback for Windows cp1252

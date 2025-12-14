@@ -27,6 +27,7 @@ class PatternType(Enum):
     BLIND_SPOT = "blind_spot"
     ANTI_PATTERN = "anti_pattern"
     FEEDBACK = "feedback"
+    LEARNING_STYLE = "learning_style"  # Phase 9: How user learns best
 
 
 @dataclass
@@ -53,6 +54,7 @@ class SelfImproveData:
     blind_spots: list[Pattern] = field(default_factory=list)
     anti_patterns: list[Pattern] = field(default_factory=list)
     feedback: list[Pattern] = field(default_factory=list)
+    learning_styles: list[Pattern] = field(default_factory=list)
 
     def all_patterns(self) -> list[Pattern]:
         """Get all patterns as a flat list."""
@@ -61,7 +63,8 @@ class SelfImproveData:
             self.skills +
             self.blind_spots +
             self.anti_patterns +
-            self.feedback
+            self.feedback +
+            self.learning_styles
         )
 
     def to_dict(self) -> dict:
@@ -86,6 +89,10 @@ class SelfImproveData:
             "feedback": [
                 {"category": p.category, "description": p.description, "date": str(p.date_added)}
                 for p in self.feedback
+            ],
+            "learning_styles": [
+                {"category": p.category, "description": p.description, "confidence": p.confidence}
+                for p in self.learning_styles
             ],
         }
 
@@ -121,6 +128,12 @@ class SelfImproveParser:
     # FEEDBACK: [date] context -> correction
     FEEDBACK_PATTERN = re.compile(
         r"^(?:-\s*)?FEEDBACK:\s*\[([^\]]+)\]\s*(.+)$",
+        re.IGNORECASE | re.MULTILINE
+    )
+
+    # LEARNING_STYLE: [context] description (Phase 9)
+    LEARNING_STYLE_PATTERN = re.compile(
+        r"^(?:-\s*)?LEARNING_STYLE:\s*\[([^\]]+)\]\s*(.+)$",
         re.IGNORECASE | re.MULTILINE
     )
 
@@ -176,6 +189,13 @@ class SelfImproveParser:
                     category=date_str,
                     description=match.group(2).strip(),
                     date_added=parsed_date,
+                    source_line=i,
+                ))
+            elif match := self.LEARNING_STYLE_PATTERN.match(line):
+                data.learning_styles.append(Pattern(
+                    type=PatternType.LEARNING_STYLE,
+                    category=match.group(1).strip(),
+                    description=match.group(2).strip(),
                     source_line=i,
                 ))
 
@@ -691,3 +711,702 @@ def process_feedback_for_patterns(min_occurrences: int = 3) -> int:
 
     new_patterns = extract_patterns_from_feedback(data.feedback, min_occurrences)
     return promote_extracted_patterns(new_patterns)
+
+
+# =============================================================================
+# Phase 6: Confidence Decay - Patterns lose confidence over time
+# Phase 7: Reinforcement Tracking - Patterns gain confidence when used
+# =============================================================================
+
+import hashlib
+import json
+from datetime import timedelta
+from typing import Dict
+
+from .storage import get_global_mind_dir
+
+
+@dataclass
+class PatternMetadata:
+    """Metadata for tracking pattern lifecycle.
+
+    Stored in ~/.mind/pattern_metadata.json alongside SELF_IMPROVE.md.
+    Tracks when patterns were created, last reinforced, and their confidence.
+    """
+    pattern_hash: str  # MD5 hash of normalized description (first 12 chars)
+    created_at: str  # ISO format datetime
+    last_reinforced: str  # ISO format datetime
+    reinforcement_count: int = 0
+    base_confidence: float = 0.5  # Starting confidence for new patterns
+
+    def current_confidence(
+        self,
+        decay_rate: float = 0.1,
+        decay_period_days: int = 30
+    ) -> float:
+        """Get confidence with decay applied.
+
+        Args:
+            decay_rate: How much to decay per period (default 10%)
+            decay_period_days: Days per decay period (default 30)
+
+        Returns:
+            Decayed confidence, minimum 0.1
+        """
+        last = datetime.fromisoformat(self.last_reinforced)
+        return calculate_decayed_confidence(
+            self.base_confidence,
+            last,
+            decay_rate,
+            decay_period_days
+        )
+
+
+def calculate_decayed_confidence(
+    base_confidence: float,
+    last_reinforced: datetime,
+    decay_rate: float = 0.1,
+    decay_period_days: int = 30
+) -> float:
+    """Calculate confidence after time-based decay.
+
+    The decay formula: confidence * (1 - decay_rate) ^ periods
+
+    Examples:
+        - 30 days inactive: 0.8 * 0.9^1 = 0.72
+        - 60 days inactive: 0.8 * 0.9^2 = 0.648
+        - 90 days inactive: 0.8 * 0.9^3 = 0.583
+
+    Args:
+        base_confidence: Original confidence (0.0 to 1.0)
+        last_reinforced: When pattern was last used/reinforced
+        decay_rate: How much to decay per period (default 10%)
+        decay_period_days: Days per decay period (default 30)
+
+    Returns:
+        Decayed confidence, minimum 0.1 (patterns never fully disappear)
+    """
+    days_since = (datetime.now() - last_reinforced).days
+
+    if days_since < decay_period_days:
+        return base_confidence
+
+    decay_periods = days_since // decay_period_days
+    decayed = base_confidence * ((1 - decay_rate) ** decay_periods)
+
+    return max(0.1, decayed)
+
+
+def hash_pattern_description(description: str) -> str:
+    """Create stable hash for pattern matching.
+
+    Used to identify patterns across sessions without storing full text.
+
+    Args:
+        description: The pattern description text
+
+    Returns:
+        12-character MD5 hash of normalized description
+    """
+    normalized = description.lower().strip()
+    return hashlib.md5(normalized.encode()).hexdigest()[:12]
+
+
+def get_pattern_metadata_path() -> Path:
+    """Get path to pattern_metadata.json."""
+    return get_global_mind_dir() / "pattern_metadata.json"
+
+
+def load_pattern_metadata() -> Dict[str, PatternMetadata]:
+    """Load pattern metadata from state file.
+
+    Returns:
+        Dictionary mapping pattern_hash -> PatternMetadata
+    """
+    path = get_pattern_metadata_path()
+    if not path.exists():
+        return {}
+
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        result = {}
+        for k, v in data.get("patterns", {}).items():
+            result[k] = PatternMetadata(
+                pattern_hash=v.get("pattern_hash", k),
+                created_at=v.get("created_at", datetime.now().isoformat()),
+                last_reinforced=v.get("last_reinforced", datetime.now().isoformat()),
+                reinforcement_count=v.get("reinforcement_count", 0),
+                base_confidence=v.get("base_confidence", 0.5),
+            )
+        return result
+    except (json.JSONDecodeError, TypeError, KeyError):
+        return {}
+
+
+def save_pattern_metadata(metadata: Dict[str, PatternMetadata]) -> None:
+    """Save pattern metadata to state file.
+
+    Args:
+        metadata: Dictionary mapping pattern_hash -> PatternMetadata
+    """
+    path = get_pattern_metadata_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    data = {
+        "patterns": {
+            k: {
+                "pattern_hash": v.pattern_hash,
+                "created_at": v.created_at,
+                "last_reinforced": v.last_reinforced,
+                "reinforcement_count": v.reinforcement_count,
+                "base_confidence": v.base_confidence,
+            }
+            for k, v in metadata.items()
+        },
+        "last_updated": datetime.now().isoformat(),
+        "schema_version": 1,
+    }
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def ensure_pattern_metadata(pattern: Pattern) -> PatternMetadata:
+    """Ensure a pattern has metadata, creating if needed.
+
+    Args:
+        pattern: The Pattern to ensure metadata for
+
+    Returns:
+        PatternMetadata for the pattern
+    """
+    metadata = load_pattern_metadata()
+    pattern_hash = hash_pattern_description(pattern.description)
+
+    if pattern_hash not in metadata:
+        now = datetime.now().isoformat()
+        metadata[pattern_hash] = PatternMetadata(
+            pattern_hash=pattern_hash,
+            created_at=now,
+            last_reinforced=now,
+            reinforcement_count=0,
+            base_confidence=0.5,
+        )
+        save_pattern_metadata(metadata)
+
+    return metadata[pattern_hash]
+
+
+def reinforce_pattern(description: str, boost: float = 0.1) -> dict:
+    """Reinforce a pattern, boosting its confidence.
+
+    Called when a pattern is used and helps the user. This:
+    1. Updates last_reinforced to now (resets decay clock)
+    2. Increments reinforcement_count
+    3. Boosts base_confidence by boost amount (capped at 1.0)
+
+    Args:
+        description: The pattern description to reinforce
+        boost: How much to increase confidence (default 10%)
+
+    Returns:
+        Dict with success status and updated metadata
+    """
+    metadata = load_pattern_metadata()
+    pattern_hash = hash_pattern_description(description)
+
+    if pattern_hash not in metadata:
+        # Pattern not tracked yet, create it
+        now = datetime.now().isoformat()
+        metadata[pattern_hash] = PatternMetadata(
+            pattern_hash=pattern_hash,
+            created_at=now,
+            last_reinforced=now,
+            reinforcement_count=1,
+            base_confidence=min(1.0, 0.5 + boost),
+        )
+    else:
+        # Update existing pattern
+        pattern_meta = metadata[pattern_hash]
+        pattern_meta.last_reinforced = datetime.now().isoformat()
+        pattern_meta.reinforcement_count += 1
+        pattern_meta.base_confidence = min(1.0, pattern_meta.base_confidence + boost)
+
+    save_pattern_metadata(metadata)
+
+    return {
+        "success": True,
+        "pattern_hash": pattern_hash,
+        "reinforcement_count": metadata[pattern_hash].reinforcement_count,
+        "new_confidence": metadata[pattern_hash].base_confidence,
+    }
+
+
+def get_pattern_confidence(pattern: Pattern) -> float:
+    """Get the current (decayed) confidence for a pattern.
+
+    Args:
+        pattern: The Pattern to get confidence for
+
+    Returns:
+        Current confidence after decay (0.1 to 1.0)
+    """
+    metadata = load_pattern_metadata()
+    pattern_hash = hash_pattern_description(pattern.description)
+
+    if pattern_hash not in metadata:
+        # New pattern, use default confidence from pattern itself
+        return pattern.confidence
+
+    return metadata[pattern_hash].current_confidence()
+
+
+def filter_by_confidence(
+    patterns: list[Pattern],
+    min_confidence: float = 0.3
+) -> list[Pattern]:
+    """Filter out patterns below confidence threshold.
+
+    Used to prevent stale patterns from being surfaced.
+
+    Args:
+        patterns: List of patterns to filter
+        min_confidence: Minimum confidence to include (default 0.3)
+
+    Returns:
+        Filtered list of patterns above threshold
+    """
+    return [
+        p for p in patterns
+        if get_pattern_confidence(p) >= min_confidence
+    ]
+
+
+def get_confidence_stats() -> dict:
+    """Get statistics about pattern confidence distribution.
+
+    Useful for debugging and understanding pattern health.
+
+    Returns:
+        Dict with confidence statistics
+    """
+    metadata = load_pattern_metadata()
+
+    if not metadata:
+        return {
+            "total_patterns": 0,
+            "avg_confidence": 0,
+            "high_confidence": 0,
+            "medium_confidence": 0,
+            "low_confidence": 0,
+        }
+
+    confidences = [m.current_confidence() for m in metadata.values()]
+
+    return {
+        "total_patterns": len(metadata),
+        "avg_confidence": sum(confidences) / len(confidences),
+        "high_confidence": len([c for c in confidences if c >= 0.7]),
+        "medium_confidence": len([c for c in confidences if 0.3 <= c < 0.7]),
+        "low_confidence": len([c for c in confidences if c < 0.3]),
+    }
+
+
+# =============================================================================
+# Phase 8: Contradiction Detection - Detect conflicting patterns
+# =============================================================================
+
+
+def extract_keywords(text: str) -> list[str]:
+    """Extract meaningful keywords from text.
+
+    Args:
+        text: The text to extract keywords from
+
+    Returns:
+        List of keywords (4+ chars, no stop words)
+    """
+    # Stop words to filter out
+    stop_words = {
+        'this', 'that', 'with', 'from', 'have', 'been', 'like', 'prefer',
+        'when', 'what', 'which', 'there', 'their', 'about', 'would', 'could',
+        'should', 'very', 'just', 'only', 'some', 'more', 'also', 'into',
+    }
+
+    # Extract words 4+ chars
+    words = re.findall(r'\b\w{4,}\b', text.lower())
+    return [w for w in words if w not in stop_words]
+
+
+def jaccard_similarity(set1: set, set2: set) -> float:
+    """Calculate Jaccard similarity between two sets.
+
+    Args:
+        set1: First set of keywords
+        set2: Second set of keywords
+
+    Returns:
+        Similarity score between 0.0 and 1.0
+    """
+    if not set1 or not set2:
+        return 0.0
+
+    intersection = len(set1 & set2)
+    union = len(set1 | set2)
+
+    return intersection / union if union > 0 else 0.0
+
+
+def find_similar_patterns(
+    new_description: str,
+    existing_patterns: list[Pattern],
+    similarity_threshold: float = 0.4
+) -> list[tuple[Pattern, float]]:
+    """Find patterns similar to the new one.
+
+    Uses Jaccard similarity on keyword overlap (no embeddings needed).
+
+    Args:
+        new_description: Description of the new pattern
+        existing_patterns: List of existing patterns to compare against
+        similarity_threshold: Minimum similarity to include (default 0.4)
+
+    Returns:
+        List of (pattern, similarity_score) tuples, sorted by similarity
+    """
+    new_keywords = set(extract_keywords(new_description))
+
+    if not new_keywords:
+        return []
+
+    similar = []
+    for pattern in existing_patterns:
+        existing_keywords = set(extract_keywords(pattern.description))
+
+        if not existing_keywords:
+            continue
+
+        similarity = jaccard_similarity(new_keywords, existing_keywords)
+
+        if similarity >= similarity_threshold:
+            similar.append((pattern, similarity))
+
+    return sorted(similar, key=lambda x: x[1], reverse=True)
+
+
+# Opposing word pairs for contradiction detection
+OPPOSING_PAIRS = [
+    ('prefer', 'avoid'),
+    ('like', 'dislike'),
+    ('always', 'never'),
+    ('use', "don't use"),
+    ('use', 'dont use'),
+    ('simple', 'complex'),
+    ('verbose', 'terse'),
+    ('detailed', 'brief'),
+    ('short', 'long'),
+    ('minimal', 'comprehensive'),
+    ('functional', 'object-oriented'),
+    ('mutable', 'immutable'),
+    ('sync', 'async'),
+    ('monolith', 'microservice'),
+    ('class', 'function'),
+    ('explicit', 'implicit'),
+    ('strict', 'lenient'),
+]
+
+
+def detect_contradiction(
+    new_pattern: Pattern,
+    similar_pattern: Pattern
+) -> bool:
+    """Check if two similar patterns contradict each other.
+
+    Looks for opposing signals in the pattern descriptions.
+
+    Args:
+        new_pattern: The new pattern being added
+        similar_pattern: An existing similar pattern
+
+    Returns:
+        True if patterns contradict each other
+    """
+    new_lower = new_pattern.description.lower()
+    existing_lower = similar_pattern.description.lower()
+
+    for pos, neg in OPPOSING_PAIRS:
+        # Check if one has positive and other has negative
+        new_has_pos = pos in new_lower
+        new_has_neg = neg in new_lower
+        existing_has_pos = pos in existing_lower
+        existing_has_neg = neg in existing_lower
+
+        # Contradiction: one prefers X, other avoids X
+        if (new_has_pos and existing_has_neg) or (new_has_neg and existing_has_pos):
+            return True
+
+    return False
+
+
+def find_contradictions(
+    new_description: str,
+    pattern_type: PatternType,
+    existing_patterns: list[Pattern]
+) -> list[dict]:
+    """Find patterns that contradict the new one.
+
+    Args:
+        new_description: Description of the new pattern
+        pattern_type: Type of the new pattern
+        existing_patterns: List of existing patterns to check
+
+    Returns:
+        List of dicts describing contradictions found
+    """
+    # Create temporary pattern for comparison
+    new_pattern = Pattern(
+        type=pattern_type,
+        category="temp",
+        description=new_description
+    )
+
+    # Find similar patterns
+    similar = find_similar_patterns(new_description, existing_patterns)
+
+    # Check each similar pattern for contradictions
+    contradictions = []
+    for pattern, similarity in similar:
+        if detect_contradiction(new_pattern, pattern):
+            contradictions.append({
+                "pattern": pattern.description,
+                "type": pattern.type.value,
+                "category": pattern.category,
+                "similarity": round(similarity, 2),
+            })
+
+    return contradictions
+
+
+def add_pattern_with_contradiction_check(
+    pattern_type: PatternType,
+    category: str,
+    description: str
+) -> dict:
+    """Add a pattern, checking for contradictions first.
+
+    Args:
+        pattern_type: Type of pattern (PREFERENCE, SKILL, etc.)
+        category: Category tag like [coding], [python], etc.
+        description: The pattern description
+
+    Returns:
+        Dict with:
+        - success: bool
+        - action: "added" | "contradiction_detected" | "duplicate"
+        - conflicts: list of conflicting patterns (if any)
+        - suggestion: guidance on resolving conflicts
+    """
+    data = load_self_improve()
+    all_patterns = data.all_patterns()
+
+    # Check for exact duplicate
+    for pattern in all_patterns:
+        if pattern.description.lower().strip() == description.lower().strip():
+            return {
+                "success": False,
+                "action": "duplicate",
+                "message": "This exact pattern already exists",
+            }
+
+    # Check for contradictions
+    contradictions = find_contradictions(description, pattern_type, all_patterns)
+
+    if contradictions:
+        return {
+            "success": False,
+            "action": "contradiction_detected",
+            "conflicts": contradictions,
+            "suggestion": (
+                "Resolve conflict before adding. Options:\n"
+                "1. Use mind_log type='reinforce' on the correct pattern\n"
+                "2. Manually remove the outdated pattern from SELF_IMPROVE.md\n"
+                "3. Update the existing pattern's description"
+            ),
+        }
+
+    # No contradictions, safe to add
+    success = append_pattern(pattern_type, category, description)
+
+    if success:
+        return {"success": True, "action": "added"}
+    else:
+        return {"success": False, "action": "failed", "message": "Failed to append pattern"}
+
+
+# =============================================================================
+# Phase 9: Learning Style - Model HOW user learns, not just WHAT
+# =============================================================================
+
+from collections import Counter
+
+# Indicators for detecting learning style from feedback
+LEARNING_STYLE_INDICATORS = {
+    # How they want concepts explained
+    "concepts:example_first": [
+        "show me", "give example", "can you demonstrate", "what does this look like",
+        "show an example", "concrete example", "for example"
+    ],
+    "concepts:theory_first": [
+        "why does", "how does", "explain the", "what's the reason",
+        "understand why", "explain why", "tell me why"
+    ],
+    # Communication preferences
+    "communication:terse": [
+        "too much", "too long", "shorter", "brief", "tldr", "just tell me",
+        "get to the point", "too verbose", "too detailed"
+    ],
+    "communication:detailed": [
+        "more detail", "explain more", "elaborate", "tell me more",
+        "can you explain", "need more info", "more context"
+    ],
+    # Complexity handling
+    "complexity:incremental": [
+        "step by step", "one at a time", "break it down", "smaller pieces",
+        "one thing at a time", "simpler", "too complex"
+    ],
+    "complexity:big_picture": [
+        "overall", "big picture", "full context", "everything at once",
+        "whole thing", "complete picture", "overview"
+    ],
+    # Debugging approach
+    "debugging:logging_first": [
+        "add log", "print", "console.log", "debug output", "trace",
+        "let me see", "show me what"
+    ],
+    "debugging:understand_first": [
+        "why is this", "what causes", "root cause", "understand the issue",
+        "explain the bug", "what's happening"
+    ],
+    # Decision making
+    "decisions:options": [
+        "what are my options", "alternatives", "other ways", "compare",
+        "pros and cons", "which should I", "trade-offs"
+    ],
+    "decisions:recommendation": [
+        "just tell me", "what should I", "recommend", "best approach",
+        "what would you do", "your suggestion"
+    ],
+}
+
+# Human-readable descriptions for detected styles
+LEARNING_STYLE_DESCRIPTIONS = {
+    "concepts:example_first": "learns better with concrete examples before abstract explanations",
+    "concepts:theory_first": "wants to understand the 'why' before seeing examples",
+    "communication:terse": "prefers brief, to-the-point explanations",
+    "communication:detailed": "appreciates thorough, detailed explanations",
+    "complexity:incremental": "learns best with step-by-step, incremental reveals",
+    "complexity:big_picture": "prefers seeing the full picture upfront",
+    "debugging:logging_first": "debugs by adding logging/prints first, then reasons",
+    "debugging:understand_first": "wants to understand the root cause before fixing",
+    "decisions:options": "prefers seeing multiple options compared before deciding",
+    "decisions:recommendation": "wants direct recommendations without listing alternatives",
+}
+
+
+def extract_learning_style_from_feedback(
+    feedback_entries: list[Pattern],
+    min_occurrences: int = 2
+) -> list[tuple[str, str, str]]:
+    """Extract learning style patterns from feedback.
+
+    Analyzes feedback to detect patterns in how the user prefers to receive
+    information, debug code, make decisions, etc.
+
+    Args:
+        feedback_entries: List of feedback patterns to analyze
+        min_occurrences: Minimum times a style must appear (default 2)
+
+    Returns:
+        List of (style_key, category, description) tuples for detected styles
+    """
+    detected = Counter()
+
+    for fb in feedback_entries:
+        desc_lower = fb.description.lower()
+        for style_key, phrases in LEARNING_STYLE_INDICATORS.items():
+            if any(phrase in desc_lower for phrase in phrases):
+                detected[style_key] += 1
+
+    # Return styles that appear min_occurrences+ times
+    results = []
+    for style_key, count in detected.items():
+        if count >= min_occurrences:
+            category = style_key.split(':')[0]
+            description = LEARNING_STYLE_DESCRIPTIONS.get(
+                style_key,
+                style_key.split(':')[1].replace('_', ' ')
+            )
+            results.append((style_key, category, description))
+
+    return results
+
+
+def generate_learning_style_context(learning_styles: list[Pattern]) -> str:
+    """Generate learning style hints for Claude's context.
+
+    Args:
+        learning_styles: List of learning style patterns
+
+    Returns:
+        Formatted markdown section for context injection
+    """
+    if not learning_styles:
+        return ""
+
+    lines = ["## How You Learn Best", ""]
+
+    for ls in learning_styles:
+        lines.append(f"- **{ls.category}**: {ls.description}")
+
+    lines.append("")
+    lines.append("_Adapt explanations and approach to match these preferences._")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+def promote_learning_styles_from_feedback(
+    data: SelfImproveData,
+    min_occurrences: int = 2
+) -> list[Pattern]:
+    """Extract and promote learning styles from feedback to patterns.
+
+    Analyzes feedback entries, extracts learning style signals, and creates
+    new LEARNING_STYLE patterns for those that meet the threshold.
+
+    Args:
+        data: SelfImproveData containing feedback entries
+        min_occurrences: Minimum times a style must appear
+
+    Returns:
+        List of new learning style patterns to add
+    """
+    # Extract styles from feedback
+    detected_styles = extract_learning_style_from_feedback(
+        data.feedback,
+        min_occurrences
+    )
+
+    # Filter out styles that already exist
+    existing_descriptions = {
+        ls.description.lower() for ls in data.learning_styles
+    }
+
+    new_patterns = []
+    for style_key, category, description in detected_styles:
+        if description.lower() not in existing_descriptions:
+            new_patterns.append(Pattern(
+                type=PatternType.LEARNING_STYLE,
+                category=category,
+                description=description,
+            ))
+
+    return new_patterns

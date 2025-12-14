@@ -16,8 +16,9 @@ from ..config import is_mascot_enabled
 from ..context import ContextGenerator
 from ..mascot import get_mindful, mindful_line, can_use_unicode, ACTION_EMOTIONS
 from ..parser import Entity, EntityType, Parser
-from ..storage import ProjectsRegistry, get_mind_home
+from ..storage import ProjectsRegistry, get_mind_home, get_self_improve_path
 from ..templates import SESSION_TEMPLATE
+from ..self_improve import load_self_improve, generate_intuition_context, SelfImproveData
 
 
 # Gap threshold for session detection (30 minutes)
@@ -1019,6 +1020,39 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
     last_activity = datetime.fromtimestamp(state.get("last_activity", now) / 1000) if state.get("last_activity") else None
     context = context_gen.generate(result, last_activity)
 
+    # Load SELF_IMPROVE.md patterns and inject into context
+    self_improve_data = load_self_improve()
+    self_improve_context = ""
+    if self_improve_data.all_patterns():
+        # Get project stack for filtering
+        registry = ProjectsRegistry.load()
+        project_info = registry.get(project_path)
+        stack = project_info.stack if project_info else result.project_state.stack
+
+        self_improve_context = generate_intuition_context(self_improve_data, stack)
+
+        if self_improve_context:
+            # Insert after Session Context section or at the start if not found
+            lines = context.split("\n")
+            insert_idx = 0
+            for i, line in enumerate(lines):
+                if line.startswith("## Session Context") or line.startswith("## Project State"):
+                    # Find end of this section (next ## or end)
+                    for j in range(i + 1, len(lines)):
+                        if lines[j].startswith("## "):
+                            insert_idx = j
+                            break
+                    else:
+                        insert_idx = len(lines)
+                    break
+
+            if insert_idx > 0:
+                lines.insert(insert_idx, f"\n{self_improve_context}\n")
+                context = "\n".join(lines)
+            else:
+                # Fallback: append after first few lines
+                context = context + f"\n\n{self_improve_context}"
+
     # Check for due reminders and inject into context
     due_reminders = get_due_reminders(project_path)
     context_reminders = get_context_reminders(project_path)
@@ -1091,6 +1125,18 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
         if blocker_count >= 2:
             session_warnings.append(f"WARNING: {blocker_count} blockers logged - consider asking user for direction")
 
+    # Build self_improve summary for output
+    self_improve_summary = None
+    if self_improve_data.all_patterns():
+        self_improve_summary = {
+            "preferences_count": len(self_improve_data.preferences),
+            "skills_count": len(self_improve_data.skills),
+            "blind_spots_count": len(self_improve_data.blind_spots),
+            "anti_patterns_count": len(self_improve_data.anti_patterns),
+            "feedback_count": len(self_improve_data.feedback),
+            "context_injected": bool(self_improve_context),
+        }
+
     output = {
         "context": context,
         "session": session_state,
@@ -1106,6 +1152,7 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
             "keywords": r["due"],  # For context type, 'due' field holds keywords
             "index": r["index"],
         } for r in context_reminders] if context_reminders else [],
+        "self_improve": self_improve_summary,
         "session_info": {
             "last_session": datetime.fromtimestamp(state["last_activity"] / 1000).isoformat() if state.get("last_activity") else None,
             "gap_detected": gap_detected,

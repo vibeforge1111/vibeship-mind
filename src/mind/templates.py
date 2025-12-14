@@ -96,3 +96,33 @@ This project uses Mind for persistent memory across sessions.
 GITIGNORE_CONTENT = """.index/
 state.json
 """
+
+SELF_IMPROVE_TEMPLATE = """<!-- MIND SELF-IMPROVEMENT - Cross-project patterns about YOU
+This file lives in ~/.mind/ and persists across all projects.
+It helps Claude remember your patterns, preferences, and blind spots. -->
+
+# Self-Improvement Patterns
+
+## Preferences
+<!-- How you like to work: coding style, workflow, communication -->
+<!-- Format: PREFERENCE: [category] description -->
+
+## Skills
+<!-- What you're good at in specific contexts -->
+<!-- Format: SKILL: [stack:context] description -->
+
+## Blind Spots
+<!-- Things you consistently miss or forget -->
+<!-- Format: BLIND_SPOT: [category] description -->
+
+## Anti-Patterns
+<!-- Approaches that don't work for you -->
+<!-- Format: ANTI_PATTERN: [category] description -->
+
+---
+
+## Feedback Log
+<!-- Raw corrections for pattern extraction (3+ occurrences = pattern) -->
+<!-- Format: FEEDBACK: [date] context -> correction -->
+
+"""

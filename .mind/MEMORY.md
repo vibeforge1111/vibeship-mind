@@ -215,3 +215,32 @@ learned: Claude's brand color is coral/orange #D97757 - use for subtle visual co
 learned: Hero subtitle should focus on: what it is, what it stores, and ease of install - not technical details like "markdown files"
 fixed: Fixed session premature clearing bug: added touch_activity() to mind_log, mind_blocker, mind_session, mind_search - any Mind tool usage now keeps the session alive
 decided: Use svelte-claude-skills (svelte5-runes, sveltekit-data-flow, sveltekit-structure) from ~/.claude/skills/svelte-claude-skills when working on Svelte/SvelteKit projects
+learned: Svelte 5 requires onclick={() => ...} syntax, not onclick="..." strings
+learned: Railway nixpacks only has Node 22.11, so use @sveltejs/vite-plugin-svelte@5.1.1 (supports >=22) not v6 (requires ^22.12)
+decided: KEY: Claude should log actively to SESSION.md throughout work - experience (what's happening), assumption (unverified beliefs), rejected (dismissed approaches). Frequent logging > milestone logging.
+fixed: added SESSION.md Logging Protocol section to CLAUDE.md - now has when/frequency/why structure
+fixed: added Loop & Rabbit Hole Detection section to CLAUDE.md - warning signs tables + what to do checklist + prevention rules
+fixed: session_warnings field added to mind_recall() output - triggers at 3+ rejected or 2+ blockers
+fixed: pushed SESSION.md logging protocol + loop detection to GitHub
+decided: chosen: Unicode box drawing mascot (option 1) - need encoding fallback for Windows
+decided: final picks: Excited v1 (stars + ○○), Shy v3 (◦◦ + ><), Sleepy v3 (ᴗᴗ + ..)
+fixed: ASCII fallback working - Mindful displays correctly on Windows cp1252
+fixed: integrated Mindful mascot into MCP server responses
+decided: MIND_UNICODE=1 env var enables fancy Unicode mascot (Mindful) in MCP responses - ASCII fallback for Windows cp1252. Future: let users create custom mascots.
+
+<!-- Promoted from SESSION.md on 2025-12-14 -->
+decided against: orb-inside concept too confusing - try third eye instead
+decided against: last batch too edgy/scary - needs to be fun and friendly
+decided against: considering auto-inject session state every turn - rejected because token cost too high for marginal benefit
+learned: Windows cp1252 encoding error again - need to set PYTHONIOENCODING or detect encoding
+
+decided: remove Mindful mascot from CLI, keep only in MCP layer - CLI is for scripting/professional use, MCP is conversational
+fixed: removed Mindful mascot from CLI, kept only in MCP layer - cleaner separation of concerns
+learned: researched self-improvement systems: Letta/MemGPT (hierarchical memory + skill learning), Mem0 (vector-based fact extraction), A-MEM (Zettelkasten-style linking), reflection loops, self-generated curricula, self-correction training
+decided: KEY: the billion dollar insight is "proactive intuition" - Claude that predicts and warns based on your patterns, not just recalls facts. The aha moment: "Claude actually knows me now"
+fixed: completed architecture doc (SELF_IMPROVE_ARCHITECTURE.md) and implementation guide (SELF_IMPROVE_IMPLEMENTATION.md) - both focus on LOCAL first with cloud perspective noted for future
+learned: discovered Spawner integration opportunity - Spawner has Skills (markdown/YAML specialist knowledge), Mind has SELF_IMPROVE learning. KEY synergy: Mind learns WHAT works for user, Spawner provides HOW-TO expertise. Mind could inform Spawner skill selection based on user patterns.
+decided: KEY: expanding architecture to full Vibeship Intelligence vision - not just code quality, but billion dollar product building: problem validation, UX excellence, business intelligence, compounding learning
+fixed: KEY: shipped Vibeship Ecosystem vision docs - SELF_IMPROVE_ARCHITECTURE.md with full Spawner integration section, and VIBESHIP_ECOSYSTEM.md standalone doc for both repos. Vision: compound intelligence that grows with user, billion dollar product building system.
+fixed: upgraded SELF_IMPROVE_IMPLEMENTATION.md with full Phase 2-5 code: intuition detection, feedback capture, pattern extraction, CLI tools, and Spawner integration (detect_spawner, mind_learn_edge tool)
+fixed: Phase 1 SELF_IMPROVE implementation complete: storage.py (get_global_mind_dir, get_self_improve_path), templates.py (SELF_IMPROVE_TEMPLATE), cli.py (init creates global SELF_IMPROVE.md), self_improve.py (parser, pattern types, context generation), mcp/server.py (mind_recall loads and injects patterns)

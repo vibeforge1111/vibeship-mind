@@ -10,9 +10,9 @@ from . import __version__
 from .context import update_claude_md
 from .detection import detect_stack
 from .parser import InlineScanner, Parser
-from .storage import ProjectsRegistry
+from .storage import ProjectsRegistry, get_global_mind_dir, get_self_improve_path
 from .config import create_default_config
-from .templates import GITIGNORE_CONTENT, MEMORY_TEMPLATE, SESSION_TEMPLATE
+from .templates import GITIGNORE_CONTENT, MEMORY_TEMPLATE, SESSION_TEMPLATE, SELF_IMPROVE_TEMPLATE
 
 
 @click.group()
@@ -31,6 +31,15 @@ def init(path: str):
 
     # Create .mind directory
     mind_dir.mkdir(exist_ok=True)
+
+    # Ensure global Mind directory exists with SELF_IMPROVE.md
+    global_dir = get_global_mind_dir()
+    self_improve_file = get_self_improve_path()
+    if not self_improve_file.exists():
+        self_improve_file.write_text(SELF_IMPROVE_TEMPLATE)
+        click.echo(f"[+] Created global ~/.mind/SELF_IMPROVE.md")
+    else:
+        click.echo(f"[.] Global ~/.mind/SELF_IMPROVE.md already exists (preserved)")
 
     # Create .mind/.gitignore
     gitignore = mind_dir / ".gitignore"

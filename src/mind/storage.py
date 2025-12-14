@@ -15,6 +15,33 @@ def get_mind_home() -> Path:
     return home
 
 
+def get_global_mind_dir() -> Path:
+    """Get global Mind directory for cross-project data (~/.mind).
+
+    This is the same as get_mind_home() but with clearer semantic meaning
+    for SELF_IMPROVE.md and other global files.
+    """
+    return get_mind_home()
+
+
+def get_self_improve_path() -> Path:
+    """Get path to global SELF_IMPROVE.md file.
+
+    SELF_IMPROVE.md lives in ~/.mind/ and stores cross-project patterns:
+    - PREFERENCE: coding style, workflow, communication preferences
+    - SKILL: things you're good at in specific contexts
+    - BLIND_SPOT: things you consistently miss or forget
+    - ANTI_PATTERN: approaches that don't work for you
+    - FEEDBACK: raw corrections for pattern extraction
+    """
+    return get_global_mind_dir() / "SELF_IMPROVE.md"
+
+
+def get_global_edges_path() -> Path:
+    """Get path to global edges file."""
+    return get_global_mind_dir() / "global_edges.json"
+
+
 @dataclass
 class ProjectInfo:
     path: str

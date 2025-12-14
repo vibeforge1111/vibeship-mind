@@ -14,7 +14,7 @@ Mind fixes both problems with two-layer memory:
 
 ## Why Mind?
 
-**4 commands + 1 prompt.** Clone, sync, init, connect. Done.
+**2 commands.** Install, init. Done.
 
 **Fully automated.** Memory just works - no commands required:
 - Claude writes memories as it works
@@ -39,9 +39,45 @@ Optional tools are there when you want them, but the core memory flow runs hands
 
 ## Ready to Give Claude a Mind?
 
-**4 commands + 1 prompt. Zero friction.**
+**2 commands. Zero friction.**
 
 ### 1. Install Mind
+
+```bash
+pip install vibeship-mind
+```
+
+### 2. Initialize in your project
+
+```bash
+cd your-project
+mind init
+```
+
+### 3. Connect to Claude Code
+
+Add to your MCP config:
+
+**Mac/Linux:** `~/.config/claude/mcp.json`
+**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "mind": {
+      "command": "mind",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+Restart Claude Code, then say: **"Let's run The Mind"**
+
+---
+
+<details>
+<summary><strong>Alternative: Install from source</strong></summary>
 
 ```bash
 git clone https://github.com/vibeforge1111/vibeship-mind.git
@@ -50,38 +86,7 @@ uv sync
 uv run mind init
 ```
 
-<details>
-<summary>If <code>uv sync</code> fails, install uv first</summary>
-
-```bash
-# macOS/Linux
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Windows (PowerShell)
-powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
-```
-
-</details>
-
-### 2. Tell Claude Code to connect
-
-Just paste this to Claude:
-
-> Add Mind MCP server to my config
-
-Then in any project, say: **"Let's run The Mind"**
-
----
-
-<details>
-<summary><strong>MCP Config Reference</strong> (if Claude needs help)</summary>
-
-**Config file location:**
-- Mac/Linux: `~/.config/claude/mcp.json`
-- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-
-**Add this** (replace path with where you cloned vibeship-mind):
-
+MCP config for source install:
 ```json
 {
   "mcpServers": {
@@ -92,8 +97,6 @@ Then in any project, say: **"Let's run The Mind"**
   }
 }
 ```
-
-Restart Claude Code after adding.
 
 </details>
 
@@ -168,29 +171,12 @@ Reminders are stored in `.mind/REMINDERS.md` and shown in `mind_recall()` output
 
 ## Initialize Mind in Any Project
 
-Run this command, replacing the paths:
-
 ```bash
-uv --directory /path/to/vibeship-mind run mind init /path/to/your/project
+cd your-project
+mind init
 ```
 
-**Example (Windows):**
-```bash
-uv --directory C:\Users\YOU\vibeship-mind run mind init C:\Users\YOU\my-project
-```
-
-**Example (Mac/Linux):**
-```bash
-uv --directory ~/vibeship-mind run mind init ~/my-project
-```
-
-**Using Claude Code?** Just paste this:
-
-> Run `uv --directory /path/to/vibeship-mind run mind init .` to set up Mind in this project
-
-(Replace `/path/to/vibeship-mind` with where you cloned it)
-
-This creates `.mind/MEMORY.md` and `.mind/SESSION.md`.
+That's it! This creates `.mind/MEMORY.md` and `.mind/SESSION.md`.
 
 ---
 
@@ -198,16 +184,16 @@ This creates `.mind/MEMORY.md` and `.mind/SESSION.md`.
 
 ```bash
 # Check if everything is working
-uv --directory /path/to/vibeship-mind run mind doctor
+mind doctor
 
-# See what Mind extracted from your notes (run from project dir, or pass path)
-uv --directory /path/to/vibeship-mind run mind parse /path/to/your/project
+# See what Mind extracted from your notes
+mind parse
 
 # Check project status
-uv --directory /path/to/vibeship-mind run mind status /path/to/your/project
+mind status
 
 # List all registered projects
-uv --directory /path/to/vibeship-mind run mind list
+mind list
 ```
 
 ---
@@ -245,10 +231,10 @@ your-project/
 
 | Problem | Fix |
 |---------|-----|
-| "Command not found" | Use full path: `uv --directory /path/to/vibeship-mind run mind ...` |
+| "Command not found" | Make sure `pip install vibeship-mind` completed and `mind` is in your PATH |
 | Nothing being captured | Use keywords: `decided`, `problem`, `learned`, `gotcha` |
 | Claude repeating mistakes | Tell Claude: "Check SESSION.md" or "Add to Rejected Approaches" |
-| Need to check health | `uv --directory /path/to/vibeship-mind run mind doctor` |
+| Need to check health | Run `mind doctor` |
 
 ---
 

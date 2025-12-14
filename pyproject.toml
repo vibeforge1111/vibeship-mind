@@ -1,5 +1,5 @@
 [project]
-name = "mind-memory"
+name = "vibeship-mind"
 version = "2.1.0"
 description = "File-based memory system for AI coding assistants"
 readme = "README.md"

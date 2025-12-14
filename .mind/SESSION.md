@@ -3,6 +3,8 @@
 ## Experience
 <!-- Raw moments, thoughts, what's happening -->
 
+- starting Phase 4: CLI Tools - mind patterns, mind feedback commands
+- test
 - testing session type
 - starting Phase 3: Feedback Capture - auto-logging corrections and pattern extraction
 - starting Phase 2: Pattern Radar - proactive intuition detection with WATCH/AVOID/TIP warnings

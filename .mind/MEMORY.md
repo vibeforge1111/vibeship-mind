@@ -247,3 +247,5 @@ fixed: Phase 1 SELF_IMPROVE implementation complete: storage.py (get_global_mind
 fixed: Phase 2 Pattern Radar complete: Intuition dataclass, detect_intuitions(), _extract_triggers(), format_intuitions_for_context(), integration into mind_recall output with context injection. Triggers WATCH/AVOID/TIP based on blind spots, anti-patterns, and skills matching session context.
 decided: testing memory type
 fixed: Phase 3 Feedback Capture complete: new mind_log types (feedback, preference, blind_spot, skill) route to SELF_IMPROVE.md, pattern extraction from feedback (3+ occurrences promotes to patterns), log_to_self_improve() function
+decided: test
+fixed: completed Phase 4: CLI Tools - added mind patterns, mind feedback, mind self commands

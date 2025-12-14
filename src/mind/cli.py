@@ -377,6 +377,145 @@ def doctor():
         click.echo("Overall: Healthy")
 
 
+@cli.command("patterns")
+@click.option("--type", "pattern_type", type=click.Choice(["all", "preference", "skill", "blind_spot", "anti_pattern"]), default="all", help="Filter by pattern type")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+def patterns(pattern_type: str, as_json: bool):
+    """View learned patterns from SELF_IMPROVE.md."""
+    from .self_improve import load_self_improve
+
+    data = load_self_improve()
+
+    # Select patterns based on type filter
+    if pattern_type == "all":
+        patterns_to_show = {
+            "preferences": data.preferences,
+            "skills": data.skills,
+            "blind_spots": data.blind_spots,
+            "anti_patterns": data.anti_patterns,
+        }
+    elif pattern_type == "preference":
+        patterns_to_show = {"preferences": data.preferences}
+    elif pattern_type == "skill":
+        patterns_to_show = {"skills": data.skills}
+    elif pattern_type == "blind_spot":
+        patterns_to_show = {"blind_spots": data.blind_spots}
+    elif pattern_type == "anti_pattern":
+        patterns_to_show = {"anti_patterns": data.anti_patterns}
+    else:
+        patterns_to_show = {}
+
+    if as_json:
+        output = {}
+        for key, plist in patterns_to_show.items():
+            output[key] = [
+                {"category": p.category, "description": p.description, "confidence": p.confidence}
+                for p in plist
+            ]
+        click.echo(json.dumps(output, indent=2))
+    else:
+        total = 0
+        for type_name, plist in patterns_to_show.items():
+            if plist:
+                # Format header: "preferences" -> "Preferences"
+                header = type_name.replace("_", " ").title()
+                click.echo(f"=== {header} ===")
+                for p in plist:
+                    click.echo(f"  [{p.category}] {p.description}")
+                click.echo()
+                total += len(plist)
+
+        if total == 0:
+            click.echo("No patterns found.")
+            click.echo("Patterns are learned over time from your feedback.")
+            click.echo()
+            click.echo("Add patterns manually:")
+            click.echo("  PREFERENCE: [category] description")
+            click.echo("  SKILL: [stack:context] description")
+            click.echo("  BLIND_SPOT: [category] description")
+            click.echo("  ANTI_PATTERN: [category] description")
+        else:
+            click.echo(f"Total: {total} patterns")
+
+
+@cli.command("feedback")
+@click.option("--limit", default=20, help="Maximum entries to show")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+def feedback(limit: int, as_json: bool):
+    """View feedback log from SELF_IMPROVE.md."""
+    from .self_improve import load_self_improve
+
+    data = load_self_improve()
+    entries = data.feedback[:limit]
+
+    if as_json:
+        output = [
+            {"date": str(e.date_added), "description": e.description}
+            for e in entries
+        ]
+        click.echo(json.dumps(output, indent=2))
+    else:
+        if not entries:
+            click.echo("No feedback entries found.")
+            click.echo()
+            click.echo("Log feedback during sessions with:")
+            click.echo("  mind_log('context -> correction', type='feedback')")
+        else:
+            click.echo(f"=== Feedback Log ({len(entries)}/{len(data.feedback)}) ===")
+            for e in entries:
+                click.echo(f"  [{e.date_added}] {e.description}")
+            click.echo()
+            if len(data.feedback) > limit:
+                click.echo(f"({len(data.feedback) - limit} more entries, use --limit to see more)")
+
+
+@cli.command("self")
+def self_status():
+    """Show SELF_IMPROVE.md summary and stats."""
+    from .self_improve import load_self_improve, get_self_improve_path
+
+    path = get_self_improve_path()
+    if not path.exists():
+        click.echo("SELF_IMPROVE.md not found.")
+        click.echo("Run 'mind init' in any project to create it.")
+        return
+
+    data = load_self_improve()
+
+    click.echo("=== Self-Improvement Summary ===")
+    click.echo(f"Location: {path}")
+    click.echo()
+
+    # Stats
+    click.echo("Patterns:")
+    click.echo(f"  Preferences:   {len(data.preferences)}")
+    click.echo(f"  Skills:        {len(data.skills)}")
+    click.echo(f"  Blind Spots:   {len(data.blind_spots)}")
+    click.echo(f"  Anti-Patterns: {len(data.anti_patterns)}")
+    click.echo(f"  Feedback Log:  {len(data.feedback)} entries")
+    click.echo()
+
+    total = len(data.all_patterns())
+    click.echo(f"Total: {total} patterns")
+
+    # File size
+    file_size_kb = path.stat().st_size / 1024
+    click.echo(f"File size: {file_size_kb:.1f}KB")
+    click.echo()
+
+    # Quick preview of each type
+    if data.blind_spots:
+        click.echo("Recent Blind Spots (watch out!):")
+        for bs in data.blind_spots[:3]:
+            click.echo(f"  - [{bs.category}] {bs.description}")
+        click.echo()
+
+    if data.anti_patterns:
+        click.echo("Recent Anti-Patterns (avoid!):")
+        for ap in data.anti_patterns[:3]:
+            click.echo(f"  - [{ap.category}] {ap.description}")
+
+
 @cli.command("status")
 @click.argument("path", default=".", type=click.Path(exists=True, file_okay=False))
 def status(path: str):

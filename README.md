@@ -50,6 +50,19 @@ uv sync
 uv run mind init
 ```
 
+<details>
+<summary>If <code>uv sync</code> fails, install uv first</summary>
+
+```bash
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+</details>
+
 ### 2. Tell Claude Code to connect
 
 Just paste this to Claude:

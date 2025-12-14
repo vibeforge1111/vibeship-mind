@@ -46,7 +46,18 @@
 				</div>
 			</div>
 		</div>
-		<p class="step-note">Requires <a href="https://docs.astral.sh/uv/" target="_blank">uv</a> (Claude Code installs it automatically)</p>
+		<details class="uv-help">
+			<summary>If <code>uv sync</code> fails, install uv first</summary>
+			<div class="terminal small">
+				<div class="terminal-body">
+					<div class="line comment"># macOS/Linux</div>
+					<div class="line command">$ curl -LsSf https://astral.sh/uv/install.sh | sh</div>
+					<div class="line blank"></div>
+					<div class="line comment"># Windows (PowerShell)</div>
+					<div class="line command">$ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"</div>
+				</div>
+			</div>
+		</details>
 	</section>
 
 	<!-- Step 2: Add MCP Server -->
@@ -287,6 +298,26 @@
 
 	.step-note a {
 		color: var(--green-dim);
+	}
+
+	.uv-help {
+		margin-top: var(--space-3);
+		font-size: var(--text-sm);
+	}
+
+	.uv-help summary {
+		color: var(--text-secondary);
+		cursor: pointer;
+	}
+
+	.uv-help summary:hover {
+		color: var(--text-primary);
+	}
+
+	.uv-help summary code {
+		background: transparent;
+		padding: 0;
+		color: inherit;
 	}
 
 	/* Terminal */

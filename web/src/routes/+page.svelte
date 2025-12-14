@@ -570,6 +570,15 @@ Done.`,
 				<code>uv sync</code>
 				<code>uv run mind init</code>
 			</div>
+			<details class="uv-help">
+				<summary>If <code>uv sync</code> fails, install uv first</summary>
+				<div class="uv-install-commands">
+					<code class="comment"># macOS/Linux</code>
+					<code>curl -LsSf https://astral.sh/uv/install.sh | sh</code>
+					<code class="comment"># Windows (PowerShell)</code>
+					<code>powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"</code>
+				</div>
+			</details>
 		</div>
 
 		<div class="install-step">
@@ -1094,6 +1103,67 @@ Done.`,
 		color: var(--terminal-muted);
 	}
 
+	.install-preview code.comment::before {
+		content: '';
+	}
+
+	.install-preview code.comment {
+		color: var(--terminal-muted);
+		font-style: italic;
+	}
+
+	.uv-help {
+		margin-top: var(--space-3);
+		font-size: var(--text-sm);
+	}
+
+	.uv-help summary {
+		color: var(--text-secondary);
+		cursor: pointer;
+	}
+
+	.uv-help summary:hover {
+		color: var(--text-primary);
+	}
+
+	.uv-help summary code {
+		background: transparent;
+		padding: 0;
+		color: inherit;
+	}
+
+	.uv-install-commands {
+		margin-top: var(--space-2);
+		padding: var(--space-3);
+		background: var(--bg-secondary);
+		border: 1px solid var(--border);
+	}
+
+	.uv-install-commands code {
+		display: block;
+		padding: var(--space-1) 0;
+		background: transparent;
+		font-size: var(--text-sm);
+	}
+
+	.uv-install-commands code.comment {
+		color: var(--text-tertiary);
+		font-style: italic;
+	}
+
+	.uv-install-commands code.comment::before {
+		content: '';
+	}
+
+	.uv-install-commands code:not(.comment) {
+		color: var(--terminal-command);
+	}
+
+	.uv-install-commands code:not(.comment)::before {
+		content: '$ ';
+		color: var(--terminal-muted);
+	}
+
 	.prompt-box {
 		position: relative;
 		padding: var(--space-3) var(--space-4);
@@ -1112,7 +1182,7 @@ Done.`,
 	.step-note {
 		margin-top: var(--space-2);
 		font-size: var(--text-sm);
-		color: var(--text-tertiary);
+		color: var(--text-secondary);
 	}
 
 	.cta-buttons {

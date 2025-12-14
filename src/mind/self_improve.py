@@ -525,3 +525,169 @@ def format_intuitions_for_context(intuitions: list[Intuition]) -> str:
 
     lines.append("")
     return "\n".join(lines)
+
+
+# =============================================================================
+# Phase 3: Feedback Capture - Pattern Extraction
+# =============================================================================
+
+
+def extract_patterns_from_feedback(
+    feedback_entries: list[Pattern],
+    min_occurrences: int = 3
+) -> list[tuple[str, str, str]]:
+    """Extract patterns from accumulated feedback.
+
+    Looks for repeated themes in feedback to identify:
+    - Preferences (consistent style choices)
+    - Blind spots (repeated mistakes)
+    - Anti-patterns (approaches that don't work)
+
+    Args:
+        feedback_entries: List of FEEDBACK patterns from SELF_IMPROVE.md
+        min_occurrences: Minimum times a pattern must appear
+
+    Returns:
+        List of (type, category, description) tuples for new patterns
+    """
+    from collections import Counter
+
+    if len(feedback_entries) < min_occurrences:
+        return []
+
+    # Extract themes from feedback descriptions
+    themes: Counter = Counter()
+    category_themes: dict[str, str] = {}
+
+    for fb in feedback_entries:
+        desc = fb.description.lower()
+
+        # Look for common correction patterns
+        if "->" in desc:
+            parts = desc.split("->", 1)
+            original = parts[0].strip()
+            correction = parts[1].strip() if len(parts) > 1 else ""
+
+            # Style preferences
+            if any(w in correction for w in ["single", "double", "quotes"]):
+                themes["style:quotes"] += 1
+                category_themes["style:quotes"] = correction
+
+            if any(w in correction for w in ["simple", "simpler", "less complex", "minimal"]):
+                themes["approach:simplicity"] += 1
+                category_themes["approach:simplicity"] = "prefers simpler solutions"
+
+            if any(w in correction for w in ["detailed", "more thorough", "comprehensive"]):
+                themes["approach:detail"] += 1
+                category_themes["approach:detail"] = "prefers detailed solutions"
+
+            # Type hints / documentation
+            if any(w in correction for w in ["type hint", "typing", "annotation"]):
+                themes["style:type_hints"] += 1
+                category_themes["style:type_hints"] = "prefers type hints"
+
+            if any(w in correction for w in ["docstring", "comment", "document"]):
+                themes["style:documentation"] += 1
+                category_themes["style:documentation"] = "prefers documentation"
+
+            # Error handling patterns
+            if any(w in original for w in ["error", "catch", "try", "exception", "handling"]):
+                themes["blind_spot:error_handling"] += 1
+                category_themes["blind_spot:error_handling"] = "tends to skip error handling"
+
+            # Validation patterns
+            if any(w in original for w in ["valid", "check", "sanitize", "input"]):
+                themes["blind_spot:validation"] += 1
+                category_themes["blind_spot:validation"] = "tends to skip input validation"
+
+            # Over-engineering
+            if any(w in correction for w in ["overkill", "yagni", "too much", "unnecessary"]):
+                themes["anti_pattern:overengineering"] += 1
+                category_themes["anti_pattern:overengineering"] = "tends to over-engineer"
+
+            # Under-engineering
+            if any(w in correction for w in ["too simple", "not enough", "missing"]):
+                themes["anti_pattern:underengineering"] += 1
+                category_themes["anti_pattern:underengineering"] = "tends to under-engineer"
+
+    # Extract patterns that meet threshold
+    new_patterns = []
+    for theme, count in themes.items():
+        if count >= min_occurrences:
+            parts = theme.split(":", 1)
+            if len(parts) != 2:
+                continue
+            pattern_type, category = parts
+            description = category_themes.get(theme, category)
+
+            # Map to actual types
+            type_map = {
+                "style": "preference",
+                "approach": "preference",
+                "blind_spot": "blind_spot",
+                "anti_pattern": "anti_pattern"
+            }
+            actual_type = type_map.get(pattern_type, "preference")
+
+            new_patterns.append((actual_type, category, description))
+
+    return new_patterns
+
+
+def promote_extracted_patterns(new_patterns: list[tuple[str, str, str]]) -> int:
+    """Add extracted patterns to SELF_IMPROVE.md.
+
+    Args:
+        new_patterns: List of (type, category, description) tuples
+
+    Returns:
+        Number of patterns added.
+    """
+    if not new_patterns:
+        return 0
+
+    path = get_self_improve_path()
+    if not path.exists():
+        return 0
+
+    content = path.read_text(encoding="utf-8")
+    added = 0
+
+    for pattern_type, category, description in new_patterns:
+        # Skip if description already exists (avoid duplicates)
+        if description.lower() in content.lower():
+            continue
+
+        # Use append_pattern which handles section finding
+        ptype_map = {
+            "preference": PatternType.PREFERENCE,
+            "blind_spot": PatternType.BLIND_SPOT,
+            "anti_pattern": PatternType.ANTI_PATTERN,
+            "skill": PatternType.SKILL,
+        }
+        ptype = ptype_map.get(pattern_type)
+        if ptype and append_pattern(ptype, category, description):
+            added += 1
+
+    return added
+
+
+def process_feedback_for_patterns(min_occurrences: int = 3) -> int:
+    """Process feedback log and extract new patterns.
+
+    Call this periodically (e.g., on session end) to promote
+    repeated feedback into permanent patterns.
+
+    Args:
+        min_occurrences: Minimum times a theme must appear
+
+    Returns:
+        Number of new patterns created.
+    """
+    data = load_self_improve()
+
+    if len(data.feedback) < min_occurrences:
+        return 0
+
+    new_patterns = extract_patterns_from_feedback(data.feedback, min_occurrences)
+    return promote_extracted_patterns(new_patterns)

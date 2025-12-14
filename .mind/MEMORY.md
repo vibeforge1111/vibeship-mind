@@ -245,3 +245,5 @@ fixed: KEY: shipped Vibeship Ecosystem vision docs - SELF_IMPROVE_ARCHITECTURE.m
 fixed: upgraded SELF_IMPROVE_IMPLEMENTATION.md with full Phase 2-5 code: intuition detection, feedback capture, pattern extraction, CLI tools, and Spawner integration (detect_spawner, mind_learn_edge tool)
 fixed: Phase 1 SELF_IMPROVE implementation complete: storage.py (get_global_mind_dir, get_self_improve_path), templates.py (SELF_IMPROVE_TEMPLATE), cli.py (init creates global SELF_IMPROVE.md), self_improve.py (parser, pattern types, context generation), mcp/server.py (mind_recall loads and injects patterns)
 fixed: Phase 2 Pattern Radar complete: Intuition dataclass, detect_intuitions(), _extract_triggers(), format_intuitions_for_context(), integration into mind_recall output with context injection. Triggers WATCH/AVOID/TIP based on blind spots, anti-patterns, and skills matching session context.
+decided: testing memory type
+fixed: Phase 3 Feedback Capture complete: new mind_log types (feedback, preference, blind_spot, skill) route to SELF_IMPROVE.md, pattern extraction from feedback (3+ occurrences promotes to patterns), log_to_self_improve() function

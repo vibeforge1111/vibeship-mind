@@ -1647,7 +1647,7 @@ async def handle_reminders(args: dict[str, Any]) -> list[TextContent]:
 
 
 async def handle_log(args: dict[str, Any]) -> list[TextContent]:
-    """Handle mind_log tool - route to SESSION.md or MEMORY.md based on type."""
+    """Handle mind_log tool - route to SESSION.md, MEMORY.md, or SELF_IMPROVE.md based on type."""
     message = args.get("message", "")
     entry_type = args.get("type", "experience")
 
@@ -1661,8 +1661,10 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
     # Route by type:
     # - SESSION.md (ephemeral): experience, blocker, assumption, rejected
     # - MEMORY.md (permanent): decision, learning, problem, progress
+    # - SELF_IMPROVE.md (global): feedback, preference, blind_spot, skill
     session_types = {"experience", "blocker", "assumption", "rejected"}
     memory_types = {"decision", "learning", "problem", "progress"}
+    global_types = {"feedback", "preference", "blind_spot", "skill"}
 
     # Prefixes for memory entries
     memory_prefixes = {
@@ -1672,7 +1674,14 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
         "progress": "fixed:",
     }
 
-    if entry_type in session_types:
+    success = False
+    target = "unknown"
+
+    if entry_type in global_types:
+        # Write to SELF_IMPROVE.md (global, cross-project)
+        success = log_to_self_improve(message, entry_type)
+        target = "SELF_IMPROVE.md"
+    elif entry_type in session_types:
         # Write to SESSION.md
         session_file = get_session_file(project_path)
         if not session_file.exists():
@@ -1716,6 +1725,37 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
             "error": f"Failed to write to {target}",
         }
         return [TextContent(type="text", text=mindful_response("error", output, f"Failed to write to {target}"))]
+
+
+def log_to_self_improve(message: str, log_type: str) -> bool:
+    """Log directly to global SELF_IMPROVE.md.
+
+    Args:
+        message: The message to log
+        log_type: One of: feedback, preference, blind_spot, skill
+
+    Returns:
+        True if successful, False otherwise
+    """
+    from ..self_improve import append_pattern, PatternType
+
+    # Map log type to PatternType
+    type_map = {
+        "feedback": PatternType.FEEDBACK,
+        "preference": PatternType.PREFERENCE,
+        "blind_spot": PatternType.BLIND_SPOT,
+        "skill": PatternType.SKILL,
+    }
+
+    pattern_type = type_map.get(log_type)
+    if not pattern_type:
+        return False
+
+    # For feedback, the message is the full description
+    # For others, we use "general" as the default category
+    category = "general"
+
+    return append_pattern(pattern_type, category, message)
 
 
 async def handle_reminder_done(args: dict[str, Any]) -> list[TextContent]:

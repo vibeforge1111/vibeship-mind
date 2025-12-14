@@ -59,7 +59,9 @@ python -m mind init
 
 Copy and paste this to Claude:
 
-> Add Mind MCP server to my config. Use command "python" with args ["-m", "mind", "mcp"]
+```
+Add Mind MCP server to my config. Use command "python" with args ["-m", "mind", "mcp"]
+```
 
 Claude will set it up for you. Restart Claude Code after, and Mind will work automatically.
 

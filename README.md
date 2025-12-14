@@ -14,7 +14,7 @@ Mind fixes both problems with two-layer memory:
 
 ## Why Mind?
 
-**2-prompt install.** Clone the repo, tell Claude to add the MCP server. Done.
+**4 commands + 1 prompt.** Clone, sync, init, connect. Done.
 
 **Fully automated.** Memory just works - no commands required:
 - Claude writes memories as it works
@@ -37,9 +37,11 @@ Optional tools are there when you want them, but the core memory flow runs hands
 
 ---
 
-## Install
+## Ready to Give Claude a Mind?
 
-**Requires:** [uv](https://docs.astral.sh/uv/) (Claude Code installs uv automatically)
+**4 commands + 1 prompt. Zero friction.**
+
+### 1. Install Mind
 
 ```bash
 git clone https://github.com/vibeforge1111/vibeship-mind.git
@@ -48,25 +50,24 @@ uv sync
 uv run mind init
 ```
 
-That's it. Now connect to Claude Code below.
+### 2. Tell Claude Code to connect
+
+Just paste this to Claude:
+
+> Add Mind MCP server to my config
+
+Then in any project, say: **"Let's run The Mind"**
 
 ---
 
-## Connect to Claude Code
+<details>
+<summary><strong>MCP Config Reference</strong> (if Claude needs help)</summary>
 
-Add Mind as an MCP server to give Claude memory tools:
+**Config file location:**
+- Mac/Linux: `~/.config/claude/mcp.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
-**Easy way:** Just paste this to Claude:
-
-> Add Mind MCP server from github.com/vibeforge1111/vibeship-mind to my config
-
-**Manual way:**
-
-1. Open your MCP config file:
-   - Mac/Linux: `~/.config/claude/mcp.json`
-   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-
-2. Add this (replace path with where you cloned vibeship-mind):
+**Add this** (replace path with where you cloned vibeship-mind):
 
 ```json
 {
@@ -79,7 +80,9 @@ Add Mind as an MCP server to give Claude memory tools:
 }
 ```
 
-3. Restart Claude Code
+Restart Claude Code after adding.
+
+</details>
 
 ---
 

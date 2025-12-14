@@ -18,7 +18,14 @@ from ..mascot import get_mindful, mindful_line, can_use_unicode, ACTION_EMOTIONS
 from ..parser import Entity, EntityType, Parser
 from ..storage import ProjectsRegistry, get_mind_home, get_self_improve_path
 from ..templates import SESSION_TEMPLATE
-from ..self_improve import load_self_improve, generate_intuition_context, SelfImproveData
+from ..self_improve import (
+    load_self_improve,
+    generate_intuition_context,
+    detect_intuitions,
+    format_intuitions_for_context,
+    SelfImproveData,
+    Intuition,
+)
 
 
 # Gap threshold for session detection (30 minutes)
@@ -1023,15 +1030,37 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
     # Load SELF_IMPROVE.md patterns and inject into context
     self_improve_data = load_self_improve()
     self_improve_context = ""
-    if self_improve_data.all_patterns():
-        # Get project stack for filtering
-        registry = ProjectsRegistry.load()
-        project_info = registry.get(project_path)
-        stack = project_info.stack if project_info else result.project_state.stack
+    detected_intuitions: list[Intuition] = []
 
+    # Get project stack for filtering
+    registry = ProjectsRegistry.load()
+    project_info = registry.get(project_path)
+    stack = project_info.stack if project_info else result.project_state.stack
+
+    if self_improve_data.all_patterns():
         self_improve_context = generate_intuition_context(self_improve_data, stack)
 
+        # Phase 2: Pattern Radar - Detect intuitions from session context
+        session_content_for_radar = read_session_file(project_path) or ""
+        detected_intuitions = detect_intuitions(
+            session_content_for_radar,
+            self_improve_data,
+            stack
+        )
+
+        # Build combined context: patterns + intuitions
+        combined_context = ""
         if self_improve_context:
+            combined_context = self_improve_context
+
+        if detected_intuitions:
+            intuition_context = format_intuitions_for_context(detected_intuitions)
+            if combined_context:
+                combined_context = combined_context + "\n\n" + intuition_context
+            else:
+                combined_context = intuition_context
+
+        if combined_context:
             # Insert after Session Context section or at the start if not found
             lines = context.split("\n")
             insert_idx = 0
@@ -1047,11 +1076,11 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
                     break
 
             if insert_idx > 0:
-                lines.insert(insert_idx, f"\n{self_improve_context}\n")
+                lines.insert(insert_idx, f"\n{combined_context}\n")
                 context = "\n".join(lines)
             else:
                 # Fallback: append after first few lines
-                context = context + f"\n\n{self_improve_context}"
+                context = context + f"\n\n{combined_context}"
 
     # Check for due reminders and inject into context
     due_reminders = get_due_reminders(project_path)
@@ -1135,7 +1164,21 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
             "anti_patterns_count": len(self_improve_data.anti_patterns),
             "feedback_count": len(self_improve_data.feedback),
             "context_injected": bool(self_improve_context),
+            "intuitions_triggered": len(detected_intuitions),
         }
+
+    # Build intuitions list for output
+    intuitions_output = None
+    if detected_intuitions:
+        intuitions_output = [
+            {
+                "type": i.type,
+                "message": i.message,
+                "source": i.source_pattern,
+                "confidence": i.confidence,
+            }
+            for i in detected_intuitions
+        ]
 
     output = {
         "context": context,
@@ -1153,6 +1196,7 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
             "index": r["index"],
         } for r in context_reminders] if context_reminders else [],
         "self_improve": self_improve_summary,
+        "intuitions": intuitions_output,
         "session_info": {
             "last_session": datetime.fromtimestamp(state["last_activity"] / 1000).isoformat() if state.get("last_activity") else None,
             "gap_detected": gap_detected,

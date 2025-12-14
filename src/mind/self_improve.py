@@ -363,3 +363,165 @@ def generate_intuition_context(data: SelfImproveData, stack: list[str]) -> str:
             lines.append(f"- [{p.category}] {p.description}")
 
     return "\n".join(lines) if lines else ""
+
+
+# =============================================================================
+# Phase 2: Pattern Radar - Proactive Intuition Detection
+# =============================================================================
+
+
+@dataclass
+class Intuition:
+    """A proactive warning or tip based on learned patterns."""
+    type: str  # "watch", "avoid", "tip"
+    message: str
+    source_pattern: str  # Which pattern triggered this
+    confidence: float
+
+
+def detect_intuitions(
+    session_context: str,
+    data: SelfImproveData,
+    project_stack: list[str]
+) -> list[Intuition]:
+    """Scan current context for patterns that should trigger warnings.
+
+    This is the "Pattern Radar" - it scans what the user is working on
+    and proactively surfaces relevant warnings based on their blind spots,
+    anti-patterns, and skills.
+
+    Args:
+        session_context: Current SESSION.md content + recent activity
+        data: Parsed SELF_IMPROVE.md data
+        project_stack: Detected stack tags for this project
+
+    Returns:
+        List of intuitions to surface to the user (max 5)
+    """
+    intuitions = []
+    context_lower = session_context.lower()
+
+    # Check blind spots - these are WATCH warnings
+    for blind_spot in data.blind_spots:
+        triggers = _extract_triggers(blind_spot.category, blind_spot.description)
+        for trigger in triggers:
+            if trigger.lower() in context_lower:
+                intuitions.append(Intuition(
+                    type="watch",
+                    message=f"You tend to: {blind_spot.description}",
+                    source_pattern=f"BLIND_SPOT: [{blind_spot.category}]",
+                    confidence=0.8
+                ))
+                break  # One match per blind spot
+
+    # Check anti-patterns - these are AVOID warnings
+    for anti_pattern in data.anti_patterns:
+        triggers = _extract_triggers(anti_pattern.category, anti_pattern.description)
+        for trigger in triggers:
+            if trigger.lower() in context_lower:
+                intuitions.append(Intuition(
+                    type="avoid",
+                    message=f"Watch out: {anti_pattern.description}",
+                    source_pattern=f"ANTI_PATTERN: [{anti_pattern.category}]",
+                    confidence=0.7
+                ))
+                break
+
+    # Check skills - these are TIP suggestions (only for matching stack)
+    stack_lower = [s.lower() for s in project_stack]
+    for skill in data.skills:
+        # Check if skill is relevant to current stack
+        skill_stack = skill.category.split(':')[0].lower()
+        if skill_stack in stack_lower or skill_stack in {"general", "workflow"}:
+            # Check if context suggests this skill applies
+            skill_triggers = _extract_triggers(skill.category, skill.description)
+            for trigger in skill_triggers:
+                if trigger.lower() in context_lower:
+                    intuitions.append(Intuition(
+                        type="tip",
+                        message=f"Remember: {skill.description}",
+                        source_pattern=f"SKILL: [{skill.category}]",
+                        confidence=0.6
+                    ))
+                    break
+
+    # Dedupe by message
+    seen = set()
+    unique = []
+    for i in intuitions:
+        if i.message not in seen:
+            seen.add(i.message)
+            unique.append(i)
+
+    # Return top 5 by confidence
+    return sorted(unique, key=lambda x: x.confidence, reverse=True)[:5]
+
+
+def _extract_triggers(category: str, description: str) -> list[str]:
+    """Extract trigger words from a pattern.
+
+    E.g., "[error-handling] forgets network timeouts"
+    -> ["error", "handling", "network", "timeout", "api", "fetch"]
+    """
+    triggers = []
+
+    # From category - split on common delimiters
+    triggers.extend(category.replace('-', ' ').replace(':', ' ').replace('_', ' ').split())
+
+    # From description - extract key words (4+ chars, not stop words)
+    stop_words = {
+        'this', 'that', 'with', 'from', 'have', 'been', 'were', 'they',
+        'when', 'what', 'which', 'where', 'will', 'would', 'could', 'should',
+        'your', 'their', 'about', 'there', 'here', 'some', 'more', 'also',
+        'just', 'only', 'than', 'then', 'very', 'much', 'most', 'other',
+        'into', 'over', 'after', 'before', 'between', 'through', 'during',
+        'tend', 'tends', 'forget', 'forgets', 'sometimes', 'often', 'always',
+    }
+    words = re.findall(r'\b\w{4,}\b', description.lower())
+    triggers.extend([w for w in words if w not in stop_words])
+
+    # Add common related terms for better matching
+    related = {
+        'api': ['fetch', 'request', 'endpoint', 'http', 'rest', 'graphql'],
+        'auth': ['login', 'token', 'session', 'password', 'oauth', 'jwt'],
+        'error': ['catch', 'exception', 'handling', 'throw', 'fail'],
+        'test': ['jest', 'pytest', 'spec', 'assert', 'mock', 'unit'],
+        'async': ['await', 'promise', 'callback', 'concurrent'],
+        'database': ['sql', 'query', 'migration', 'schema', 'postgres', 'mysql'],
+        'security': ['validation', 'sanitize', 'xss', 'injection', 'csrf'],
+        'performance': ['optimize', 'cache', 'lazy', 'memo', 'index'],
+        'type': ['typescript', 'typing', 'hints', 'annotation'],
+    }
+    for trigger in list(triggers):
+        if trigger in related:
+            triggers.extend(related[trigger])
+
+    return list(set(triggers))
+
+
+def format_intuitions_for_context(intuitions: list[Intuition]) -> str:
+    """Format intuitions for injection into MIND:CONTEXT.
+
+    Args:
+        intuitions: List of detected intuitions
+
+    Returns:
+        Formatted string for context injection
+    """
+    if not intuitions:
+        return ""
+
+    lines = ["## Intuition (Pattern Radar)", "", "Based on your patterns:"]
+
+    type_prefix = {
+        "watch": "WATCH",
+        "avoid": "AVOID",
+        "tip": "TIP"
+    }
+
+    for i in intuitions:
+        prefix = type_prefix.get(i.type, "NOTE")
+        lines.append(f"- **{prefix}**: {i.message}")
+
+    lines.append("")
+    return "\n".join(lines)

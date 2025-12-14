@@ -7,7 +7,7 @@ from typing import Any
 
 DEFAULT_CONFIG = {
     "version": 1,
-    "mascot": True,  # Show Mindful mascot in CLI and MCP responses
+    "mascot": True,  # Show Mindful mascot in MCP responses
     "experimental": {
         # Add experimental features here
         # "auto_mark_reminders": False,

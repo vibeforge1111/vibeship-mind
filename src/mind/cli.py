@@ -9,49 +9,10 @@ import click
 from . import __version__
 from .context import update_claude_md
 from .detection import detect_stack
-from .mascot import get_mindful, can_use_unicode
 from .parser import InlineScanner, Parser
 from .storage import ProjectsRegistry
-from .config import create_default_config, is_mascot_enabled, set_mascot_enabled
+from .config import create_default_config
 from .templates import GITIGNORE_CONTENT, MEMORY_TEMPLATE, SESSION_TEMPLATE
-
-
-def echo_with_mindful(message: str, emotion: str = "idle", project_path: Path = None):
-    """Print message with Mindful mascot (if enabled).
-
-    Args:
-        message: Message to display
-        emotion: Mindful's emotion
-        project_path: Project path to check mascot config (uses cwd if None)
-    """
-    # Check if mascot is enabled
-    if project_path is None:
-        project_path = Path.cwd()
-
-    if is_mascot_enabled(project_path):
-        fancy = can_use_unicode()
-        art = get_mindful(emotion, fancy=fancy)
-        click.echo(art)
-        click.echo()
-
-    click.echo(message)
-
-
-def echo_mindful_only(emotion: str = "idle", project_path: Path = None):
-    """Print just Mindful mascot (if enabled), no message.
-
-    Args:
-        emotion: Mindful's emotion
-        project_path: Project path to check mascot config (uses cwd if None)
-    """
-    if project_path is None:
-        project_path = Path.cwd()
-
-    if is_mascot_enabled(project_path):
-        fancy = can_use_unicode()
-        art = get_mindful(emotion, fancy=fancy)
-        click.echo(art)
-        click.echo()
 
 
 @click.group()
@@ -125,7 +86,7 @@ def init(path: str):
     click.echo("[+] Registered project with Mind")
 
     click.echo()
-    echo_with_mindful("Mind initialized! Ready to remember.", "happy")
+    click.echo("Mind initialized! Ready to remember.")
     click.echo()
     click.echo("MCP tools available:")
     click.echo("  - mind_recall() : Load session context (call first!)")
@@ -215,7 +176,7 @@ def parse(path: str, as_json: bool, inline: bool):
 
         click.echo()
         total = len(result.entities) + len(inline_entities)
-        echo_with_mindful(f"Total: {total} entities, {len(result.project_edges)} gotchas", "thinking")
+        click.echo(f"Total: {total} entities, {len(result.project_edges)} gotchas")
 
 
 # Project management commands
@@ -226,11 +187,10 @@ def list_projects():
     projects = registry.list_all()
 
     if not projects:
-        echo_with_mindful("No projects registered.", "sleepy")
+        click.echo("No projects registered.")
         click.echo("Run 'mind init' in a project directory to register it.")
         return
 
-    echo_mindful_only("idle")
     click.echo(f"Registered Projects ({len(projects)})")
     click.echo("-" * 40)
 
@@ -261,7 +221,7 @@ def add_project(path: str):
     registry = ProjectsRegistry.load()
     registry.register(project_path, stack)
 
-    echo_with_mindful(f"Registered: {project_path.name}", "happy")
+    click.echo(f"Registered: {project_path.name}")
 
 
 @cli.command("remove")
@@ -272,10 +232,10 @@ def remove_project(path: str):
 
     registry = ProjectsRegistry.load()
     if registry.unregister(project_path):
-        echo_with_mindful(f"Unregistered: {project_path.name}", "sad")
+        click.echo(f"Unregistered: {project_path.name}")
         click.echo("(Files in .mind/ preserved)")
     else:
-        echo_with_mindful(f"Project not registered: {project_path.name}", "confused")
+        click.echo(f"Project not registered: {project_path.name}")
 
 
 @cli.command("mcp")
@@ -283,61 +243,6 @@ def mcp_server():
     """Run the MCP server for AI assistant integration."""
     from .mcp import run_server
     run_server()
-
-
-@cli.command("config")
-@click.argument("setting", required=False)
-@click.argument("value", required=False)
-@click.argument("path", default=".", type=click.Path(exists=True, file_okay=False), required=False)
-def config_cmd(setting: str, value: str, path: str):
-    """View or change Mind configuration.
-
-    Examples:
-        mind config              # Show all settings
-        mind config mascot       # Show mascot setting
-        mind config mascot on    # Enable Mindful mascot
-        mind config mascot off   # Disable Mindful mascot
-    """
-    project_path = Path(path).resolve()
-    mind_dir = project_path / ".mind"
-
-    if not mind_dir.exists():
-        click.echo(f"Error: {project_path} is not a Mind project.")
-        click.echo("Run 'mind init' first.")
-        raise SystemExit(1)
-
-    # No arguments - show all settings
-    if not setting:
-        mascot_status = "on" if is_mascot_enabled(project_path) else "off"
-        click.echo("Mind Configuration")
-        click.echo("-" * 30)
-        click.echo(f"mascot: {mascot_status}")
-        return
-
-    # Setting name only - show current value
-    if setting and not value:
-        if setting == "mascot":
-            status = "on" if is_mascot_enabled(project_path) else "off"
-            click.echo(f"mascot: {status}")
-        else:
-            click.echo(f"Unknown setting: {setting}")
-            click.echo("Available settings: mascot")
-        return
-
-    # Setting name and value - update
-    if setting == "mascot":
-        if value.lower() in ("on", "true", "1", "yes"):
-            set_mascot_enabled(project_path, True)
-            echo_with_mindful("Mindful is now ON!", "happy")
-        elif value.lower() in ("off", "false", "0", "no"):
-            set_mascot_enabled(project_path, False)
-            click.echo("Mindful mascot disabled.")
-        else:
-            click.echo(f"Invalid value: {value}")
-            click.echo("Use 'on' or 'off'")
-    else:
-        click.echo(f"Unknown setting: {setting}")
-        click.echo("Available settings: mascot")
 
 
 @cli.command("doctor")
@@ -455,12 +360,12 @@ def doctor():
         click.echo()
 
     if issues:
-        echo_with_mindful("Overall: UNHEALTHY", "error")
+        click.echo("Overall: UNHEALTHY")
         raise SystemExit(1)
     elif warnings:
-        echo_with_mindful(f"Overall: Healthy ({len(warnings)} warnings)", "warning")
+        click.echo(f"Overall: Healthy ({len(warnings)} warnings)")
     else:
-        echo_with_mindful("Overall: Healthy", "happy")
+        click.echo("Overall: Healthy")
 
 
 @cli.command("status")
@@ -478,7 +383,6 @@ def status(path: str):
     memory_file = mind_dir / "MEMORY.md"
     state_file = mind_dir / "state.json"
 
-    echo_mindful_only("curious", project_path)
     click.echo(f"Project: {project_path.name}")
     click.echo("-" * 40)
 

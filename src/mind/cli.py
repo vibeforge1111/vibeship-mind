@@ -213,15 +213,17 @@ def ensure_mcp_configuration() -> tuple[bool, str]:
     errors = []
     
     for config_path in all_config_paths:
+        original_content = None
         backup_path = None
         try:
-            # Try to find existing config file or create new one
+            # Read original content first if file exists (for safe restore on failure)
             if config_path.exists():
-                # Read existing config
                 try:
-                    config = json.loads(config_path.read_text(encoding="utf-8"))
+                    original_content = config_path.read_text(encoding="utf-8")
+                    config = json.loads(original_content)
                 except json.JSONDecodeError:
-                    # If invalid JSON, create new config
+                    # If invalid JSON, create new config but still preserve original content
+                    original_content = config_path.read_text(encoding="utf-8")
                     config = {"mcpServers": {"mind": mind_config}}
             else:
                 # Create new config
@@ -235,14 +237,16 @@ def ensure_mcp_configuration() -> tuple[bool, str]:
             # Update or add mind server config
             config["mcpServers"]["mind"] = mind_config
             
-            # Write config back
-            # Create backup if file exists
+            # Create backup file if original exists (for additional safety)
+            # If backup creation fails, we still have original_content in memory as fallback
             if config_path.exists():
                 backup_path = config_path.with_suffix(config_path.suffix + ".bak")
                 try:
                     config_path.rename(backup_path)
                 except Exception:
-                    pass  # Backup failed, continue anyway
+                    # Backup creation failed, but we have original_content in memory
+                    # Continue with write - we can restore from memory if write fails
+                    backup_path = None
             
             # Write new config
             config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
@@ -257,12 +261,23 @@ def ensure_mcp_configuration() -> tuple[bool, str]:
             updated_paths.append(config_path)
             
         except Exception as e:
-            # Restore backup if write failed
+            # Restore from backup file if it exists
             if backup_path and backup_path.exists():
                 try:
                     backup_path.rename(config_path)
                 except Exception:
-                    pass
+                    # If backup restore fails, try restoring from memory
+                    if original_content is not None:
+                        try:
+                            config_path.write_text(original_content, encoding="utf-8")
+                        except Exception:
+                            pass  # Last resort failed
+            elif original_content is not None:
+                # No backup file, but we have original content in memory - restore it
+                try:
+                    config_path.write_text(original_content, encoding="utf-8")
+                except Exception:
+                    pass  # Restore failed, but we tried
             errors.append(f"{config_path}: {e}")
     
     # Return True only if all config files were updated successfully (no errors)

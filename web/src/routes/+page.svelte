@@ -276,7 +276,7 @@ Done.`,
 	<p class="subtitle">
 		Memory for Claude Code that persists across sessions.
 		Decisions, learnings, and reminders.
-		Install in 2 minutes with 2 prompts. Free for now.
+		Install with 2 commands. Free forever.
 	</p>
 
 	<div class="terminal">
@@ -344,8 +344,8 @@ Done.`,
 		</div>
 
 		<div class="feature feature-highlight">
-			<h3>2 Minutes to Fix All This</h3>
-			<p>3 commands to install. 2 prompts to configure. These problems stop. Fully automated after.</p>
+			<h3>2 Commands to Fix All This</h3>
+			<p>pip install, mind init. These problems stop. Fully automated after.</p>
 		</div>
 	</div>
 </section>
@@ -558,42 +558,50 @@ Done.`,
 
 <section class="get-started-cta">
 	<h2>Ready to Give Claude a <span class="highlight">Mind</span>?</h2>
-	<p>4 commands + 1 prompt. Zero friction.</p>
+	<p>2 commands. Zero friction.</p>
 
 	<div class="install-steps">
 		<div class="install-step">
 			<div class="step-label">1. Install Mind</div>
 			<div class="install-preview">
-				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('git clone https://github.com/vibeforge1111/vibeship-mind.git\ncd vibeship-mind\nuv sync\nuv run mind init'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
-				<code>git clone https://github.com/vibeforge1111/vibeship-mind.git</code>
-				<code>cd vibeship-mind</code>
-				<code>uv sync</code>
-				<code>uv run mind init</code>
+				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('pip install vibeship-mind'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
+				<code>pip install vibeship-mind</code>
 			</div>
-			<details class="uv-help">
-				<summary>If <code>uv sync</code> fails, install uv first</summary>
-				<div class="uv-install-commands">
-					<code class="comment"># macOS/Linux</code>
-					<code>curl -LsSf https://astral.sh/uv/install.sh | sh</code>
-					<code class="comment"># Windows (PowerShell)</code>
-					<code>powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"</code>
-				</div>
-			</details>
 		</div>
 
 		<div class="install-step">
-			<div class="step-label">2. Tell Claude Code to connect</div>
-			<div class="prompt-box">
-				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('Add Mind MCP server to my config'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
-				<p>Add Mind MCP server to my config</p>
+			<div class="step-label">2. Initialize in your project</div>
+			<div class="install-preview">
+				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('cd your-project\nmind init'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
+				<code>cd your-project</code>
+				<code>mind init</code>
 			</div>
-			<div class="step-note">Then in any Claude project: "Let's run The Mind"</div>
+		</div>
+
+		<div class="install-step">
+			<div class="step-label">3. Connect to Claude Code</div>
+			<div class="mcp-config-box">
+				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('{\n  "mcpServers": {\n    "mind": {\n      "command": "mind",\n      "args": ["mcp"]\n    }\n  }\n}'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
+				<div class="config-label">Add to your MCP config:</div>
+				<pre>{`{
+  "mcpServers": {
+    "mind": {
+      "command": "mind",
+      "args": ["mcp"]
+    }
+  }
+}`}</pre>
+			</div>
+			<div class="step-note">Then say: "Let's run The Mind"</div>
 		</div>
 	</div>
 
 	<div class="cta-buttons">
-		<a href="https://github.com/vibeforge1111/vibeship-mind" class="btn btn-primary btn-lg" target="_blank">
-			View on GitHub
+		<a href="https://pypi.org/project/vibeship-mind/" class="btn btn-primary btn-lg" target="_blank">
+			View on PyPI
+		</a>
+		<a href="https://github.com/vibeforge1111/vibeship-mind" class="btn btn-secondary btn-lg" target="_blank">
+			GitHub
 		</a>
 	</div>
 </section>
@@ -1183,6 +1191,30 @@ Done.`,
 		margin-top: var(--space-2);
 		font-size: var(--text-sm);
 		color: var(--text-secondary);
+	}
+
+	.mcp-config-box {
+		position: relative;
+		padding: var(--space-4);
+		background: var(--terminal-bg);
+		border: 1px solid var(--green-dim);
+		box-shadow: 0 0 12px rgba(0, 196, 154, 0.15);
+	}
+
+	.mcp-config-box .config-label {
+		font-size: var(--text-sm);
+		color: var(--text-secondary);
+		margin-bottom: var(--space-2);
+	}
+
+	.mcp-config-box pre {
+		margin: 0;
+		background: transparent;
+		border: none;
+		padding: 0;
+		font-size: var(--text-sm);
+		color: var(--terminal-command);
+		line-height: 1.5;
 	}
 
 	.cta-buttons {

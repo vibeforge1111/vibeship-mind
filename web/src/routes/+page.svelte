@@ -59,7 +59,7 @@ Last: two-layer memory system`,
 		mind_log: {
 			name: 'mind_log(msg, type)',
 			category: 'core',
-			desc: 'Log to SESSION or MEMORY',
+			desc: 'Log to SESSION, MEMORY, or SELF_IMPROVE',
 			output: `> mind_log("using flexbox for layout", type="experience")
 
 {
@@ -69,7 +69,7 @@ Last: two-layer memory system`,
   "target": "SESSION.md"
 }`,
 			explain: {
-				what: "Saves thoughts, decisions, and learnings as you work. Session types (experience, blocker) are temporary. Memory types (decision, learning) are permanent.",
+				what: "Saves thoughts, decisions, and learnings as you work. Routes by type: SESSION (experience, blocker, assumption, rejected), MEMORY (decision, learning, problem, progress), SELF_IMPROVE (feedback, preference, blind_spot, skill), or reinforce to boost pattern confidence.",
 				auto: false,
 				autoWhen: null,
 				manual: "Claude calls this throughout your session to remember what's happening"

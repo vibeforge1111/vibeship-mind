@@ -110,6 +110,8 @@ Restart Claude Code after adding.
 **Type routing for `mind_log()`:**
 - SESSION.md: `experience`, `blocker`, `assumption`, `rejected`
 - MEMORY.md: `decision`, `learning`, `problem`, `progress`
+- SELF_IMPROVE.md: `feedback`, `preference`, `blind_spot`, `skill`
+- Special: `reinforce` (boosts pattern confidence)
 
 **Reading:**
 | Tool | What it does |

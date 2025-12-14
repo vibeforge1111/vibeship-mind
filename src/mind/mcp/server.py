@@ -916,8 +916,8 @@ def create_server() -> Server:
                         },
                         "type": {
                             "type": "string",
-                            "enum": ["experience", "blocker", "assumption", "rejected", "decision", "learning", "problem", "progress", "reinforce"],
-                            "description": "Type determines destination: experience/blocker/assumption/rejected -> SESSION, decision/learning/problem/progress -> MEMORY, reinforce -> boosts pattern confidence",
+                            "enum": ["experience", "blocker", "assumption", "rejected", "decision", "learning", "problem", "progress", "feedback", "preference", "blind_spot", "skill", "reinforce"],
+                            "description": "Type determines destination: experience/blocker/assumption/rejected -> SESSION, decision/learning/problem/progress -> MEMORY, feedback/preference/blind_spot/skill -> SELF_IMPROVE, reinforce -> boosts pattern confidence",
                         },
                     },
                     "required": ["message"],

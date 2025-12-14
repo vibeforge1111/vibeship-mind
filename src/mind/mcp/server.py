@@ -1166,6 +1166,7 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
             "blind_spots_count": len(self_improve_data.blind_spots),
             "anti_patterns_count": len(self_improve_data.anti_patterns),
             "feedback_count": len(self_improve_data.feedback),
+            "learning_styles_count": len(self_improve_data.learning_styles),
             "context_injected": bool(self_improve_context),
             "intuitions_triggered": len(detected_intuitions),
         }
@@ -1581,6 +1582,23 @@ async def handle_status(args: dict[str, Any]) -> list[TextContent]:
                 "stats": entity_counts,
             }
 
+    # Get confidence stats for patterns (Phase 6)
+    confidence_stats = get_confidence_stats()
+
+    # Get self_improve stats
+    self_improve_data = load_self_improve()
+    self_improve_stats = None
+    if self_improve_data.all_patterns():
+        self_improve_stats = {
+            "total_patterns": len(self_improve_data.all_patterns()),
+            "preferences": len(self_improve_data.preferences),
+            "skills": len(self_improve_data.skills),
+            "blind_spots": len(self_improve_data.blind_spots),
+            "anti_patterns": len(self_improve_data.anti_patterns),
+            "feedback": len(self_improve_data.feedback),
+            "learning_styles": len(self_improve_data.learning_styles),
+        }
+
     status = {
         "version": 2,
         "current_project": current_project,
@@ -1588,6 +1606,8 @@ async def handle_status(args: dict[str, Any]) -> list[TextContent]:
             "projects_registered": len(registry.list_all()),
             "global_edges": len(load_global_edges()),
         },
+        "self_improve": self_improve_stats,
+        "confidence": confidence_stats if confidence_stats.get("total_patterns", 0) > 0 else None,
     }
 
     return [TextContent(type="text", text=json.dumps(status, indent=2))]

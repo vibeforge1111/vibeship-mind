@@ -342,45 +342,75 @@ def get_patterns_for_stack(data: SelfImproveData, stack: list[str]) -> dict:
     }
 
 
-def generate_intuition_context(data: SelfImproveData, stack: list[str]) -> str:
+def generate_intuition_context(
+    data: SelfImproveData,
+    stack: list[str],
+    min_confidence: float = 0.3
+) -> str:
     """Generate context string for Claude from self-improvement data.
 
     This creates a concise summary that can be injected into MIND:CONTEXT.
+    Patterns with low confidence (stale/unused) are filtered out.
 
     Args:
         data: Parsed self-improvement data
         stack: Current project's tech stack
+        min_confidence: Minimum confidence threshold (Phase 6 decay)
 
     Returns:
         Formatted context string.
     """
     relevant = get_patterns_for_stack(data, stack)
 
+    # Phase 6: Filter by confidence - stale patterns don't get surfaced
+    def filter_confident(patterns: list[Pattern]) -> list[Pattern]:
+        """Filter patterns by decayed confidence threshold."""
+        result = []
+        for p in patterns:
+            confidence = get_pattern_confidence(p)
+            if confidence >= min_confidence:
+                result.append(p)
+        return result
+
     lines = []
 
-    # Add preferences (top 3)
-    if relevant["preferences"]:
+    # Add preferences (top 3, filtered by confidence)
+    confident_prefs = filter_confident(relevant["preferences"])
+    if confident_prefs:
         lines.append("## Your Preferences")
-        for p in relevant["preferences"][:3]:
+        for p in confident_prefs[:3]:
             lines.append(f"- [{p.category}] {p.description}")
 
-    # Add skills (top 3)
-    if relevant["skills"]:
+    # Add skills (top 3, filtered by confidence)
+    confident_skills = filter_confident(relevant["skills"])
+    if confident_skills:
         lines.append("\n## Your Skills")
-        for p in relevant["skills"][:3]:
+        for p in confident_skills[:3]:
             lines.append(f"- [{p.category}] {p.description}")
 
     # Add blind spots - these are warnings (all of them, they're important)
-    if relevant["blind_spots"]:
+    # Still filter by confidence but with lower threshold for warnings
+    confident_blinds = filter_confident(relevant["blind_spots"])
+    if confident_blinds:
         lines.append("\n## Watch Out (Your Blind Spots)")
-        for p in relevant["blind_spots"]:
+        for p in confident_blinds:
             lines.append(f"- [{p.category}] {p.description}")
 
     # Add anti-patterns - these are warnings (all of them, they're important)
-    if relevant["anti_patterns"]:
+    confident_antis = filter_confident(relevant["anti_patterns"])
+    if confident_antis:
         lines.append("\n## Avoid (Your Anti-Patterns)")
-        for p in relevant["anti_patterns"]:
+        for p in confident_antis:
             lines.append(f"- [{p.category}] {p.description}")
+
+    # Phase 9: Add learning styles
+    if data.learning_styles:
+        confident_styles = filter_confident(data.learning_styles)
+        if confident_styles:
+            lines.append("\n## How You Learn Best")
+            for ls in confident_styles:
+                lines.append(f"- **{ls.category}**: {ls.description}")
+            lines.append("\n_Adapt explanations to match these preferences._")
 
     return "\n".join(lines) if lines else ""
 

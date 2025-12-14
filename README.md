@@ -43,10 +43,11 @@ Optional tools are there when you want them, but the core memory flow runs hands
 
 ### 1. Install Mind
 
-Copy-paste all at once:
-
 ```bash
-git clone https://github.com/vibeforge1111/vibeship-mind.git && cd vibeship-mind && uv sync && uv run mind init
+git clone https://github.com/vibeforge1111/vibeship-mind.git
+cd vibeship-mind
+uv sync
+uv run mind init
 ```
 
 ### 2. Tell Claude Code to connect

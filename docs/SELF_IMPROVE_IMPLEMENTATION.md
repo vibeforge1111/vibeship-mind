@@ -1,6 +1,6 @@
 # SELF_IMPROVE Implementation Guide
 
-<!-- doc-version: 1.0.0 | last-updated: 2025-12-14 -->
+<!-- doc-version: 2.0.0 | last-updated: 2025-12-14 -->
 
 > **Purpose**: Step-by-step guide to implement the self-improvement layer in Mind. Follow the Architecture document for what to build; follow this guide for how to build it.
 
@@ -8,13 +8,39 @@
 
 ## Overview
 
-Implementation is split into 4 phases:
-1. **Foundation** - Global directory, template, basic promotion
-2. **Pattern Radar** - Detection and injection in mind_recall()
-3. **Feedback Capture** - Auto-logging and pattern extraction
-4. **CLI Tools** - User-facing pattern management
+Implementation is split into 9 phases:
 
-This guide covers Phase 1 (Foundation) in full detail. Later phases will be documented as implementation progresses.
+### Completed
+- [x] **Phase 1: Foundation** - Global directory, template, basic promotion
+- [x] **Phase 2: Pattern Radar** - Detection and injection in mind_recall()
+- [x] **Phase 3: Feedback Capture** - Auto-logging and pattern extraction
+- [x] **Phase 4: CLI Tools** - User-facing pattern management
+- [x] **Phase 5: Testing Playground** - Unit tests + interactive test runner
+
+### In Progress / Planned
+- [ ] **Phase 6: Confidence Decay** - Patterns lose confidence over time if not reinforced
+- [ ] **Phase 7: Reinforcement Tracking** - Track when patterns help, boost confidence
+- [ ] **Phase 8: Contradiction Detection** - Flag conflicting patterns
+- [ ] **Phase 9: Learning Style** - Model HOW the user learns, not just WHAT they know
+
+---
+
+## Why These Phases Matter
+
+**The Self-Correcting Loop:**
+```
+User works → Mind suggests → User accepts/ignores/corrects → Mind learns → Better suggestions
+```
+
+Currently broken at step 4. Phases 6-8 fix this:
+- **Decay** (Phase 6): Old wrong patterns fade away
+- **Reinforcement** (Phase 7): Useful patterns get stronger
+- **Contradiction** (Phase 8): Conflicting patterns get flagged
+
+**The AGI Step:**
+- **Learning Style** (Phase 9): Adapt HOW to help, not just WHAT to say
+
+---
 
 ---
 
@@ -1467,21 +1493,552 @@ async def mind_learn_edge(
 
 ---
 
+## Phase 6: Confidence Decay
+
+**Goal**: Patterns that aren't reinforced should lose confidence over time, preventing stale assumptions from persisting.
+
+### Why This Matters
+
+Without decay:
+```
+Day 1: User says "I prefer verbose comments"
+Day 30: User's style evolved, now prefers minimal comments
+Day 60: Mind still pushing verbose comments (confidence never dropped)
+```
+
+Old patterns become lies the system believes with high confidence.
+
+### Task 6.1: Add Decay Calculation
+
+**File**: `src/mind/self_improve.py`
+
+```python
+from datetime import datetime, timedelta
+
+def calculate_decayed_confidence(
+    base_confidence: float,
+    last_reinforced: datetime,
+    decay_rate: float = 0.1,
+    decay_period_days: int = 30
+) -> float:
+    """Calculate confidence after time-based decay.
+
+    Args:
+        base_confidence: Original confidence (0.0 to 1.0)
+        last_reinforced: When pattern was last used/reinforced
+        decay_rate: How much to decay per period (default 10%)
+        decay_period_days: Days per decay period (default 30)
+
+    Returns:
+        Decayed confidence, minimum 0.1
+    """
+    days_since = (datetime.now() - last_reinforced).days
+
+    if days_since < decay_period_days:
+        return base_confidence
+
+    decay_periods = days_since // decay_period_days
+    decayed = base_confidence * ((1 - decay_rate) ** decay_periods)
+
+    return max(0.1, decayed)
+```
+
+### Task 6.2: Add Pattern Metadata Storage
+
+**File**: `src/mind/self_improve.py`
+
+```python
+@dataclass
+class PatternMetadata:
+    """Metadata for tracking pattern lifecycle."""
+    pattern_hash: str  # Hash of pattern content for identification
+    created_at: datetime
+    last_reinforced: datetime
+    reinforcement_count: int = 0
+    base_confidence: float = 0.5
+
+    def current_confidence(self) -> float:
+        """Get confidence with decay applied."""
+        return calculate_decayed_confidence(
+            self.base_confidence,
+            self.last_reinforced
+        )
+```
+
+Store in `~/.mind/pattern_metadata.json`:
+```json
+{
+  "patterns": {
+    "abc123": {
+      "pattern_hash": "abc123",
+      "created_at": "2025-12-01T10:00:00",
+      "last_reinforced": "2025-12-10T14:30:00",
+      "reinforcement_count": 3,
+      "base_confidence": 0.7
+    }
+  }
+}
+```
+
+### Task 6.3: Apply Decay in mind_recall()
+
+Update `handle_recall()` to filter low-confidence patterns:
+
+```python
+def filter_by_confidence(patterns: dict, min_confidence: float = 0.3) -> dict:
+    """Filter out patterns below confidence threshold."""
+    metadata = load_pattern_metadata()
+
+    filtered = {}
+    for key, pattern_list in patterns.items():
+        filtered[key] = [
+            p for p in pattern_list
+            if get_pattern_confidence(p, metadata) >= min_confidence
+        ]
+    return filtered
+```
+
+### Testing
+
+```python
+def test_confidence_decay():
+    # Pattern not reinforced for 90 days should decay
+    old_date = datetime.now() - timedelta(days=90)
+    confidence = calculate_decayed_confidence(0.8, old_date)
+    assert confidence < 0.8  # Should have decayed
+    assert confidence >= 0.1  # Should not go below minimum
+
+def test_recent_pattern_no_decay():
+    # Pattern reinforced recently should not decay
+    recent = datetime.now() - timedelta(days=5)
+    confidence = calculate_decayed_confidence(0.8, recent)
+    assert confidence == 0.8
+```
+
+---
+
+## Phase 7: Reinforcement Tracking
+
+**Goal**: Track when patterns actually help the user, and boost their confidence.
+
+### Task 7.1: Add Reinforcement Log Type
+
+Update `handle_log()` to accept reinforcement:
+
+```python
+# In handle_log()
+if log_type == "reinforce":
+    # Format: "pattern description that helped"
+    pattern_hash = hash_pattern_description(message)
+    reinforce_pattern(pattern_hash)
+    return {"success": True, "action": "reinforced", "pattern": message}
+```
+
+### Task 7.2: Implement Reinforcement
+
+**File**: `src/mind/self_improve.py`
+
+```python
+def reinforce_pattern(pattern_hash: str, boost: float = 0.1) -> bool:
+    """Reinforce a pattern, boosting its confidence.
+
+    Args:
+        pattern_hash: Hash identifying the pattern
+        boost: How much to increase confidence (default 10%)
+
+    Returns:
+        True if pattern was found and reinforced
+    """
+    metadata = load_pattern_metadata()
+
+    if pattern_hash not in metadata:
+        return False
+
+    pattern = metadata[pattern_hash]
+    pattern.last_reinforced = datetime.now()
+    pattern.reinforcement_count += 1
+    pattern.base_confidence = min(1.0, pattern.base_confidence + boost)
+
+    save_pattern_metadata(metadata)
+    return True
+
+
+def hash_pattern_description(description: str) -> str:
+    """Create stable hash for pattern matching."""
+    import hashlib
+    normalized = description.lower().strip()
+    return hashlib.md5(normalized.encode()).hexdigest()[:12]
+```
+
+### Task 7.3: Usage Pattern
+
+When Claude uses a pattern and it helps:
+
+```python
+# Claude notices pattern was useful
+mind_log("prefers functional style - used this, worked well", type="reinforce")
+```
+
+### Testing
+
+```python
+def test_reinforcement_boosts_confidence():
+    # Setup: pattern with 0.5 confidence
+    create_test_pattern("test pattern", confidence=0.5)
+
+    # Reinforce it
+    reinforce_pattern(hash_pattern_description("test pattern"))
+
+    # Check confidence increased
+    meta = load_pattern_metadata()
+    pattern = meta[hash_pattern_description("test pattern")]
+    assert pattern.base_confidence == 0.6
+
+def test_reinforcement_resets_decay():
+    # Old pattern that has decayed
+    old_pattern = create_test_pattern("old pattern", days_ago=90)
+
+    # Reinforce it
+    reinforce_pattern(hash_pattern_description("old pattern"))
+
+    # last_reinforced should be now, confidence restored
+    meta = load_pattern_metadata()
+    pattern = meta[hash_pattern_description("old pattern")]
+    assert pattern.current_confidence() > 0.5  # Decay reset
+```
+
+---
+
+## Phase 8: Contradiction Detection
+
+**Goal**: When adding a new pattern, detect if it conflicts with existing patterns.
+
+### Task 8.1: Similarity Detection
+
+**File**: `src/mind/self_improve.py`
+
+```python
+def find_similar_patterns(
+    new_description: str,
+    existing_patterns: list[Pattern],
+    similarity_threshold: float = 0.6
+) -> list[tuple[Pattern, float]]:
+    """Find patterns similar to the new one.
+
+    Uses keyword overlap for simplicity (no embeddings needed).
+
+    Returns:
+        List of (pattern, similarity_score) tuples
+    """
+    new_keywords = set(extract_keywords(new_description))
+
+    similar = []
+    for pattern in existing_patterns:
+        existing_keywords = set(extract_keywords(pattern.description))
+
+        if not new_keywords or not existing_keywords:
+            continue
+
+        # Jaccard similarity
+        intersection = len(new_keywords & existing_keywords)
+        union = len(new_keywords | existing_keywords)
+        similarity = intersection / union if union > 0 else 0
+
+        if similarity >= similarity_threshold:
+            similar.append((pattern, similarity))
+
+    return sorted(similar, key=lambda x: x[1], reverse=True)
+
+
+def extract_keywords(text: str) -> list[str]:
+    """Extract meaningful keywords from text."""
+    import re
+    # Words 4+ chars, not stop words
+    stop_words = {'this', 'that', 'with', 'from', 'have', 'been', 'like', 'prefer'}
+    words = re.findall(r'\b\w{4,}\b', text.lower())
+    return [w for w in words if w not in stop_words]
+```
+
+### Task 8.2: Contradiction Detection
+
+```python
+def detect_contradiction(
+    new_pattern: Pattern,
+    similar_pattern: Pattern
+) -> bool:
+    """Check if two similar patterns contradict each other.
+
+    Looks for opposing signals like:
+    - "prefer X" vs "avoid X"
+    - "always X" vs "never X"
+    - "like X" vs "dislike X"
+    """
+    new_lower = new_pattern.description.lower()
+    existing_lower = similar_pattern.description.lower()
+
+    # Opposing word pairs
+    opposites = [
+        ('prefer', 'avoid'),
+        ('like', 'dislike'),
+        ('always', 'never'),
+        ('use', 'dont use'),
+        ('simple', 'complex'),
+        ('verbose', 'terse'),
+        ('detailed', 'brief'),
+    ]
+
+    for pos, neg in opposites:
+        if (pos in new_lower and neg in existing_lower) or \
+           (neg in new_lower and pos in existing_lower):
+            return True
+
+    return False
+```
+
+### Task 8.3: Integrate into Pattern Addition
+
+```python
+def add_pattern_with_contradiction_check(
+    pattern_type: PatternType,
+    category: str,
+    description: str
+) -> dict:
+    """Add a pattern, checking for contradictions first.
+
+    Returns:
+        {
+            "success": bool,
+            "action": "added" | "contradiction_detected" | "duplicate",
+            "conflicts": [list of conflicting patterns if any]
+        }
+    """
+    data = load_self_improve()
+    all_patterns = data.all_patterns()
+
+    new_pattern = Pattern(type=pattern_type, category=category, description=description)
+
+    # Check for similar patterns
+    similar = find_similar_patterns(description, all_patterns)
+
+    # Check for contradictions
+    contradictions = []
+    for pattern, similarity in similar:
+        if detect_contradiction(new_pattern, pattern):
+            contradictions.append({
+                "pattern": pattern.description,
+                "type": pattern.type.value,
+                "similarity": similarity
+            })
+
+    if contradictions:
+        return {
+            "success": False,
+            "action": "contradiction_detected",
+            "conflicts": contradictions,
+            "suggestion": "Resolve conflict before adding. Use mind_log to update existing pattern or remove old one."
+        }
+
+    # No contradictions, safe to add
+    append_pattern(pattern_type, category, description)
+    return {"success": True, "action": "added"}
+```
+
+### Testing
+
+```python
+def test_detect_contradiction():
+    p1 = Pattern(PatternType.PREFERENCE, "style", "prefer verbose comments")
+    p2 = Pattern(PatternType.PREFERENCE, "style", "prefer terse comments")
+
+    assert detect_contradiction(p1, p2) == True
+
+def test_no_contradiction_different_topics():
+    p1 = Pattern(PatternType.PREFERENCE, "style", "prefer verbose comments")
+    p2 = Pattern(PatternType.PREFERENCE, "testing", "prefer integration tests")
+
+    assert detect_contradiction(p1, p2) == False
+
+def test_similar_but_not_contradicting():
+    p1 = Pattern(PatternType.SKILL, "python", "good at asyncio")
+    p2 = Pattern(PatternType.SKILL, "python", "good at asyncio patterns")
+
+    similar = find_similar_patterns(p1.description, [p2])
+    assert len(similar) > 0  # Similar
+    assert detect_contradiction(p1, p2) == False  # But not contradicting
+```
+
+---
+
+## Phase 9: Learning Style
+
+**Goal**: Model HOW the user learns, not just WHAT they know. This is the AGI-like step.
+
+### Why This Matters
+
+Same information, different delivery:
+
+**Without learning style:**
+> "Here's how to fix the auth bug: change line 42 to use `await`"
+
+**With `LEARNING_STYLE: [debugging] wants to understand the "why" first`:**
+> "The bug happens because `fetchUser()` is async but you're not awaiting it, so `user` is a Promise, not the actual data. The fix is adding `await` on line 42."
+
+**With `LEARNING_STYLE: [debugging] learns by adding logging first`:**
+> "Let's add a `console.log(user)` on line 43 first - you'll see it's a Promise object, which confirms the issue is missing `await` on line 42."
+
+### Task 9.1: Add Learning Style Pattern Type
+
+**File**: `src/mind/self_improve.py`
+
+```python
+class PatternType(Enum):
+    PREFERENCE = "preference"
+    SKILL = "skill"
+    BLIND_SPOT = "blind_spot"
+    ANTI_PATTERN = "anti_pattern"
+    FEEDBACK = "feedback"
+    LEARNING_STYLE = "learning_style"  # NEW
+```
+
+Update parser:
+```python
+LEARNING_STYLE_PATTERN = re.compile(
+    r"^(?:-\s*)?LEARNING_STYLE:\s*\[([^\]]+)\]\s*(.+)$",
+    re.IGNORECASE | re.MULTILINE
+)
+```
+
+### Task 9.2: Learning Style Categories
+
+```markdown
+## Learning Styles
+<!-- How you best absorb information. Format: LEARNING_STYLE: [context] description -->
+
+# Common categories:
+LEARNING_STYLE: [concepts] needs concrete example before abstract explanation
+LEARNING_STYLE: [debugging] adds logging first, reasons second
+LEARNING_STYLE: [decisions] needs 2-3 options compared, not single recommendation
+LEARNING_STYLE: [feedback] responds better to questions than direct corrections
+LEARNING_STYLE: [complexity] prefers incremental reveal over full picture upfront
+LEARNING_STYLE: [new-tech] tries first, reads docs when stuck
+LEARNING_STYLE: [communication] prefers terse bullet points over prose
+```
+
+### Task 9.3: Extract from Feedback
+
+Detect learning style from correction patterns:
+
+```python
+def extract_learning_style_from_feedback(feedback_entries: list[Pattern]) -> list[tuple[str, str]]:
+    """Extract learning style patterns from feedback.
+
+    Looks for signals like:
+    - "show me an example" -> learns by example
+    - "why does this work" -> needs understanding
+    - "too much detail" -> prefers terse
+    - "step by step" -> prefers incremental
+    """
+    indicators = {
+        "concepts:example_first": [
+            "show me", "give example", "can you demonstrate", "what does this look like"
+        ],
+        "concepts:theory_first": [
+            "why does", "how does", "explain the", "what's the reason"
+        ],
+        "communication:terse": [
+            "too much", "too long", "shorter", "brief", "tldr", "just tell me"
+        ],
+        "communication:detailed": [
+            "more detail", "explain more", "elaborate", "tell me more"
+        ],
+        "complexity:incremental": [
+            "step by step", "one at a time", "break it down", "smaller pieces"
+        ],
+        "complexity:big_picture": [
+            "overall", "big picture", "full context", "everything at once"
+        ],
+    }
+
+    detected = Counter()
+    for fb in feedback_entries:
+        desc_lower = fb.description.lower()
+        for style, phrases in indicators.items():
+            if any(phrase in desc_lower for phrase in phrases):
+                detected[style] += 1
+
+    # Return styles that appear 2+ times
+    return [(style, style.split(':')[1]) for style, count in detected.items() if count >= 2]
+```
+
+### Task 9.4: Inject Learning Style into Context
+
+```python
+def generate_learning_style_context(learning_styles: list[Pattern]) -> str:
+    """Generate learning style hints for Claude."""
+    if not learning_styles:
+        return ""
+
+    lines = ["## How You Learn Best", ""]
+
+    for ls in learning_styles:
+        lines.append(f"- **{ls.category}**: {ls.description}")
+
+    lines.append("")
+    lines.append("_Adapt your explanations to match these preferences._")
+    lines.append("")
+
+    return "\n".join(lines)
+```
+
+### Testing
+
+```python
+def test_learning_style_extraction():
+    feedback = [
+        Pattern(PatternType.FEEDBACK, "2025-01-01", "too abstract -> show me an example"),
+        Pattern(PatternType.FEEDBACK, "2025-01-02", "confused -> can you demonstrate"),
+        Pattern(PatternType.FEEDBACK, "2025-01-03", "still unclear -> give example please"),
+    ]
+
+    styles = extract_learning_style_from_feedback(feedback)
+    assert any("example" in s[1] for s in styles)
+
+def test_learning_style_in_context():
+    data = load_self_improve()
+    # Add learning style
+    append_pattern(PatternType.LEARNING_STYLE, "debugging", "learns by adding print statements first")
+
+    context = generate_full_context(data, ["python"])
+    assert "How You Learn Best" in context
+    assert "print statements" in context
+```
+
+---
+
 ## Rollout Plan
 
-1. **Internal testing**: Test with vibeship-mind project itself
-2. **Alpha**: Release behind feature flag (`"self_improve": false` in config)
-3. **Beta**: Enable by default, gather feedback
-4. **GA**: Remove feature flag, document in README
+### Phase 1-5: COMPLETE
+Already shipped and tested.
 
-Feature flag in `config.py`:
+### Phase 6-9: Incremental Rollout
+
+1. **Phase 6 (Decay)**: Ship first - low risk, high value
+2. **Phase 7 (Reinforcement)**: Ship with Phase 6 - they work together
+3. **Phase 8 (Contradiction)**: Ship after 6+7 proven stable
+4. **Phase 9 (Learning Style)**: Ship last - most experimental
+
+### Feature Flags
 
 ```python
 DEFAULT_CONFIG = {
     "version": 1,
     "mascot": True,
-    "experimental": {
-        "self_improve": False,  # Enable for alpha testers
+    "self_improve": {
+        "enabled": True,          # Phases 1-5
+        "decay": False,           # Phase 6
+        "reinforcement": False,   # Phase 7
+        "contradiction": False,   # Phase 8
+        "learning_style": False,  # Phase 9
     },
 }
 ```

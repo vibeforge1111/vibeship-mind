@@ -3,6 +3,9 @@
 ## Experience
 <!-- Raw moments, thoughts, what's happening -->
 
+- thinking about what single addition would make Mind closer to AGI-like self-improvement
+- reconsidering - what makes self-improvement actually work beyond just feedback loop?
+- analyzing Opus audit doc - need to separate valuable improvements from over-engineering
 - creating testing playground for SELF_IMPROVE validation - isolated environment to test patterns, intuitions, feedback loops
 - starting Phase 5: Testing & Validation - real-world usage to validate pattern detection helps
 - starting Phase 4: CLI Tools - mind patterns, mind feedback commands

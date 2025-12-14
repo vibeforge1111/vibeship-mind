@@ -213,6 +213,7 @@ def ensure_mcp_configuration() -> tuple[bool, str]:
     errors = []
     
     for config_path in all_config_paths:
+        backup_path = None
         try:
             # Try to find existing config file or create new one
             if config_path.exists():
@@ -236,7 +237,6 @@ def ensure_mcp_configuration() -> tuple[bool, str]:
             
             # Write config back
             # Create backup if file exists
-            backup_path = None
             if config_path.exists():
                 backup_path = config_path.with_suffix(config_path.suffix + ".bak")
                 try:
@@ -386,7 +386,8 @@ def init(path: str):
                 click.echo('  "mcpServers": {')
                 click.echo('    "mind": {')
                 click.echo('      "command": "uv",')
-                click.echo(f'      "args": ["--directory", "{expected_path}", "run", "mind", "mcp"]')
+                args_json = json.dumps(["--directory", expected_path, "run", "mind", "mcp"])
+                click.echo(f'      "args": {args_json}')
                 click.echo("    }")
                 click.echo("  }")
                 click.echo("}")

@@ -256,6 +256,7 @@ def append_pattern(pattern_type: PatternType, category: str, description: str) -
         PatternType.BLIND_SPOT: "## Blind Spots",
         PatternType.ANTI_PATTERN: "## Anti-Patterns",
         PatternType.FEEDBACK: "## Feedback Log",
+        PatternType.LEARNING_STYLE: "## Learning Styles",
     }
 
     section_header = section_map.get(pattern_type)
@@ -1038,6 +1039,40 @@ def get_confidence_stats() -> dict:
         "medium_confidence": len([c for c in confidences if 0.3 <= c < 0.7]),
         "low_confidence": len([c for c in confidences if c < 0.3]),
     }
+
+
+def initialize_pattern_metadata(data: SelfImproveData) -> int:
+    """Initialize metadata for all patterns that don't have it yet.
+
+    Called during session gap processing when decay is enabled.
+    Creates metadata entries for existing patterns so decay can track them.
+
+    Args:
+        data: Parsed SelfImproveData with all patterns
+
+    Returns:
+        Number of patterns initialized
+    """
+    metadata = load_pattern_metadata()
+    initialized = 0
+
+    for pattern in data.all_patterns():
+        pattern_hash = hash_pattern_description(pattern.description)
+        if pattern_hash not in metadata:
+            now = datetime.now().isoformat()
+            metadata[pattern_hash] = PatternMetadata(
+                pattern_hash=pattern_hash,
+                created_at=now,
+                last_reinforced=now,
+                reinforcement_count=0,
+                base_confidence=0.5,
+            )
+            initialized += 1
+
+    if initialized > 0:
+        save_pattern_metadata(metadata)
+
+    return initialized
 
 
 # =============================================================================

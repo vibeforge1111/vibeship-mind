@@ -8,10 +8,15 @@ from typing import Any
 DEFAULT_CONFIG = {
     "version": 1,
     "mascot": True,  # Show Mindful mascot in MCP responses
+    "self_improve": {
+        "enabled": True,           # Phases 1-5: Core self-improvement
+        "decay": True,             # Phase 6: Patterns lose confidence over time
+        "reinforcement": True,     # Phase 7: Track when patterns help
+        "contradiction": True,     # Phase 8: Detect conflicting patterns
+        "learning_style": True,    # Phase 9: Model HOW user learns
+    },
     "experimental": {
         # Add experimental features here
-        # "auto_mark_reminders": False,
-        # "self_improve": False,
     },
 }
 
@@ -47,6 +52,25 @@ def is_feature_enabled(feature: str, project_path: Path) -> bool:
     """
     config = load_config(project_path)
     return config.get("experimental", {}).get(feature, False)
+
+
+def is_self_improve_feature_enabled(feature: str, project_path: Path) -> bool:
+    """Check if a self-improvement feature is enabled.
+
+    Features:
+        - "enabled": Core self-improvement (Phases 1-5)
+        - "decay": Confidence decay over time (Phase 6)
+        - "reinforcement": Track pattern usage (Phase 7)
+        - "contradiction": Detect conflicting patterns (Phase 8)
+        - "learning_style": Model how user learns (Phase 9)
+
+    Usage:
+        if is_self_improve_feature_enabled("contradiction", project_path):
+            check_for_contradictions(...)
+    """
+    config = load_config(project_path)
+    self_improve = config.get("self_improve", DEFAULT_CONFIG["self_improve"])
+    return self_improve.get(feature, False)
 
 
 def enable_feature(feature: str, project_path: Path) -> None:

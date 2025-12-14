@@ -1004,6 +1004,7 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
 
     # SESSION.md handling - process old session if gap detected
     promoted_count = 0
+    learning_styles_promoted = 0
     session_content = None
     if gap_detected:
         old_session = read_session_file(project_path)
@@ -1014,6 +1015,29 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
 
             # Clear SESSION.md for new session
             clear_session_file(project_path)
+
+        # Phase 6: Initialize pattern metadata for decay tracking
+        # Phase 9: Extract and promote learning styles from feedback
+        from ..config import is_self_improve_feature_enabled
+        from ..self_improve import (
+            load_self_improve,
+            promote_learning_styles_from_feedback,
+            append_pattern,
+            PatternType,
+            initialize_pattern_metadata,
+        )
+        self_improve_data = load_self_improve()
+
+        # Phase 6: Ensure all patterns have metadata for decay tracking
+        if is_self_improve_feature_enabled("decay", project_path):
+            initialize_pattern_metadata(self_improve_data)
+
+        # Phase 9: Extract learning styles from feedback
+        if is_self_improve_feature_enabled("learning_style", project_path):
+            new_styles = promote_learning_styles_from_feedback(self_improve_data)
+            for style in new_styles:
+                if append_pattern(PatternType.LEARNING_STYLE, style.category, style.description):
+                    learning_styles_promoted += 1
 
     # Read current session state
     session_content = read_session_file(project_path)
@@ -1714,11 +1738,16 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
 
     success = False
     target = "unknown"
+    contradiction_info = None
 
     if entry_type in global_types:
         # Write to SELF_IMPROVE.md (global, cross-project)
-        success = log_to_self_improve(message, entry_type)
+        result = log_to_self_improve(message, entry_type, project_path)
+        success = result.get("success", False)
         target = "SELF_IMPROVE.md"
+        # Phase 8: Check for contradictions
+        if result.get("action") == "contradiction_detected":
+            contradiction_info = result.get("conflicts", [])
     elif entry_type in session_types:
         # Write to SESSION.md
         session_file = get_session_file(project_path)
@@ -1757,6 +1786,18 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
         }
         msg = f"{entry_type} -> {target}"
         return [TextContent(type="text", text=mindful_response("log", output, msg))]
+    elif contradiction_info:
+        # Phase 8: Pattern contradicts existing pattern
+        output = {
+            "success": False,
+            "action": "contradiction_detected",
+            "conflicts": contradiction_info,
+            "suggestion": (
+                "This pattern conflicts with existing patterns. "
+                "Use type='reinforce' on the correct one, or remove the outdated pattern."
+            ),
+        }
+        return [TextContent(type="text", text=mindful_response("warning", output, "Contradiction detected"))]
     else:
         output = {
             "success": False,
@@ -1765,17 +1806,23 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
         return [TextContent(type="text", text=mindful_response("error", output, f"Failed to write to {target}"))]
 
 
-def log_to_self_improve(message: str, log_type: str) -> bool:
-    """Log directly to global SELF_IMPROVE.md.
+def log_to_self_improve(message: str, log_type: str, project_path: Path = None) -> dict:
+    """Log directly to global SELF_IMPROVE.md with contradiction checking.
 
     Args:
         message: The message to log
         log_type: One of: feedback, preference, blind_spot, skill
+        project_path: Project path for config lookup (optional)
 
     Returns:
-        True if successful, False otherwise
+        Dict with success status and details (action, conflicts if any)
     """
-    from ..self_improve import append_pattern, PatternType
+    from ..self_improve import (
+        append_pattern,
+        PatternType,
+        add_pattern_with_contradiction_check,
+    )
+    from ..config import is_self_improve_feature_enabled
 
     # Map log type to PatternType
     type_map = {
@@ -1787,13 +1834,24 @@ def log_to_self_improve(message: str, log_type: str) -> bool:
 
     pattern_type = type_map.get(log_type)
     if not pattern_type:
-        return False
+        return {"success": False, "error": f"Unknown log type: {log_type}"}
 
     # For feedback, the message is the full description
     # For others, we use "general" as the default category
     category = "general"
 
-    return append_pattern(pattern_type, category, message)
+    # Phase 8: Check for contradictions if enabled (skip for feedback type)
+    if (
+        project_path
+        and pattern_type != PatternType.FEEDBACK
+        and is_self_improve_feature_enabled("contradiction", project_path)
+    ):
+        result = add_pattern_with_contradiction_check(pattern_type, category, message)
+        return result
+
+    # No contradiction check - just append directly
+    success = append_pattern(pattern_type, category, message)
+    return {"success": success, "action": "added" if success else "failed"}
 
 
 async def handle_reminder_done(args: dict[str, Any]) -> list[TextContent]:

@@ -119,6 +119,10 @@ It helps Claude remember your patterns, preferences, and blind spots. -->
 <!-- Approaches that don't work for you -->
 <!-- Format: ANTI_PATTERN: [category] description -->
 
+## Learning Styles
+<!-- How you learn best - extracted from feedback patterns -->
+<!-- Format: LEARNING_STYLE: [context] description -->
+
 ---
 
 ## Feedback Log

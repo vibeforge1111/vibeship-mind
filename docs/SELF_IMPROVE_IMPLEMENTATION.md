@@ -16,12 +16,24 @@ Implementation is split into 9 phases:
 - [x] **Phase 3: Feedback Capture** - Auto-logging and pattern extraction
 - [x] **Phase 4: CLI Tools** - User-facing pattern management
 - [x] **Phase 5: Testing Playground** - Unit tests + interactive test runner
+- [x] **Phase 6: Confidence Decay** - Patterns lose confidence over time if not reinforced
+- [x] **Phase 7: Reinforcement Tracking** - Track when patterns help, boost confidence
+- [x] **Phase 8: Contradiction Detection** - Flag conflicting patterns
+- [x] **Phase 9: Learning Style** - Model HOW the user learns, not just WHAT they know
 
-### In Progress / Planned
-- [ ] **Phase 6: Confidence Decay** - Patterns lose confidence over time if not reinforced
-- [ ] **Phase 7: Reinforcement Tracking** - Track when patterns help, boost confidence
-- [ ] **Phase 8: Contradiction Detection** - Flag conflicting patterns
-- [ ] **Phase 9: Learning Style** - Model HOW the user learns, not just WHAT they know
+### Feature Flags (in .mind/config.json)
+All phases are enabled by default. To disable specific phases:
+```json
+{
+  "self_improve": {
+    "enabled": true,
+    "decay": true,
+    "reinforcement": true,
+    "contradiction": true,
+    "learning_style": true
+  }
+}
+```
 
 ---
 
@@ -2017,32 +2029,29 @@ def test_learning_style_in_context():
 
 ## Rollout Plan
 
-### Phase 1-5: COMPLETE
-Already shipped and tested.
-
-### Phase 6-9: Incremental Rollout
-
-1. **Phase 6 (Decay)**: Ship first - low risk, high value
-2. **Phase 7 (Reinforcement)**: Ship with Phase 6 - they work together
-3. **Phase 8 (Contradiction)**: Ship after 6+7 proven stable
-4. **Phase 9 (Learning Style)**: Ship last - most experimental
+### ALL PHASES COMPLETE
+All 9 phases are now implemented and enabled by default.
 
 ### Feature Flags
+
+All features enabled by default in `src/mind/config.py`:
 
 ```python
 DEFAULT_CONFIG = {
     "version": 1,
     "mascot": True,
     "self_improve": {
-        "enabled": True,          # Phases 1-5
-        "decay": False,           # Phase 6
-        "reinforcement": False,   # Phase 7
-        "contradiction": False,   # Phase 8
-        "learning_style": False,  # Phase 9
+        "enabled": True,           # Phases 1-5: Core self-improvement
+        "decay": True,             # Phase 6: Confidence decay over time
+        "reinforcement": True,     # Phase 7: Track pattern usage
+        "contradiction": True,     # Phase 8: Detect conflicting patterns
+        "learning_style": True,    # Phase 9: Model how user learns
     },
 }
 ```
 
+To disable a feature for a project, edit `.mind/config.json`.
+
 ---
 
-*This guide will be updated as implementation progresses. Check git history for changes.*
+*Implementation complete as of 2025-12-15. Check git history for changes.*

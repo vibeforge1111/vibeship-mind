@@ -586,7 +586,7 @@ Done.`,
 				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('Add Mind MCP server to my config. Use command "python" with args ["-m", "mind", "mcp"]'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
 				<p class="prompt-text">Add Mind MCP server to my config. Use command "python" with args ["-m", "mind", "mcp"]</p>
 			</div>
-			<div class="step-note">Claude will set it up for you. Restart Claude Code after.</div>
+			<div class="step-note">Claude will set it up for you. Restart Claude Code after, and Mind works automatically.</div>
 		</div>
 	</div>
 

@@ -61,15 +61,15 @@ Copy and paste this to Claude:
 
 > Add Mind MCP server to my config. Use command "python" with args ["-m", "mind", "mcp"]
 
-Claude will set it up for you. Restart Claude Code after.
+Claude will set it up for you. Restart Claude Code after, and Mind will work automatically.
 
 <details>
-<summary><strong>Manual setup</strong></summary>
+<summary><strong>Manual setup (if you prefer)</strong></summary>
 
-Add to your MCP config:
+Add to your MCP config file:
 
-**Mac/Linux:** `~/.claude/claude_desktop_config.json`
-**Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
+**Mac/Linux:** `~/.claude.json`
+**Windows:** `%USERPROFILE%\.claude.json`
 
 ```json
 {
@@ -82,9 +82,9 @@ Add to your MCP config:
 }
 ```
 
-</details>
+Save the file, then restart Claude Code.
 
-Restart Claude Code, then say: **"Let's run The Mind"**
+</details>
 
 ---
 

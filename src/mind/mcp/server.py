@@ -1020,7 +1020,6 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
         # Phase 9: Extract and promote learning styles from feedback
         from ..config import is_self_improve_feature_enabled
         from ..self_improve import (
-            load_self_improve,
             promote_learning_styles_from_feedback,
             append_pattern,
             PatternType,

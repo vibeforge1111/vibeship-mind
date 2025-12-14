@@ -276,7 +276,7 @@ Done.`,
 	<p class="subtitle">
 		Memory for Claude Code that persists across sessions.
 		Decisions, learnings, and reminders.
-		Install with 3 commands. Free forever.
+		Install with 3 commands. Free for now.
 	</p>
 
 	<div class="terminal">

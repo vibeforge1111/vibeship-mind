@@ -214,6 +214,7 @@ def ensure_mcp_configuration() -> tuple[bool, str]:
     
     for config_path in all_config_paths:
         original_content = None
+        original_was_valid_json = False
         backup_path = None
         try:
             # Read original content first if file exists (for safe restore on failure)
@@ -221,10 +222,12 @@ def ensure_mcp_configuration() -> tuple[bool, str]:
                 try:
                     original_content = config_path.read_text(encoding="utf-8")
                     config = json.loads(original_content)
+                    original_was_valid_json = True
                 except json.JSONDecodeError:
-                    # If invalid JSON, create new config but still preserve original content
-                    original_content = config_path.read_text(encoding="utf-8")
+                    # If invalid JSON, create new config to replace it
+                    # Don't preserve invalid content - we're fixing it, not restoring it
                     config = {"mcpServers": {"mind": mind_config}}
+                    original_was_valid_json = False
             else:
                 # Create new config
                 config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -266,14 +269,15 @@ def ensure_mcp_configuration() -> tuple[bool, str]:
                 try:
                     backup_path.rename(config_path)
                 except Exception:
-                    # If backup restore fails, try restoring from memory
-                    if original_content is not None:
+                    # If backup restore fails, try restoring from memory (only if original was valid JSON)
+                    if original_content is not None and original_was_valid_json:
                         try:
                             config_path.write_text(original_content, encoding="utf-8")
                         except Exception:
                             pass  # Last resort failed
-            elif original_content is not None:
-                # No backup file, but we have original content in memory - restore it
+            elif original_content is not None and original_was_valid_json:
+                # No backup file, but we have original valid content in memory - restore it
+                # Don't restore if original was invalid JSON (we were fixing it)
                 try:
                     config_path.write_text(original_content, encoding="utf-8")
                 except Exception:

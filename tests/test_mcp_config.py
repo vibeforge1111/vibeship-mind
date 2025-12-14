@@ -560,4 +560,37 @@ class TestEnsureMcpConfiguration:
         assert "otherKey" in restored_config
         assert restored_config["otherKey"] == "originalValue"
 
+    def test_does_not_restore_invalid_json_on_write_failure(self, tmp_path, mock_project_root, monkeypatch):
+        """Should not restore invalid JSON when write fails - we were fixing it, not preserving it."""
+        config_path = tmp_path / "mcp.json"
+        invalid_json_content = "not valid json {{{"
+        config_path.write_text(invalid_json_content, encoding="utf-8")
+        
+        # Track if restore was attempted (by checking if original_content would be written back)
+        restore_attempted = []
+        original_write_text = Path.write_text
+        
+        def track_restore_write(self, data, encoding=None):
+            # Check if this is a restore attempt (writing back invalid JSON)
+            if self == config_path and data == invalid_json_content:
+                restore_attempted.append(True)
+            if self == config_path and "mcpServers" in data and len(restore_attempted) == 0:
+                # This is the normal write - make it fail
+                raise IOError("Write failed")
+            return original_write_text(self, data, encoding=encoding)
+        
+        monkeypatch.setattr(Path, "write_text", track_restore_write)
+        monkeypatch.setattr("mind.cli.get_all_mcp_config_paths", lambda: [config_path])
+        monkeypatch.setattr("mind.cli.get_mind_project_root", lambda: mock_project_root)
+        
+        success, status = ensure_mcp_configuration()
+        
+        # Should return False because write failed
+        assert success is False
+        assert "error" in status.lower() or "failed" in status.lower()
+        
+        # Key assertion: verify that invalid JSON was NOT explicitly restored
+        # Since original_content is not set for invalid JSON, restore logic won't run
+        assert len(restore_attempted) == 0, "Invalid JSON should not be restored"
+
 

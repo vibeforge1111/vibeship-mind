@@ -1,6 +1,6 @@
 # Mind
 
-<!-- doc-version: 2.1.0 | last-updated: 2025-12-13 -->
+<!-- doc-version: 2.1.1 | last-updated: 2025-12-15 -->
 
 > Mind gives Claude a mind - not just memory across sessions, but focus within them. It remembers what worked, what didn't, and what it's supposed to be building.
 
@@ -49,28 +49,40 @@ pip install vibeship-mind
 
 ### 2. Initialize in your project
 
+Open a terminal in your project folder, then run:
+
 ```bash
-cd your-project
-mind init
+python -m mind init
 ```
 
 ### 3. Connect to Claude Code
 
+Copy and paste this to Claude:
+
+> Add Mind MCP server to my config. Use command "python" with args ["-m", "mind", "mcp"]
+
+Claude will set it up for you. Restart Claude Code after.
+
+<details>
+<summary><strong>Manual setup</strong></summary>
+
 Add to your MCP config:
 
-**Mac/Linux:** `~/.config/claude/mcp.json`
+**Mac/Linux:** `~/.claude/claude_desktop_config.json`
 **Windows:** `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
   "mcpServers": {
     "mind": {
-      "command": "mind",
-      "args": ["mcp"]
+      "command": "python",
+      "args": ["-m", "mind", "mcp"]
     }
   }
 }
 ```
+
+</details>
 
 Restart Claude Code, then say: **"Let's run The Mind"**
 
@@ -171,9 +183,10 @@ Reminders are stored in `.mind/REMINDERS.md` and shown in `mind_recall()` output
 
 ## Initialize Mind in Any Project
 
+Open a terminal in your project folder and run:
+
 ```bash
-cd your-project
-mind init
+python -m mind init
 ```
 
 That's it! This creates `.mind/MEMORY.md` and `.mind/SESSION.md`.
@@ -184,16 +197,16 @@ That's it! This creates `.mind/MEMORY.md` and `.mind/SESSION.md`.
 
 ```bash
 # Check if everything is working
-mind doctor
+python -m mind doctor
 
 # See what Mind extracted from your notes
-mind parse
+python -m mind parse
 
 # Check project status
-mind status
+python -m mind status
 
 # List all registered projects
-mind list
+python -m mind list
 ```
 
 ---
@@ -231,10 +244,10 @@ your-project/
 
 | Problem | Fix |
 |---------|-----|
-| "Command not found" | Make sure `pip install vibeship-mind` completed and `mind` is in your PATH |
+| "Command not found" | Use `python -m mind` instead of just `mind` |
 | Nothing being captured | Use keywords: `decided`, `problem`, `learned`, `gotcha` |
 | Claude repeating mistakes | Tell Claude: "Check SESSION.md" or "Add to Rejected Approaches" |
-| Need to check health | Run `mind doctor` |
+| Need to check health | Run `python -m mind doctor` |
 
 ---
 

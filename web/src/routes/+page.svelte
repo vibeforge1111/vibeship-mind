@@ -571,28 +571,22 @@ Done.`,
 
 		<div class="install-step">
 			<div class="step-label">2. Initialize in your project</div>
+			<div class="step-explanation">Open a terminal in your project folder, then run:</div>
 			<div class="install-preview">
-				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('cd your-project\nmind init'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
-				<code>cd your-project</code>
-				<code>mind init</code>
+				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('python -m mind init'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
+				<code>python -m mind init</code>
 			</div>
+			<div class="step-note">Run this in any folder where you want Claude to remember things</div>
 		</div>
 
 		<div class="install-step">
 			<div class="step-label">3. Connect to Claude Code</div>
-			<div class="mcp-config-box">
-				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('{\n  "mcpServers": {\n    "mind": {\n      "command": "mind",\n      "args": ["mcp"]\n    }\n  }\n}'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
-				<div class="config-label">Add to your MCP config:</div>
-				<pre>{`{
-  "mcpServers": {
-    "mind": {
-      "command": "mind",
-      "args": ["mcp"]
-    }
-  }
-}`}</pre>
+			<div class="step-explanation">Copy and paste this to Claude:</div>
+			<div class="install-preview prompt-style">
+				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('Add Mind MCP server to my config. Use command "python" with args ["-m", "mind", "mcp"]'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
+				<p class="prompt-text">Add Mind MCP server to my config. Use command "python" with args ["-m", "mind", "mcp"]</p>
 			</div>
-			<div class="step-note">Then say: "Let's run The Mind"</div>
+			<div class="step-note">Claude will set it up for you. Restart Claude Code after.</div>
 		</div>
 	</div>
 
@@ -1061,6 +1055,12 @@ Done.`,
 		letter-spacing: 0.05em;
 	}
 
+	.step-explanation {
+		font-size: var(--text-sm);
+		color: var(--text-secondary);
+		margin-bottom: var(--space-2);
+	}
+
 	.install-preview {
 		display: flex;
 		flex-direction: column;
@@ -1193,27 +1193,19 @@ Done.`,
 		color: var(--text-secondary);
 	}
 
-	.mcp-config-box {
-		position: relative;
+	.install-preview.prompt-style {
 		padding: var(--space-4);
-		background: var(--terminal-bg);
-		border: 1px solid var(--green-dim);
-		box-shadow: 0 0 12px rgba(0, 196, 154, 0.15);
 	}
 
-	.mcp-config-box .config-label {
-		font-size: var(--text-sm);
-		color: var(--text-secondary);
-		margin-bottom: var(--space-2);
+	.install-preview.prompt-style code::before {
+		content: none;
 	}
 
-	.mcp-config-box pre {
+	.prompt-text {
 		margin: 0;
-		background: transparent;
-		border: none;
-		padding: 0;
-		font-size: var(--text-sm);
+		font-size: var(--text-base);
 		color: var(--terminal-command);
+		font-style: italic;
 		line-height: 1.5;
 	}
 

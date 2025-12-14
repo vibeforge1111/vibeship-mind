@@ -507,4 +507,57 @@ class TestEnsureMcpConfiguration:
         claude_data = json.loads(claude_config.read_text(encoding="utf-8"))
         assert claude_data["mcpServers"]["mind"]["args"][1] == str(mock_project_root)
 
+    def test_restores_from_memory_when_backup_fails(self, tmp_path, mock_project_root, monkeypatch):
+        """Should restore original content from memory when backup creation fails and write fails."""
+        config_path = tmp_path / "mcp.json"
+        original_config = {
+            "mcpServers": {
+                "other_server": {"command": "python", "args": ["run", "other"]}
+            },
+            "otherKey": "originalValue"
+        }
+        original_content = json.dumps(original_config, indent=2)
+        config_path.write_text(original_content, encoding="utf-8")
+        
+        # Create a wrapper to track calls and make operations fail
+        call_count = {"rename": 0, "write": 0}
+        original_rename = Path.rename
+        original_write_text = Path.write_text
+        
+        def failing_rename(self, target):
+            call_count["rename"] += 1
+            if self == config_path:
+                raise PermissionError("Cannot create backup")
+            return original_rename(self, target)
+        
+        def failing_write_text(self, data, encoding=None):
+            call_count["write"] += 1
+            if self == config_path:
+                raise IOError("Write failed")
+            return original_write_text(self, data, encoding=encoding)
+        
+        monkeypatch.setattr(Path, "rename", failing_rename)
+        monkeypatch.setattr(Path, "write_text", failing_write_text)
+        monkeypatch.setattr("mind.cli.get_all_mcp_config_paths", lambda: [config_path])
+        monkeypatch.setattr("mind.cli.get_mind_project_root", lambda: mock_project_root)
+        
+        success, status = ensure_mcp_configuration()
+        
+        # Should return False because write failed
+        assert success is False
+        assert "error" in status.lower() or "failed" in status.lower()
+        
+        # Verify backup creation was attempted and failed
+        assert call_count["rename"] > 0
+        
+        # Verify write was attempted
+        assert call_count["write"] > 0
+        
+        # Verify original content was restored from memory
+        restored_content = config_path.read_text(encoding="utf-8")
+        restored_config = json.loads(restored_content)
+        assert restored_config == original_config
+        assert "otherKey" in restored_config
+        assert restored_config["otherKey"] == "originalValue"
+
 

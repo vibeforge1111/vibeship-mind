@@ -3,6 +3,8 @@
 ## Experience
 <!-- Raw moments, thoughts, what's happening -->
 
+- creating testing playground for SELF_IMPROVE validation - isolated environment to test patterns, intuitions, feedback loops
+- starting Phase 5: Testing & Validation - real-world usage to validate pattern detection helps
 - starting Phase 4: CLI Tools - mind patterns, mind feedback commands
 - test
 - testing session type

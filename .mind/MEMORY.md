@@ -249,3 +249,4 @@ decided: testing memory type
 fixed: Phase 3 Feedback Capture complete: new mind_log types (feedback, preference, blind_spot, skill) route to SELF_IMPROVE.md, pattern extraction from feedback (3+ occurrences promotes to patterns), log_to_self_improve() function
 decided: test
 fixed: completed Phase 4: CLI Tools - added mind patterns, mind feedback, mind self commands
+fixed: created testing playground with 33 unit tests for self_improve.py + interactive test runner

@@ -563,12 +563,10 @@ Done.`,
 	<div class="install-steps">
 		<div class="install-step">
 			<div class="step-label">1. Install Mind</div>
-			<div class="install-preview">
-				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('git clone https://github.com/vibeforge1111/vibeship-mind.git\ncd vibeship-mind\nuv sync\nuv run mind init'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
-				<code>git clone https://github.com/vibeforge1111/vibeship-mind.git</code>
-				<code>cd vibeship-mind</code>
-				<code>uv sync</code>
-				<code>uv run mind init</code>
+			<p class="step-hint">Copy-paste all at once:</p>
+			<div class="install-preview install-oneliner">
+				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('git clone https://github.com/vibeforge1111/vibeship-mind.git && cd vibeship-mind && uv sync && uv run mind init'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
+				<code>git clone https://github.com/vibeforge1111/vibeship-mind.git && cd vibeship-mind && uv sync && uv run mind init</code>
 			</div>
 		</div>
 
@@ -1039,9 +1037,15 @@ Done.`,
 		font-family: var(--font-mono);
 		font-size: var(--text-sm);
 		color: var(--green-dim);
-		margin-bottom: var(--space-2);
+		margin-bottom: var(--space-1);
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
+	}
+
+	.step-hint {
+		font-size: var(--text-sm);
+		color: var(--text-tertiary);
+		margin-bottom: var(--space-2);
 	}
 
 	.install-preview {
@@ -1092,6 +1096,11 @@ Done.`,
 	.install-preview code::before {
 		content: '$ ';
 		color: var(--terminal-muted);
+	}
+
+	.install-oneliner code {
+		word-break: break-all;
+		white-space: normal;
 	}
 
 	.prompt-box {

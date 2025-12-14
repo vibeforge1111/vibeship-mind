@@ -265,15 +265,20 @@ def ensure_mcp_configuration() -> tuple[bool, str]:
                     pass
             errors.append(f"{config_path}: {e}")
     
-    if updated_paths:
+    # Return True only if all config files were updated successfully (no errors)
+    if updated_paths and not errors:
         paths_str = ", ".join(str(p) for p in updated_paths)
         status = f"MCP configuration updated in {paths_str}"
-        if errors:
-            status += f" (errors: {', '.join(errors)})"
         return True, status
     
+    # Return False if there were any errors, even if some configs succeeded
     if errors:
-        return False, f"Failed to update MCP config: {', '.join(errors)}"
+        if updated_paths:
+            paths_str = ", ".join(str(p) for p in updated_paths)
+            status = f"Partially updated: {paths_str} (errors: {', '.join(errors)})"
+        else:
+            status = f"Failed to update MCP config: {', '.join(errors)}"
+        return False, status
     
     return False, "No config files found to update"
 

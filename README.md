@@ -168,17 +168,27 @@ Reminders are stored in `.mind/REMINDERS.md` and shown in `mind_recall()` output
 
 ## Initialize Mind in Any Project
 
-From your project folder, run:
+Run this command, replacing the paths:
 
 ```bash
-uv --directory ~/vibeship-mind run mind init
+uv --directory /path/to/vibeship-mind run mind init /path/to/your/project
 ```
 
-(Adjust `~/vibeship-mind` if you cloned it somewhere else)
+**Example (Windows):**
+```bash
+uv --directory C:\Users\YOU\vibeship-mind run mind init C:\Users\YOU\my-project
+```
+
+**Example (Mac/Linux):**
+```bash
+uv --directory ~/vibeship-mind run mind init ~/my-project
+```
 
 **Using Claude Code?** Just paste this:
 
-> Run `uv --directory ~/vibeship-mind run mind init` to set up Mind in this project
+> Run `uv --directory /path/to/vibeship-mind run mind init .` to set up Mind in this project
+
+(Replace `/path/to/vibeship-mind` with where you cloned it)
 
 This creates `.mind/MEMORY.md` and `.mind/SESSION.md`.
 
@@ -190,11 +200,14 @@ This creates `.mind/MEMORY.md` and `.mind/SESSION.md`.
 # Check if everything is working
 uv --directory /path/to/vibeship-mind run mind doctor
 
-# See what Mind extracted from your notes
-uv --directory /path/to/vibeship-mind run mind parse
+# See what Mind extracted from your notes (run from project dir, or pass path)
+uv --directory /path/to/vibeship-mind run mind parse /path/to/your/project
 
 # Check project status
-uv --directory /path/to/vibeship-mind run mind status
+uv --directory /path/to/vibeship-mind run mind status /path/to/your/project
+
+# List all registered projects
+uv --directory /path/to/vibeship-mind run mind list
 ```
 
 ---

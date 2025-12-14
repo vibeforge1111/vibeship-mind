@@ -25,8 +25,24 @@ def cli():
 @cli.command()
 @click.argument("path", default=".", type=click.Path(exists=True, file_okay=False))
 def init(path: str):
-    """Initialize Mind for a project."""
+    """Initialize Mind for a project.
+
+    PATH is the project directory to initialize. Defaults to current directory.
+
+    When running from another directory via uv --directory, you MUST specify
+    the target path explicitly:
+
+        uv --directory /path/to/vibeship-mind run mind init /path/to/your/project
+    """
     project_path = Path(path).resolve()
+
+    # Warn if path is "." and we might be in the wrong directory
+    # (common mistake when using uv --directory)
+    if path == "." and project_path.name == "vibeship-mind":
+        click.echo("Warning: Initializing vibeship-mind itself.", err=True)
+        click.echo("If you meant to init a different project, specify the path:", err=True)
+        click.echo("  uv --directory /path/to/vibeship-mind run mind init /path/to/your/project", err=True)
+        click.echo()
     mind_dir = project_path / ".mind"
 
     # Create .mind directory

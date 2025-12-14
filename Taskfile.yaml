@@ -1,0 +1,33 @@
+version: '3'
+
+tasks:
+  sync:
+    desc: Sync dependencies with uv
+    cmds:
+      - uv sync
+
+  init:
+    desc: Initialize Mind for a project
+    cmds:
+      - uv run mind init
+
+  test:context-reminders:
+    desc: Run context reminders tests
+    cmds:
+      - uv run python -m pytest tests/test_context_reminders.py -v
+
+  test:mcp-config:
+    desc: Run MCP configuration tests
+    cmds:
+      - uv run python -m pytest tests/test_mcp_config.py -v
+
+  test:self-improve:
+    desc: Run self-improve tests
+    cmds:
+      - uv run python -m pytest tests/test_self_improve.py -v
+
+  test:all:
+    desc: Run all tests
+    cmds:
+      - uv run python -m pytest tests/ -v
+

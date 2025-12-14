@@ -475,4 +475,36 @@ class TestEnsureMcpConfiguration:
         assert claude_data["mcpServers"]["mind"]["args"][1] == str(mock_project_root)
         assert cursor_data["mcpServers"]["mind"]["args"][1] == str(mock_project_root)
 
+    def test_returns_false_on_partial_success(self, tmp_path, mock_project_root, monkeypatch):
+        """Should return False when one config succeeds and another fails."""
+        claude_config = tmp_path / "claude_mcp.json"
+        cursor_config = tmp_path / "cursor_mcp.json"
+        
+        # Create one valid config
+        claude_config.write_text(json.dumps({
+            "mcpServers": {
+                "mind": {
+                    "command": "uv",
+                    "args": ["--directory", "/wrong/path", "run", "mind", "mcp"]
+                }
+            }
+        }), encoding="utf-8")
+        
+        # Create a directory with the same name as the config file to make it unwritable
+        cursor_config.mkdir(parents=True)
+        
+        monkeypatch.setattr("mind.cli.get_all_mcp_config_paths", lambda: [claude_config, cursor_config])
+        monkeypatch.setattr("mind.cli.get_mind_project_root", lambda: mock_project_root)
+        
+        success, status = ensure_mcp_configuration()
+        
+        # Should return False because one config failed
+        assert success is False
+        assert "Partially updated" in status
+        assert "claude_mcp.json" in status
+        assert "cursor_mcp.json" in status or "error" in status.lower()
+        # Verify the successful config was actually updated
+        claude_data = json.loads(claude_config.read_text(encoding="utf-8"))
+        assert claude_data["mcpServers"]["mind"]["args"][1] == str(mock_project_root)
+
 

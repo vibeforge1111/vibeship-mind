@@ -1107,8 +1107,7 @@ Done.`,
 	}
 
 	.install-preview code::before {
-		content: '$ ';
-		color: var(--terminal-muted);
+		content: '';
 	}
 
 	.install-preview code.comment::before {

@@ -63,6 +63,28 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 
 </details>
 
+### 1.5. Taskfile (Optional but Recommended)
+
+Taskfile provides convenient shortcuts for common commands. Install it once:
+
+```bash
+# macOS/Linux
+brew install go-task/tap/go-task
+
+# Or download from https://taskfile.dev/installation/
+```
+
+Then use simple commands instead of long `uv` invocations:
+
+```bash
+task sync          # Sync dependencies
+task init          # Initialize Mind in current project
+task test:all      # Run all tests
+task test:mcp-config  # Run specific test suite
+```
+
+Taskfile helps by providing shorter, memorable commands and keeping your workflow consistent across projects.
+
 ### 2. Tell Claude Code to connect
 
 Just paste this to Claude:
@@ -176,11 +198,31 @@ uv --directory ~/vibeship-mind run mind init
 
 (Adjust `~/vibeship-mind` if you cloned it somewhere else)
 
+**Or with Taskfile:**
+
+```bash
+task init
+```
+
 **Using Claude Code?** Just paste this:
 
 > Run `uv --directory ~/vibeship-mind run mind init` to set up Mind in this project
 
-This creates `.mind/MEMORY.md` and `.mind/SESSION.md`.
+### What `mind init` Does
+
+The `mind init` command sets up Mind for your project:
+
+1. **Creates `.mind/` directory** - The memory workspace
+2. **Creates memory files** (if they don't exist):
+   - `MEMORY.md` - Long-term memory template
+   - `SESSION.md` - Short-term session buffer
+   - `config.json` - Feature flags and settings
+3. **Detects your tech stack** - Automatically identifies frameworks/languages
+4. **Updates `CLAUDE.md`** - Injects MIND:CONTEXT section for Claude
+5. **Registers the project** - Tracks it in Mind's registry
+6. **Configures MCP** - Checks and optionally fixes Claude/Cursor MCP configuration
+
+All files are created safely - existing files are preserved, so you can run `mind init` multiple times without losing data.
 
 ---
 

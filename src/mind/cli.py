@@ -1,6 +1,8 @@
 """Mind CLI - File-based memory for AI coding assistants (v2: daemon-free)."""
 
 import json
+import os
+import sys
 from datetime import date
 from pathlib import Path
 
@@ -13,6 +15,291 @@ from .parser import InlineScanner, Parser
 from .storage import ProjectsRegistry, get_global_mind_dir, get_self_improve_path
 from .config import create_default_config
 from .templates import GITIGNORE_CONTENT, MEMORY_TEMPLATE, SESSION_TEMPLATE, SELF_IMPROVE_TEMPLATE
+
+
+def get_claude_config_paths() -> list[Path]:
+    """Get Claude config file paths for all platforms."""
+    paths = []
+    
+    # Mac/Linux: ~/.config/claude/mcp.json
+    if sys.platform != "win32":
+        paths.append(Path.home() / ".config" / "claude" / "mcp.json")
+    
+    # Windows: %APPDATA%\Claude\claude_desktop_config.json
+    if sys.platform == "win32":
+        appdata = os.environ.get("APPDATA")
+        if appdata:
+            paths.append(Path(appdata) / "Claude" / "claude_desktop_config.json")
+        else:
+            # Fallback to Path.home() if APPDATA is not set
+            paths.append(Path.home() / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json")
+    
+    return paths
+
+
+def get_cursor_config_paths() -> list[Path]:
+    """Get Cursor config file paths for all platforms."""
+    paths = []
+    
+    # Mac/Linux: ~/.cursor/mcp.json
+    if sys.platform != "win32":
+        paths.append(Path.home() / ".cursor" / "mcp.json")
+    
+    # Windows: %APPDATA%\Cursor\mcp.json
+    if sys.platform == "win32":
+        appdata = os.environ.get("APPDATA")
+        if appdata:
+            paths.append(Path(appdata) / "Cursor" / "mcp.json")
+        else:
+            # Fallback to Path.home() if APPDATA is not set
+            paths.append(Path.home() / "AppData" / "Roaming" / "Cursor" / "mcp.json")
+    
+    return paths
+
+
+def get_all_mcp_config_paths() -> list[Path]:
+    """Get all MCP config file paths (Claude + Cursor) for all platforms."""
+    return get_claude_config_paths() + get_cursor_config_paths()
+
+
+def get_mind_project_root() -> Path | None:
+    """Get the vibeship-mind project root directory."""
+    # Try to find the project root by looking for pyproject.toml
+    current = Path(__file__).resolve()
+    
+    # Walk up from the current file location
+    # __file__ is in src/mind/cli.py, so we need to go up 3 levels to get to project root
+    # Start from src/mind/cli.py -> go to project root
+    check_paths = [current.parent.parent.parent] + list(current.parent.parent.parent.parents)
+    
+    for parent in check_paths:
+        pyproject = parent / "pyproject.toml"
+        if pyproject.exists():
+            try:
+                # Verify it's the right project by checking for mind package
+                if (parent / "src" / "mind").exists():
+                    return parent
+            except:
+                continue
+    
+    # Fallback: try to find from current working directory
+    cwd = Path.cwd()
+    for parent in [cwd] + list(cwd.parents):
+        pyproject = parent / "pyproject.toml"
+        if pyproject.exists():
+            try:
+                if (parent / "src" / "mind").exists():
+                    return parent
+            except:
+                continue
+    
+    return None
+
+
+def check_mcp_configuration() -> tuple[bool, str, str | None]:
+    """
+    Check if MCP is configured correctly in Claude and Cursor configs.
+    
+    Returns:
+        (is_configured, status_message, expected_path)
+    """
+    config_paths = get_all_mcp_config_paths()
+    mind_root = get_mind_project_root()
+    
+    if not mind_root:
+        return False, "Could not determine vibeship-mind project root", None
+    
+    expected_path = str(mind_root.resolve())
+    
+    configured_paths = []
+    error_messages = []
+    
+    for config_path in config_paths:
+        if not config_path.exists():
+            continue
+        
+        try:
+            config = json.loads(config_path.read_text(encoding="utf-8"))
+            servers = config.get("mcpServers", {})
+            
+            if "mind" not in servers:
+                error_messages.append(f"MCP server 'mind' not found in {config_path}")
+                continue
+            
+            mind_config = servers["mind"]
+            args = mind_config.get("args", [])
+            
+            # Check if --directory is in args and points to correct path
+            directory_idx = None
+            for i, arg in enumerate(args):
+                if arg == "--directory":
+                    directory_idx = i
+                    break
+            
+            if directory_idx is None or directory_idx + 1 >= len(args):
+                error_messages.append(f"MCP config missing '--directory' argument in {config_path}")
+                continue
+            
+            configured_path = args[directory_idx + 1]
+            
+            # Normalize paths for comparison
+            try:
+                configured_resolved = Path(configured_path).resolve()
+                expected_resolved = Path(expected_path).resolve()
+                
+                if configured_resolved != expected_resolved:
+                    error_messages.append(f"MCP path mismatch in {config_path}: {configured_path} != {expected_path}")
+                    continue
+            except Exception as e:
+                error_messages.append(f"Invalid path in MCP config {config_path}: {e}")
+                continue
+            
+            # Check command is 'uv'
+            if mind_config.get("command") != "uv":
+                error_messages.append(f"MCP command should be 'uv' in {config_path}")
+                continue
+            
+            # Check args contain 'run', 'mind', 'mcp'
+            if "run" not in args or "mind" not in args or "mcp" not in args:
+                error_messages.append(f"MCP args should include 'run', 'mind', 'mcp' in {config_path}")
+                continue
+            
+            # All checks passed - this config is correct
+            configured_paths.append(config_path)
+            
+        except json.JSONDecodeError as e:
+            error_messages.append(f"Invalid JSON in {config_path}: {e}")
+            continue  # Skip invalid JSON, check other configs
+        except Exception as e:
+            error_messages.append(f"Error reading {config_path}: {e}")
+            continue  # Skip errors, check other configs
+    
+    if configured_paths:
+        paths_str = ", ".join(str(p) for p in configured_paths)
+        return True, f"MCP configured correctly in {paths_str}", expected_path
+    
+    # No config file found or all invalid
+    if error_messages:
+        error_msg = "; ".join(error_messages[:3])  # Show first 3 errors
+        if len(error_messages) > 3:
+            error_msg += f" (and {len(error_messages) - 3} more)"
+        return False, error_msg, expected_path
+    
+    config_locations = ", ".join(str(p) for p in config_paths)
+    return False, f"MCP config file not found. Expected locations: {config_locations}", expected_path
+
+
+def ensure_mcp_configuration() -> tuple[bool, str]:
+    """
+    Ensure MCP is configured correctly in Claude and Cursor configs.
+    Adds or updates the configuration as needed for both editors.
+    
+    Returns:
+        (success, status_message)
+    """
+    all_config_paths = get_all_mcp_config_paths()
+    mind_root = get_mind_project_root()
+    
+    if not mind_root:
+        return False, "Could not determine vibeship-mind project root"
+    
+    expected_path = str(mind_root.resolve())
+    mind_config = {
+        "command": "uv",
+        "args": ["--directory", expected_path, "run", "mind", "mcp"]
+    }
+    
+    updated_paths = []
+    errors = []
+    
+    for config_path in all_config_paths:
+        original_content = None
+        original_was_valid_json = False
+        backup_path = None
+        try:
+            # Read original content first if file exists (for safe restore on failure)
+            if config_path.exists():
+                try:
+                    original_content = config_path.read_text(encoding="utf-8")
+                    config = json.loads(original_content)
+                    original_was_valid_json = True
+                except json.JSONDecodeError:
+                    # If invalid JSON, create new config to replace it
+                    # Don't preserve invalid content - we're fixing it, not restoring it
+                    config = {"mcpServers": {"mind": mind_config}}
+                    original_was_valid_json = False
+            else:
+                # Create new config
+                config_path.parent.mkdir(parents=True, exist_ok=True)
+                config = {"mcpServers": {"mind": mind_config}}
+            
+            # Ensure mcpServers key exists
+            if "mcpServers" not in config:
+                config["mcpServers"] = {}
+            
+            # Update or add mind server config
+            config["mcpServers"]["mind"] = mind_config
+            
+            # Create backup file if original exists (for additional safety)
+            # If backup creation fails, we still have original_content in memory as fallback
+            if config_path.exists():
+                backup_path = config_path.with_suffix(config_path.suffix + ".bak")
+                try:
+                    config_path.rename(backup_path)
+                except Exception:
+                    # Backup creation failed, but we have original_content in memory
+                    # Continue with write - we can restore from memory if write fails
+                    backup_path = None
+            
+            # Write new config
+            config_path.write_text(json.dumps(config, indent=2) + "\n", encoding="utf-8")
+            
+            # Remove backup if write succeeded
+            if backup_path and backup_path.exists():
+                try:
+                    backup_path.unlink()
+                except Exception:
+                    pass
+            
+            updated_paths.append(config_path)
+            
+        except Exception as e:
+            # Restore from backup file if it exists
+            if backup_path and backup_path.exists():
+                try:
+                    backup_path.rename(config_path)
+                except Exception:
+                    # If backup restore fails, try restoring from memory (only if original was valid JSON)
+                    if original_content is not None and original_was_valid_json:
+                        try:
+                            config_path.write_text(original_content, encoding="utf-8")
+                        except Exception:
+                            pass  # Last resort failed
+            elif original_content is not None and original_was_valid_json:
+                # No backup file, but we have original valid content in memory - restore it
+                # Don't restore if original was invalid JSON (we were fixing it)
+                try:
+                    config_path.write_text(original_content, encoding="utf-8")
+                except Exception:
+                    pass  # Restore failed, but we tried
+            errors.append(f"{config_path}: {e}")
+    
+    # Return True only if all config files were updated successfully (no errors)
+    if updated_paths and not errors:
+        paths_str = ", ".join(str(p) for p in updated_paths)
+        status = f"MCP configuration updated in {paths_str}"
+        return True, status
+    
+    # Return False if there were any errors, even if some configs succeeded
+    if errors:
+        if updated_paths:
+            paths_str = ", ".join(str(p) for p in updated_paths)
+            status = f"Partially updated: {paths_str} (errors: {', '.join(errors)})"
+        else:
+            status = f"Failed to update MCP config: {', '.join(errors)}"
+        return False, status
+    
+    return False, "No config files found to update"
 
 
 @click.group()
@@ -93,6 +380,41 @@ def init(path: str):
     registry = ProjectsRegistry.load()
     registry.register(project_path, stack)
     click.echo("[+] Registered project with Mind")
+
+    # Check and ensure MCP configuration
+    click.echo()
+    mcp_configured, mcp_status, expected_path = check_mcp_configuration()
+    if mcp_configured:
+        click.echo(f"[+] {mcp_status}")
+    else:
+        click.echo(f"[!] {mcp_status}")
+        click.echo("[*] Attempting to fix MCP configuration...")
+        success, update_status = ensure_mcp_configuration()
+        if success:
+            click.echo(f"[+] {update_status}")
+            click.echo("[*] Restart Claude Code and/or Cursor for changes to take effect.")
+        else:
+            click.echo(f"[!] Failed to update MCP config: {update_status}")
+            if expected_path:
+                click.echo()
+                click.echo("Please manually add this to your Claude/Cursor config:")
+                click.echo()
+                if sys.platform == "win32":
+                    click.echo(f"  Claude: %APPDATA%\\Claude\\claude_desktop_config.json")
+                    click.echo(f"  Cursor: %APPDATA%\\Cursor\\mcp.json")
+                else:
+                    click.echo(f"  Claude: ~/.config/claude/mcp.json")
+                    click.echo(f"  Cursor: ~/.cursor/mcp.json")
+                click.echo()
+                click.echo("{")
+                click.echo('  "mcpServers": {')
+                click.echo('    "mind": {')
+                click.echo('      "command": "uv",')
+                args_json = json.dumps(["--directory", expected_path, "run", "mind", "mcp"])
+                click.echo(f'      "args": {args_json}')
+                click.echo("    }")
+                click.echo("  }")
+                click.echo("}")
 
     click.echo()
     click.echo("Mind initialized! Ready to remember.")

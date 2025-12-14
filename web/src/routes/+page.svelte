@@ -276,7 +276,7 @@ Done.`,
 	<p class="subtitle">
 		Memory for Claude Code that persists across sessions.
 		Decisions, learnings, and reminders.
-		Install with 2 commands. Free forever.
+		Install with 3 commands. Free forever.
 	</p>
 
 	<div class="terminal">
@@ -558,7 +558,7 @@ Done.`,
 
 <section class="get-started-cta">
 	<h2>Ready to Give Claude a <span class="highlight">Mind</span>?</h2>
-	<p>2 commands. Zero friction.</p>
+	<p>3 steps. Zero friction.</p>
 
 	<div class="install-steps">
 		<div class="install-step">

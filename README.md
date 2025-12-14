@@ -14,7 +14,7 @@ Mind fixes both problems with two-layer memory:
 
 ## Why Mind?
 
-**2 commands.** Install, init. Done.
+**3 steps.** Install, init, connect. Done.
 
 **Fully automated.** Memory just works - no commands required:
 - Claude writes memories as it works
@@ -39,7 +39,7 @@ Optional tools are there when you want them, but the core memory flow runs hands
 
 ## Ready to Give Claude a Mind?
 
-**2 commands. Zero friction.**
+**3 steps. Zero friction.**
 
 ### 1. Install Mind
 

@@ -1,2 +1,3 @@
-.index/
-state.json
+# Mind files are personal/local - don't commit
+*
+!.gitignore

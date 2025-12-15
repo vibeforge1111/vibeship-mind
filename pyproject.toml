@@ -8,6 +8,7 @@ dependencies = [
     "click>=8.1.0",
     "watchfiles>=0.21.0",
     "mcp>=1.0.0",
+    "sentence-transformers>=2.2.0",
 ]
 
 [project.scripts]

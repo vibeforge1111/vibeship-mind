@@ -7,7 +7,14 @@
 		<!-- Amplitude Analytics -->
 		<script src="https://cdn.amplitude.com/libs/analytics-browser-2.11.1-min.js.gz"></script>
 		<script>
-			window.amplitude.init("ee065fa97abc603b7a93b1bdf831626d");
+			window.amplitude.init("ee065fa97abc603b7a93b1bdf831626d", {
+				defaultTracking: {
+					sessions: true,
+					pageViews: true,
+					formInteractions: false,
+					fileDownloads: false
+				}
+			});
 		</script>
 	</head>
 	<body data-sveltekit-preload-data="hover">

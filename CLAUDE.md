@@ -51,6 +51,141 @@ python
 (None yet - add to .mind/MEMORY.md Gotchas section)
 <!-- MIND:END -->
 
+## Memory (Mind)
+
+This project uses Mind for persistent memory across sessions.
+
+### Required Protocol
+
+1. **Session Start**: ALWAYS call `mind_recall()` before responding to the first message. This loads context from previous sessions.
+
+2. **During Work**: Use `mind_log(message, type)` to capture what happens:
+   - `mind_log("chose X over Y - simpler", type="decision")` â†’ MEMORY.md
+   - `mind_log("API returns 500 on large payloads", type="problem")` â†’ MEMORY.md
+   - `mind_log("Safari needs vendor prefix for X", type="learning")` â†’ MEMORY.md
+   - `mind_log("resolved by increasing timeout", type="progress")` â†’ MEMORY.md
+   - `mind_log("working on auth flow", type="experience")` â†’ SESSION.md
+   - `mind_log("build keeps failing", type="blocker")` â†’ SESSION.md
+   - `mind_log("tried Redis - too complex", type="rejected")` â†’ SESSION.md
+   - `mind_log("assuming user has stable internet", type="assumption")` â†’ SESSION.md
+
+3. **Session End**: Summarize with `## DATE | what happened | mood: X`
+
+### Two-Layer Memory
+
+**MEMORY.md** (permanent, cross-session):
+- Decisions, learnings, problems, progress
+- Use types: `decision`, `learning`, `problem`, `progress`
+
+**SESSION.md** (ephemeral, within-session):
+- Raw experience, blockers, rejected approaches, assumptions
+- Use types: `experience`, `blocker`, `rejected`, `assumption`
+- Valuable items get promoted to MEMORY.md on session gap (>30 min)
+
+### Tools Available
+
+- `mind_recall()` - Load session context (CALL FIRST!)
+- `mind_log(msg, type)` - Log to session or memory (routes by type)
+- `mind_session()` - Get current session state
+- `mind_blocker(description)` - Log blocker + auto-search memory for solutions
+- `mind_search(query)` - Find specific memories
+- `mind_remind(msg, when)` - Set time or context reminder
+- `mind_checkpoint()` - Force process pending memories
+- `mind_edges(intent)` - Check for gotchas before coding
+- `mind_status()` - Check memory health
+
+---
+
+## Memory (Mind)
+
+This project uses Mind for persistent memory across sessions.
+
+### Required Protocol
+
+1. **Session Start**: ALWAYS call `mind_recall()` before responding to the first message. This loads context from previous sessions.
+
+2. **During Work**: Use `mind_log(message, type)` to capture what happens:
+   - `mind_log("chose X over Y - simpler", type="decision")` Ã¢â€ â€™ MEMORY.md
+   - `mind_log("API returns 500 on large payloads", type="problem")` Ã¢â€ â€™ MEMORY.md
+   - `mind_log("Safari needs vendor prefix for X", type="learning")` Ã¢â€ â€™ MEMORY.md
+   - `mind_log("resolved by increasing timeout", type="progress")` Ã¢â€ â€™ MEMORY.md
+   - `mind_log("working on auth flow", type="experience")` Ã¢â€ â€™ SESSION.md
+   - `mind_log("build keeps failing", type="blocker")` Ã¢â€ â€™ SESSION.md
+   - `mind_log("tried Redis - too complex", type="rejected")` Ã¢â€ â€™ SESSION.md
+   - `mind_log("assuming user has stable internet", type="assumption")` Ã¢â€ â€™ SESSION.md
+
+3. **Session End**: Summarize with `## DATE | what happened | mood: X`
+
+### Two-Layer Memory
+
+**MEMORY.md** (permanent, cross-session):
+- Decisions, learnings, problems, progress
+- Use types: `decision`, `learning`, `problem`, `progress`
+
+**SESSION.md** (ephemeral, within-session):
+- Raw experience, blockers, rejected approaches, assumptions
+- Use types: `experience`, `blocker`, `rejected`, `assumption`
+- Valuable items get promoted to MEMORY.md on session gap (>30 min)
+
+### Tools Available
+
+- `mind_recall()` - Load session context (CALL FIRST!)
+- `mind_log(msg, type)` - Log to session or memory (routes by type)
+- `mind_session()` - Get current session state
+- `mind_blocker(description)` - Log blocker + auto-search memory for solutions
+- `mind_search(query)` - Find specific memories
+- `mind_remind(msg, when)` - Set time or context reminder
+- `mind_checkpoint()` - Force process pending memories
+- `mind_edges(intent)` - Check for gotchas before coding
+- `mind_status()` - Check memory health
+
+---
+
+## Memory (Mind)
+
+This project uses Mind for persistent memory across sessions.
+
+### Required Protocol
+
+1. **Session Start**: ALWAYS call `mind_recall()` before responding to the first message. This loads context from previous sessions.
+
+2. **During Work**: Use `mind_log(message, type)` to capture what happens:
+   - `mind_log("chose X over Y - simpler", type="decision")` ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ MEMORY.md
+   - `mind_log("API returns 500 on large payloads", type="problem")` ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ MEMORY.md
+   - `mind_log("Safari needs vendor prefix for X", type="learning")` ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ MEMORY.md
+   - `mind_log("resolved by increasing timeout", type="progress")` ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ MEMORY.md
+   - `mind_log("working on auth flow", type="experience")` ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ SESSION.md
+   - `mind_log("build keeps failing", type="blocker")` ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ SESSION.md
+   - `mind_log("tried Redis - too complex", type="rejected")` ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ SESSION.md
+   - `mind_log("assuming user has stable internet", type="assumption")` ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ SESSION.md
+
+3. **Session End**: Summarize with `## DATE | what happened | mood: X`
+
+### Two-Layer Memory
+
+**MEMORY.md** (permanent, cross-session):
+- Decisions, learnings, problems, progress
+- Use types: `decision`, `learning`, `problem`, `progress`
+
+**SESSION.md** (ephemeral, within-session):
+- Raw experience, blockers, rejected approaches, assumptions
+- Use types: `experience`, `blocker`, `rejected`, `assumption`
+- Valuable items get promoted to MEMORY.md on session gap (>30 min)
+
+### Tools Available
+
+- `mind_recall()` - Load session context (CALL FIRST!)
+- `mind_log(msg, type)` - Log to session or memory (routes by type)
+- `mind_session()` - Get current session state
+- `mind_blocker(description)` - Log blocker + auto-search memory for solutions
+- `mind_search(query)` - Find specific memories
+- `mind_remind(msg, when)` - Set time or context reminder
+- `mind_checkpoint()` - Force process pending memories
+- `mind_edges(intent)` - Check for gotchas before coding
+- `mind_status()` - Check memory health
+
+---
+
 # CRITICAL: Call mind_recall() FIRST
 
 **At the start of EVERY session, call `mind_recall()` before doing anything else.**

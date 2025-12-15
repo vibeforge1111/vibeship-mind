@@ -109,7 +109,7 @@ def parse_session_section(content: str, section_name: str) -> list[str]:
 
 
 # Loop detection - use semantic similarity module
-from ..similarity import find_similar_rejection, is_semantic_available
+from ..similarity import find_similar_rejection
 
 
 def extract_promotable_learnings(session_content: str) -> list[dict]:
@@ -1800,9 +1800,8 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
         # Add loop warning if detected (for rejected type)
         if entry_type == "rejected" and loop_warning:
             output["loop_warning"] = loop_warning
-            method = loop_warning.get('method', 'keyword')
             similarity = loop_warning.get('similarity', 0)
-            msg = f"WARNING: Similar rejection found! {similarity:.0%} similar ({method})"
+            msg = f"WARNING: Similar rejection found! {similarity:.0%} similar"
             return [TextContent(type="text", text=mindful_response("warning", output, msg))]
 
         msg = f"{entry_type} -> {target}"

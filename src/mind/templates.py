@@ -93,8 +93,9 @@ This project uses Mind for persistent memory across sessions.
 (None yet - add to .mind/MEMORY.md Gotchas section)
 <!-- MIND:END -->"""
 
-GITIGNORE_CONTENT = """.index/
-state.json
+GITIGNORE_CONTENT = """# Mind files are personal/local - don't commit
+*
+!.gitignore
 """
 
 SELF_IMPROVE_TEMPLATE = """<!-- MIND SELF-IMPROVEMENT - Cross-project patterns about YOU

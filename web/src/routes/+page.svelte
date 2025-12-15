@@ -295,6 +295,9 @@ Done.`,
 	onMount(() => {
 		if (!browser) return;
 
+		// Track page view immediately
+		track('Page Viewed', { page: 'landing' });
+
 		// Scroll depth tracking
 		const handleScroll = () => {
 			const scrollTop = window.scrollY;

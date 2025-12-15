@@ -1,9 +1,9 @@
-"""Semantic similarity for loop detection.
+"""Semantic similarity for loop detection and search.
 
 Uses sentence-transformers for embedding-based similarity.
 """
 
-from typing import Optional
+from typing import Optional, Any
 
 # Lazy-loaded model (expensive to load, so do it only when needed)
 _model = None
@@ -89,3 +89,98 @@ def find_similar_rejection(
         }
 
     return None
+
+
+def semantic_search(
+    query: str,
+    items: list[dict[str, Any]],
+    content_key: str = "content",
+    threshold: float = 0.3,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    """Semantic search across a list of items.
+
+    Args:
+        query: The search query
+        items: List of dicts containing content to search
+        content_key: Key in dict containing text to match against
+        threshold: Minimum similarity score to include (0.0-1.0)
+        limit: Maximum results to return
+
+    Returns:
+        List of items with similarity scores, sorted by relevance
+    """
+    if not query or not items:
+        return []
+
+    model = _get_model()
+    if model is None:
+        return []
+
+    # Get query embedding
+    query_embedding = model.encode(query)
+
+    # Get embeddings for all items
+    contents = [item.get(content_key, "") for item in items]
+    content_embeddings = model.encode(contents)
+
+    # Calculate similarities and attach to items
+    results = []
+    for i, item in enumerate(items):
+        similarity = cosine_similarity(query_embedding, content_embeddings[i])
+        if similarity >= threshold:
+            result = item.copy()
+            result["semantic_similarity"] = round(similarity, 3)
+            results.append(result)
+
+    # Sort by similarity descending
+    results.sort(key=lambda x: x["semantic_similarity"], reverse=True)
+    return results[:limit]
+
+
+def semantic_search_strings(
+    query: str,
+    strings: list[str],
+    threshold: float = 0.3,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    """Semantic search across a list of strings.
+
+    Args:
+        query: The search query
+        strings: List of strings to search
+        threshold: Minimum similarity score to include (0.0-1.0)
+        limit: Maximum results to return
+
+    Returns:
+        List of dicts with content and similarity scores
+    """
+    if not query or not strings:
+        return []
+
+    model = _get_model()
+    if model is None:
+        return []
+
+    # Get query embedding
+    query_embedding = model.encode(query)
+
+    # Get embeddings for all strings
+    string_embeddings = model.encode(strings)
+
+    # Calculate similarities
+    results = []
+    for i, s in enumerate(strings):
+        if not s.strip():
+            continue
+        similarity = cosine_similarity(query_embedding, string_embeddings[i])
+        if similarity >= threshold:
+            results.append({
+                "content": s,
+                "line_index": i,
+                "semantic_similarity": round(similarity, 3),
+            })
+
+    # Sort by similarity descending
+    results.sort(key=lambda x: x["semantic_similarity"], reverse=True)
+    return results[:limit]

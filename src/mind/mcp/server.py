@@ -108,8 +108,8 @@ def parse_session_section(content: str, section_name: str) -> list[str]:
     return items
 
 
-# Loop detection - use semantic similarity module
-from ..similarity import find_similar_rejection
+# Semantic similarity module - for loop detection and search
+from ..similarity import find_similar_rejection, semantic_search, semantic_search_strings
 
 
 def extract_promotable_learnings(session_content: str) -> list[dict]:
@@ -551,39 +551,54 @@ def search_entities(
     types: Optional[list[str]] = None,
     limit: int = 10,
 ) -> list[dict]:
-    """Simple keyword search across entities."""
+    """Semantic search across entities with keyword fallback."""
+    # Filter by type first
+    filtered = entities
+    if types:
+        filtered = [e for e in entities if e.type.value in types]
+
+    if not filtered:
+        return []
+
+    # Convert entities to dicts for semantic search
+    items = []
+    for entity in filtered:
+        items.append({
+            "type": entity.type.value,
+            "title": entity.title,
+            "content": entity.content,
+            "reasoning": entity.reasoning,
+            "status": entity.status.value if entity.status else None,
+            "date": entity.date.isoformat() if entity.date else None,
+            "source_file": entity.source_file,
+            "source_line": entity.source_line,
+            "confidence": entity.confidence,
+            "source": "indexed",
+        })
+
+    # Try semantic search first
+    semantic_results = semantic_search(query, items, content_key="content", threshold=0.3, limit=limit)
+
+    if semantic_results:
+        # Map semantic_similarity to relevance for compatibility
+        for r in semantic_results:
+            r["relevance"] = r.pop("semantic_similarity")
+        return semantic_results
+
+    # Fallback to keyword search if semantic returns nothing
     query_lower = query.lower()
     query_words = set(query_lower.split())
-
     results = []
 
-    for entity in entities:
-        # Filter by type
-        if types and entity.type.value not in types:
-            continue
-
-        # Score by keyword match
-        content_lower = entity.content.lower()
-        title_lower = entity.title.lower()
-
-        # Count matching words
+    for item in items:
+        content_lower = item["content"].lower()
+        title_lower = item["title"].lower()
         matches = sum(1 for word in query_words if word in content_lower or word in title_lower)
 
         if matches > 0:
             relevance = matches / len(query_words)
-            results.append({
-                "type": entity.type.value,
-                "title": entity.title,
-                "content": entity.content,
-                "reasoning": entity.reasoning,
-                "status": entity.status.value if entity.status else None,
-                "date": entity.date.isoformat() if entity.date else None,
-                "source_file": entity.source_file,
-                "source_line": entity.source_line,
-                "confidence": entity.confidence,
-                "relevance": relevance,
-                "source": "indexed",
-            })
+            item["relevance"] = relevance
+            results.append(item)
 
     # Sort by relevance, then confidence
     results.sort(key=lambda r: (r["relevance"], r["confidence"]), reverse=True)
@@ -592,22 +607,53 @@ def search_entities(
 
 
 def search_raw_content(content: str, query: str, limit: int = 10) -> list[dict]:
-    """Search raw MEMORY.md content for unparsed matches (same-session support)."""
+    """Semantic search raw MEMORY.md content for unparsed matches (same-session support)."""
+    lines = content.split("\n")
+    # Filter out empty lines and headers
+    valid_lines = [(i, line.strip()) for i, line in enumerate(lines) if line.strip() and not line.startswith("#")]
+
+    if not valid_lines:
+        return []
+
+    # Try semantic search first
+    strings = [line for _, line in valid_lines]
+    semantic_results = semantic_search_strings(query, strings, threshold=0.3, limit=limit)
+
+    if semantic_results:
+        results = []
+        for r in semantic_results:
+            # Find original line index
+            original_idx = valid_lines[r["line_index"]][0]
+            results.append({
+                "type": "raw",
+                "title": r["content"][:100],
+                "content": r["content"],
+                "reasoning": None,
+                "status": None,
+                "date": None,
+                "source_file": "MEMORY.md",
+                "source_line": original_idx + 1,
+                "confidence": 0.5,
+                "relevance": r["semantic_similarity"],
+                "source": "unparsed",
+            })
+        return results
+
+    # Fallback to keyword search
     query_lower = query.lower()
     query_words = set(query_lower.split())
     results = []
 
-    lines = content.split("\n")
-    for i, line in enumerate(lines):
+    for i, line in valid_lines:
         line_lower = line.lower()
         matches = sum(1 for word in query_words if word in line_lower)
 
-        if matches > 0 and line.strip():
+        if matches > 0:
             relevance = matches / len(query_words)
             results.append({
                 "type": "raw",
-                "title": line.strip()[:100],
-                "content": line.strip(),
+                "title": line[:100],
+                "content": line,
                 "reasoning": None,
                 "status": None,
                 "date": None,

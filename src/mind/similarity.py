@@ -82,10 +82,41 @@ def find_similar_rejection(
             best_match = existing
 
     if best_match:
+        # Enhanced methodology suggestion based on severity
+        if best_similarity > 0.9:
+            methodology = (
+                "STOP - You're repeating an exact approach that failed before.\n"
+                "1. Call mind_session() to see all rejected approaches\n"
+                "2. Identify what's ACTUALLY different this time\n"
+                "3. If nothing is different, ask the user for a new direction"
+            )
+            severity = "critical"
+        elif best_similarity > 0.75:
+            methodology = (
+                "WARNING - This is very similar to a previous failed attempt.\n"
+                "1. Call mind_session() to review what was tried\n"
+                "2. Question your assumptions - what are you assuming is true?\n"
+                "3. Consider: Is the root cause somewhere else entirely?"
+            )
+            severity = "high"
+        else:
+            methodology = (
+                "CAUTION - Similar approach was tried before.\n"
+                "1. Call mind_session() to check the Rejected section\n"
+                "2. What makes this attempt meaningfully different?"
+            )
+            severity = "moderate"
+
         return {
             "similar_to": best_match,
             "similarity": round(best_similarity, 2),
-            "suggestion": "You may be looping. Call mind_session() to review all attempts before trying again."
+            "severity": severity,
+            "methodology": methodology,
+            "spawn_suggestion": (
+                "If stuck after 3+ attempts, consider: mind_blocker() to log the issue "
+                "and search memory for solutions, or ask the user if they want to spawn "
+                "a fresh agent to investigate."
+            ),
         }
 
     return None

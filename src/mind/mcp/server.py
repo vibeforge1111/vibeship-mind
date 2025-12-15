@@ -2287,8 +2287,12 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
         # Add loop warning if detected (for rejected type)
         if entry_type == "rejected" and loop_warning:
             output["loop_warning"] = loop_warning
+            output["methodology"] = loop_warning.get("methodology", "")
+            output["spawn_suggestion"] = loop_warning.get("spawn_suggestion", "")
             similarity = loop_warning.get('similarity', 0)
-            msg = f"WARNING: Similar rejection found! {similarity:.0%} similar"
+            severity = loop_warning.get('severity', 'moderate')
+            severity_emoji = {"critical": "STOP", "high": "WARNING", "moderate": "CAUTION"}.get(severity, "WARNING")
+            msg = f"{severity_emoji}: {similarity:.0%} similar to previous rejection"
             return [TextContent(type="text", text=mindful_response("warning", output, msg))]
 
         # Add retrieved memories if found (for experience/blocker types)

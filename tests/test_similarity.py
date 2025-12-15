@@ -52,7 +52,9 @@ class TestFindSimilarRejection:
         assert result is not None
         assert result["similarity"] > 0.99
         assert "similar_to" in result
-        assert "suggestion" in result
+        assert "methodology" in result
+        assert "severity" in result
+        assert result["severity"] == "critical"  # >0.9 similarity
 
     def test_semantic_match(self):
         """Test that semantically similar rejections are caught."""
@@ -92,6 +94,55 @@ class TestFindSimilarRejection:
         )
         assert result is not None
         assert "timeout" in result["similar_to"].lower()
+
+
+class TestLoopWarningEnhancements:
+    """Test enhanced loop warning methodology."""
+
+    def test_critical_severity_for_exact_match(self):
+        """Exact matches (>90%) should be critical severity."""
+        rejections = ["tried increasing timeout - failed"]
+        result = find_similar_rejection("tried increasing timeout - failed", rejections)
+        assert result["severity"] == "critical"
+        assert "STOP" in result["methodology"]
+
+    def test_high_severity_for_very_similar(self):
+        """Very similar matches (75-90%) should be high severity."""
+        rejections = ["tried increasing timeout to 30s - didn't work"]
+        # This should be similar but not exact
+        result = find_similar_rejection(
+            "increased the timeout value to 30 seconds - still failing",
+            rejections,
+            threshold=0.5
+        )
+        if result and 0.75 < result["similarity"] <= 0.9:
+            assert result["severity"] == "high"
+            assert "WARNING" in result["methodology"]
+
+    def test_moderate_severity_for_similar(self):
+        """Similar matches (60-75%) should be moderate severity."""
+        rejections = ["tried extending the wait duration - no improvement"]
+        result = find_similar_rejection(
+            "bump up the timeout",
+            rejections,
+            threshold=0.5
+        )
+        if result and result["similarity"] <= 0.75:
+            assert result["severity"] == "moderate"
+            assert "CAUTION" in result["methodology"]
+
+    def test_methodology_includes_steps(self):
+        """Methodology should include actionable steps."""
+        rejections = ["tried X - failed"]
+        result = find_similar_rejection("tried X - failed", rejections)
+        assert "mind_session()" in result["methodology"]
+
+    def test_spawn_suggestion_present(self):
+        """Spawn suggestion should be included."""
+        rejections = ["tried X - failed"]
+        result = find_similar_rejection("tried X - failed", rejections)
+        assert "spawn_suggestion" in result
+        assert "mind_blocker()" in result["spawn_suggestion"]
 
 
 class TestRealWorldScenarios:

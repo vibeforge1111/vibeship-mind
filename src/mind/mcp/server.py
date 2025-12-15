@@ -108,6 +108,47 @@ def parse_session_section(content: str, section_name: str) -> list[str]:
     return items
 
 
+# Loop detection helpers
+STOP_WORDS = {
+    "the", "and", "for", "with", "that", "this", "from", "have", "not", "but",
+    "are", "was", "been", "will", "would", "could", "should", "can", "may",
+    "into", "then", "than", "also", "just", "more", "some", "such", "when",
+}
+
+
+def extract_keywords(text: str) -> set[str]:
+    """Extract meaningful keywords from text (3+ chars, skip stop words)."""
+    words = re.findall(r'\b[a-zA-Z]{3,}\b', text.lower())
+    return {w for w in words if w not in STOP_WORDS}
+
+
+def check_similar_rejection(new_message: str, existing_rejections: list[str], threshold: float = 0.5) -> Optional[dict]:
+    """Check if new message is similar to existing rejections.
+
+    Returns dict with similar_to, overlap, suggestion if match found, else None.
+    """
+    new_keywords = extract_keywords(new_message)
+    if not new_keywords:
+        return None
+
+    for existing in existing_rejections:
+        existing_keywords = extract_keywords(existing)
+        if not existing_keywords:
+            continue
+
+        # Calculate overlap as intersection / smaller set
+        overlap = len(new_keywords & existing_keywords) / min(len(new_keywords), len(existing_keywords))
+
+        if overlap >= threshold:
+            return {
+                "similar_to": existing,
+                "overlap": round(overlap, 2),
+                "suggestion": "You may be looping. Call mind_session() to review all attempts before trying again."
+            }
+
+    return None
+
+
 def extract_promotable_learnings(session_content: str) -> list[dict]:
     """Extract items from SESSION.md worth promoting to MEMORY.md.
 
@@ -1738,6 +1779,7 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
     success = False
     target = "unknown"
     contradiction_info = None
+    loop_warning = None
 
     if entry_type in global_types:
         # Write to SELF_IMPROVE.md (global, cross-project)
@@ -1752,6 +1794,14 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
         session_file = get_session_file(project_path)
         if not session_file.exists():
             clear_session_file(project_path)
+
+        # Loop detection: check for similar rejections before logging
+        loop_warning = None
+        if entry_type == "rejected":
+            session_content = read_session_file(project_path)
+            if session_content:
+                existing_rejections = parse_session_section(session_content, "Rejected")
+                loop_warning = check_similar_rejection(message, existing_rejections)
 
         # Map type to section
         section_map = {
@@ -1783,6 +1833,13 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
             "type": entry_type,
             "target": target,
         }
+
+        # Add loop warning if detected (for rejected type)
+        if entry_type == "rejected" and loop_warning:
+            output["loop_warning"] = loop_warning
+            msg = f"WARNING: Similar rejection found! {loop_warning['overlap']:.0%} overlap"
+            return [TextContent(type="text", text=mindful_response("warning", output, msg))]
+
         msg = f"{entry_type} -> {target}"
         return [TextContent(type="text", text=mindful_response("log", output, msg))]
     elif contradiction_info:

@@ -668,6 +668,84 @@ def search_raw_content(content: str, query: str, limit: int = 10) -> list[dict]:
     return results[:limit]
 
 
+def retrieve_relevant_memories(
+    query_text: str,
+    memory_file: Path,
+    threshold: float = 0.5,
+    limit: int = 3,
+) -> list[dict]:
+    """Retrieve memories semantically relevant to given text.
+
+    Used for Memory -> Session retrieval: surfacing past learnings
+    when user is working on something related.
+
+    Args:
+        query_text: Text to find relevant memories for (e.g., session content, experience log)
+        memory_file: Path to MEMORY.md
+        threshold: Minimum similarity to include (higher = more relevant)
+        limit: Max results to return
+
+    Returns:
+        List of relevant memories with similarity scores
+    """
+    if not query_text or not memory_file.exists():
+        return []
+
+    # Parse memory file
+    parser = Parser()
+    content = memory_file.read_text(encoding="utf-8")
+    result = parser.parse(content, str(memory_file))
+
+    if not result.entities:
+        return []
+
+    # Convert entities to searchable items
+    items = []
+    for entity in result.entities:
+        # Focus on learnings, decisions, and problems - the useful stuff
+        if entity.type.value in ("learning", "decision", "issue"):
+            items.append({
+                "type": entity.type.value,
+                "title": entity.title,
+                "content": entity.content,
+                "date": entity.date.isoformat() if entity.date else None,
+                "source_line": entity.source_line,
+            })
+
+    if not items:
+        return []
+
+    # Semantic search
+    results = semantic_search(query_text, items, content_key="content", threshold=threshold, limit=limit)
+
+    # Rename semantic_similarity to relevance for consistency
+    for r in results:
+        if "semantic_similarity" in r:
+            r["relevance"] = r.pop("semantic_similarity")
+
+    return results
+
+
+def format_relevant_memories(memories: list[dict]) -> str:
+    """Format retrieved memories for injection into response.
+
+    Args:
+        memories: List of memory dicts from retrieve_relevant_memories
+
+    Returns:
+        Formatted string for display
+    """
+    if not memories:
+        return ""
+
+    lines = ["## Relevant Past Memories", "Based on what you're working on:"]
+    for m in memories:
+        relevance_pct = int(m.get("relevance", 0) * 100)
+        lines.append(f"- [{m['type']}] {m['content'][:150]}{'...' if len(m['content']) > 150 else ''} ({relevance_pct}% relevant)")
+
+    return "\n".join(lines)
+
+
 def match_edges(
     intent: str,
     code: Optional[str],
@@ -1230,6 +1308,33 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
         if blocker_count >= 2:
             session_warnings.append(f"WARNING: {blocker_count} blockers logged - consider asking user for direction")
 
+    # Memory -> Session retrieval: surface relevant past memories based on session content
+    relevant_memories = []
+    if session_content:
+        # Combine session experiences into a query
+        experiences = parse_session_section(session_content, "Experience")
+        if experiences:
+            # Use recent experiences as query (last 3)
+            query_text = " ".join(experiences[-3:])
+            relevant_memories = retrieve_relevant_memories(
+                query_text,
+                memory_file,
+                threshold=0.5,
+                limit=3,
+            )
+
+            # Inject into context if we found relevant memories
+            if relevant_memories:
+                memories_section = format_relevant_memories(relevant_memories)
+                # Insert after Session Context or at the end
+                if "## Session Context" in context:
+                    context = context.replace(
+                        "## Session Context",
+                        f"{memories_section}\n\n## Session Context"
+                    )
+                else:
+                    context = context + f"\n\n{memories_section}"
+
     # Build self_improve summary for output
     self_improve_summary = None
     if self_improve_data.all_patterns():
@@ -1261,6 +1366,7 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
         "context": context,
         "session": session_state,
         "session_warnings": session_warnings if session_warnings else None,
+        "relevant_memories": relevant_memories if relevant_memories else None,
         "reminders_due": [{
             "message": r["message"],
             "due": r["due"],
@@ -1789,6 +1895,7 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
     target = "unknown"
     contradiction_info = None
     loop_warning = None
+    retrieved_memories = None
 
     if entry_type in global_types:
         # Write to SELF_IMPROVE.md (global, cross-project)
@@ -1799,10 +1906,32 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
         if result.get("action") == "contradiction_detected":
             contradiction_info = result.get("conflicts", [])
     elif entry_type in session_types:
+        # Memory retrieval for session types
+        retrieved_memories = None
         # Write to SESSION.md
         session_file = get_session_file(project_path)
         if not session_file.exists():
             clear_session_file(project_path)
+
+        # Memory -> Session retrieval for experience and blocker types
+        memory_file = project_path / ".mind" / "MEMORY.md"
+        if entry_type in ("experience", "blocker") and memory_file.exists():
+            # Check if this is first experience of session (session file empty or just created)
+            session_content = read_session_file(project_path)
+            experiences = parse_session_section(session_content, "Experience") if session_content else []
+
+            # Retrieve relevant memories if:
+            # - First experience log (empty experiences)
+            # - Any blocker log (always help when stuck)
+            should_retrieve = (entry_type == "experience" and len(experiences) == 0) or entry_type == "blocker"
+
+            if should_retrieve:
+                retrieved_memories = retrieve_relevant_memories(
+                    message,
+                    memory_file,
+                    threshold=0.5,
+                    limit=2,
+                )
 
         # Loop detection: check for similar rejections before logging (semantic similarity)
         loop_warning = None
@@ -1849,6 +1978,13 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
             similarity = loop_warning.get('similarity', 0)
             msg = f"WARNING: Similar rejection found! {similarity:.0%} similar"
             return [TextContent(type="text", text=mindful_response("warning", output, msg))]
+
+        # Add retrieved memories if found (for experience/blocker types)
+        if retrieved_memories:
+            output["relevant_memories"] = retrieved_memories
+            output["memory_hint"] = "You've dealt with similar before - check relevant_memories"
+            msg = f"{entry_type} -> {target} (found {len(retrieved_memories)} relevant memories)"
+            return [TextContent(type="text", text=mindful_response("log", output, msg))]
 
         msg = f"{entry_type} -> {target}"
         return [TextContent(type="text", text=mindful_response("log", output, msg))]

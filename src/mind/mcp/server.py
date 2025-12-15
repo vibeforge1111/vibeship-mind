@@ -298,6 +298,130 @@ def mark_as_superseded(memory_file: Path, line_number: int) -> bool:
     return True
 
 
+# Bug reusability signals - keywords that indicate the bug fix is worth remembering
+BUG_REUSABILITY_SIGNALS = {
+    # Platform/OS specific
+    "platforms": ["windows", "macos", "linux", "unix", "darwin", "win32", "posix"],
+    # Common libraries/frameworks
+    "libraries": [
+        "asyncio", "multiprocessing", "threading", "subprocess",
+        "requests", "aiohttp", "flask", "django", "fastapi",
+        "numpy", "pandas", "tensorflow", "pytorch",
+        "sqlalchemy", "psycopg", "mysql", "sqlite",
+        "redis", "celery", "rabbitmq",
+        "react", "vue", "angular", "nodejs", "express",
+    ],
+    # Error patterns
+    "errors": [
+        "exception", "error", "traceback", "stack",
+        "timeout", "deadlock", "race condition", "memory leak",
+        "segfault", "core dump", "out of memory", "oom",
+        "permission denied", "access denied", "auth",
+        "encoding", "unicode", "utf-8", "cp1252",
+        "import", "module not found", "dependency",
+    ],
+    # Technical concepts that hint at reusability
+    "concepts": [
+        "async", "await", "callback", "promise",
+        "lock", "mutex", "semaphore", "concurrent",
+        "cache", "memoize", "lazy", "eager",
+        "serialize", "deserialize", "json", "pickle",
+        "socket", "tcp", "http", "websocket",
+        "path", "file", "directory", "permission",
+    ],
+}
+
+
+def check_bug_reusability(content: str) -> dict:
+    """Check if a bug/problem is worth remembering based on reusability signals.
+
+    Args:
+        content: The bug/problem description
+
+    Returns:
+        Dict with:
+        - is_reusable: True if worth remembering
+        - signals: List of detected reusability signals
+        - score: Reusability score (0.0-1.0)
+        - suggestion: If not reusable, why not
+    """
+    content_lower = content.lower()
+    detected_signals = []
+    score = 0.0
+
+    # Check each category
+    for category, keywords in BUG_REUSABILITY_SIGNALS.items():
+        for keyword in keywords:
+            if keyword in content_lower:
+                detected_signals.append(f"{category}:{keyword}")
+                # Weight by category
+                if category == "platforms":
+                    score += 0.3  # Platform bugs are highly reusable
+                elif category == "libraries":
+                    score += 0.25  # Library bugs are often reusable
+                elif category == "errors":
+                    score += 0.2  # Error patterns useful
+                elif category == "concepts":
+                    score += 0.15  # Technical concepts somewhat useful
+
+    # Bonus for problem->solution structure
+    if "->" in content or "fixed by" in content_lower or "solution:" in content_lower:
+        score += 0.2
+        detected_signals.append("structure:problem->solution")
+
+    # Bonus for root cause
+    if "because" in content_lower or "root cause" in content_lower or "caused by" in content_lower:
+        score += 0.15
+        detected_signals.append("structure:root_cause")
+
+    # Cap at 1.0
+    score = min(score, 1.0)
+
+    # Threshold for reusability
+    is_reusable = score >= 0.3 or len(detected_signals) >= 2
+
+    suggestion = None
+    if not is_reusable:
+        suggestion = "This bug seems specific to this codebase. Consider adding platform/library context or root cause for future reference."
+
+    return {
+        "is_reusable": is_reusable,
+        "signals": detected_signals,
+        "score": round(score, 2),
+        "suggestion": suggestion,
+    }
+
+
+def format_bug_for_memory(content: str, signals: list[str]) -> str:
+    """Format a bug entry for MEMORY.md with structured format.
+
+    Args:
+        content: The bug description
+        signals: Detected reusability signals
+
+    Returns:
+        Formatted bug entry with tags
+    """
+    # Extract tags from signals
+    tags = set()
+    for signal in signals:
+        if ":" in signal:
+            category, keyword = signal.split(":", 1)
+            if category in ("platforms", "libraries"):
+                tags.add(keyword)
+
+    # Filter out tags that are already present in content
+    content_lower = content.lower()
+    new_tags = {tag for tag in tags if f"#{tag}" not in content_lower}
+
+    # Add tags suffix if any new tags
+    if new_tags:
+        tag_str = " ".join(f"#{tag}" for tag in sorted(new_tags))
+        content = f"{content} [{tag_str}]"
+
+    return content
+
+
 def append_to_memory(project_path: Path, learnings: list[dict]) -> int:
     """Append promoted learnings to MEMORY.md with novelty checking.
 
@@ -306,6 +430,8 @@ def append_to_memory(project_path: Path, learnings: list[dict]) -> int:
     - Link to similar entries (50-90% similar, low confidence)
     - Supersede old entries (50-90% similar, high confidence)
     - Add new entries (<50% similar)
+
+    For bug/problem entries, also checks reusability signals.
     """
     if not learnings:
         return 0
@@ -320,6 +446,17 @@ def append_to_memory(project_path: Path, learnings: list[dict]) -> int:
 
     for learning in learnings:
         content = learning["content"]
+        entry_type = learning.get("type", "learning")
+
+        # For problem/bug entries, check reusability
+        if entry_type == "problem":
+            reuse_check = check_bug_reusability(content)
+            if not reuse_check["is_reusable"]:
+                # Skip non-reusable bugs
+                skipped += 1
+                continue
+            # Format bug with tags
+            content = format_bug_for_memory(content, reuse_check["signals"])
 
         # Check novelty and get action
         result = check_novelty_and_link(content, memory_file)
@@ -337,7 +474,7 @@ def append_to_memory(project_path: Path, learnings: list[dict]) -> int:
             mark_as_superseded(memory_file, result["similar_entry"]["line"])
             superseded += 1
 
-        promoted.append({"type": learning["type"], "content": content})
+        promoted.append({"type": entry_type, "content": content})
 
     if not promoted:
         return 0

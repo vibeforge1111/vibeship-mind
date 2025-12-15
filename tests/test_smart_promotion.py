@@ -1,9 +1,98 @@
-"""Tests for smart promotion with novelty checking and link/supersede logic."""
+"""Tests for smart promotion with novelty checking, link/supersede logic, and bug filtering."""
 
 import pytest
 from pathlib import Path
 import tempfile
 import shutil
+
+
+class TestBugReusability:
+    """Tests for check_bug_reusability function."""
+
+    def test_platform_specific_bug_is_reusable(self):
+        """Platform-specific bugs should be marked reusable."""
+        from mind.mcp.server import check_bug_reusability
+
+        result = check_bug_reusability(
+            "Windows cp1252 encoding error when reading UTF-8 files"
+        )
+        assert result["is_reusable"] is True
+        assert result["score"] >= 0.3
+        assert any("windows" in s for s in result["signals"])
+        assert any("encoding" in s for s in result["signals"])
+
+    def test_library_bug_is_reusable(self):
+        """Library-specific bugs should be marked reusable."""
+        from mind.mcp.server import check_bug_reusability
+
+        result = check_bug_reusability(
+            "asyncio event loop was already closed - caused by not awaiting properly"
+        )
+        assert result["is_reusable"] is True
+        assert any("asyncio" in s for s in result["signals"])
+        assert any("root_cause" in s for s in result["signals"])
+
+    def test_generic_bug_not_reusable(self):
+        """Generic, codebase-specific bugs should not be marked reusable."""
+        from mind.mcp.server import check_bug_reusability
+
+        result = check_bug_reusability(
+            "the button color was wrong on the homepage"
+        )
+        assert result["is_reusable"] is False
+        assert result["suggestion"] is not None
+
+    def test_structured_bug_gets_bonus(self):
+        """Bugs with problem->solution structure get bonus points."""
+        from mind.mcp.server import check_bug_reusability
+
+        result = check_bug_reusability(
+            "timeout error -> fixed by increasing wait time"
+        )
+        assert result["is_reusable"] is True
+        assert any("problem->solution" in s for s in result["signals"])
+
+    def test_root_cause_bug_gets_bonus(self):
+        """Bugs with root cause explanation get bonus points."""
+        from mind.mcp.server import check_bug_reusability
+
+        # "because" alone (0.15) isn't enough - need another signal
+        # Adding "auth" (0.2) brings total to 0.35 which exceeds threshold
+        result = check_bug_reusability(
+            "auth token failed because the token was expired"
+        )
+        assert result["is_reusable"] is True
+        assert any("root_cause" in s for s in result["signals"])
+
+
+class TestFormatBugForMemory:
+    """Tests for format_bug_for_memory function."""
+
+    def test_adds_platform_tags(self):
+        """Should add platform tags to bug entry."""
+        from mind.mcp.server import format_bug_for_memory
+
+        signals = ["platforms:windows", "errors:encoding"]
+        result = format_bug_for_memory("encoding issue on Windows", signals)
+        assert "#windows" in result
+
+    def test_adds_library_tags(self):
+        """Should add library tags to bug entry."""
+        from mind.mcp.server import format_bug_for_memory
+
+        signals = ["libraries:asyncio", "concepts:async"]
+        result = format_bug_for_memory("asyncio deadlock issue", signals)
+        assert "#asyncio" in result
+
+    def test_no_duplicate_content(self):
+        """Should not duplicate content already having tags."""
+        from mind.mcp.server import format_bug_for_memory
+
+        signals = ["platforms:windows"]
+        content = "encoding issue [#windows]"
+        result = format_bug_for_memory(content, signals)
+        # Should not add duplicate tag
+        assert result.count("#windows") == 1
 
 
 class TestCheckNoveltyAndLink:
@@ -297,3 +386,31 @@ class TestSmartPromotionIntegration:
         else:
             # Added with link
             assert "[[MEMORY#" in final_content or count == 1
+
+    def test_reusable_bug_is_promoted(self, temp_project):
+        """A reusable bug should be promoted with tags."""
+        from mind.mcp.server import append_to_memory
+
+        learnings = [
+            {"type": "problem", "content": "Windows encoding error with UTF-8 files"}
+        ]
+        count = append_to_memory(temp_project, learnings)
+        assert count == 1
+
+        content = (temp_project / ".mind" / "MEMORY.md").read_text()
+        assert "encoding" in content.lower()
+        # Should have platform tag
+        assert "#windows" in content.lower()
+
+    def test_non_reusable_bug_is_skipped(self, temp_project):
+        """A non-reusable bug should be skipped."""
+        from mind.mcp.server import append_to_memory
+
+        learnings = [
+            {"type": "problem", "content": "the login button was misaligned"}
+        ]
+        count = append_to_memory(temp_project, learnings)
+        assert count == 0
+
+        content = (temp_project / ".mind" / "MEMORY.md").read_text()
+        assert "login button" not in content

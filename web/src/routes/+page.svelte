@@ -1,4 +1,14 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { browser } from '$app/environment';
+
+	// Amplitude tracking helper
+	function track(event: string, properties?: Record<string, any>) {
+		if (browser && typeof window !== 'undefined' && (window as any).amplitude) {
+			(window as any).amplitude.track(event, properties);
+		}
+	}
+
 	// Animated typing effect for the terminal
 	let terminalLines = $state<string[]>([]);
 	let currentLine = $state(0);
@@ -269,6 +279,63 @@ Done.`,
 		{ id: 'reading', label: 'Reading' },
 		{ id: 'actions', label: 'Actions' }
 	];
+
+	// Copy button click handler with tracking
+	function handleCopy(text: string, label: string, e: MouseEvent) {
+		navigator.clipboard.writeText(text);
+		const btn = e.currentTarget as HTMLButtonElement;
+		btn.textContent = 'Copied!';
+		setTimeout(() => btn.textContent = 'Copy', 2000);
+		track('Copy Button Clicked', { label, text });
+	}
+
+	// Scroll depth tracking
+	let scrollDepths = { 25: false, 50: false, 75: false, 100: false };
+
+	onMount(() => {
+		if (!browser) return;
+
+		// Scroll depth tracking
+		const handleScroll = () => {
+			const scrollTop = window.scrollY;
+			const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+			const scrollPercent = Math.round((scrollTop / docHeight) * 100);
+
+			for (const depth of [25, 50, 75, 100] as const) {
+				if (scrollPercent >= depth && !scrollDepths[depth]) {
+					scrollDepths[depth] = true;
+					track('Scroll Depth', { depth: `${depth}%` });
+				}
+			}
+		};
+
+		// Section view tracking with IntersectionObserver
+		const sections = document.querySelectorAll('section, .hero');
+		const observedSections = new Set<string>();
+
+		const observer = new IntersectionObserver((entries) => {
+			entries.forEach(entry => {
+				if (entry.isIntersecting) {
+					const section = entry.target;
+					const sectionName = section.querySelector('h2')?.textContent ||
+						(section.classList.contains('hero') ? 'Hero' : 'Unknown');
+
+					if (!observedSections.has(sectionName)) {
+						observedSections.add(sectionName);
+						track('Section Viewed', { section: sectionName });
+					}
+				}
+			});
+		}, { threshold: 0.3 });
+
+		sections.forEach(section => observer.observe(section));
+		window.addEventListener('scroll', handleScroll, { passive: true });
+
+		return () => {
+			observer.disconnect();
+			window.removeEventListener('scroll', handleScroll);
+		};
+	});
 </script>
 
 <div class="hero">
@@ -564,7 +631,7 @@ Done.`,
 		<div class="install-step">
 			<div class="step-label">1. Install Mind</div>
 			<div class="install-preview">
-				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('pip install vibeship-mind'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
+				<button class="copy-btn" onclick={(e) => handleCopy('pip install vibeship-mind', 'pip install', e)}>Copy</button>
 				<code>pip install vibeship-mind</code>
 			</div>
 		</div>
@@ -573,7 +640,7 @@ Done.`,
 			<div class="step-label">2. Initialize in your project</div>
 			<div class="step-explanation">Open a terminal in your project folder, then run:</div>
 			<div class="install-preview">
-				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('python -m mind init'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
+				<button class="copy-btn" onclick={(e) => handleCopy('python -m mind init', 'mind init', e)}>Copy</button>
 				<code>python -m mind init</code>
 			</div>
 			<div class="step-note">Run this in any folder where you want Claude to remember things</div>
@@ -583,7 +650,7 @@ Done.`,
 			<div class="step-label">3. Connect to Claude Code</div>
 			<div class="step-explanation">Copy and paste this to Claude:</div>
 			<div class="install-preview prompt-style">
-				<button class="copy-btn" onclick={(e) => { navigator.clipboard.writeText('Add Mind MCP server to my config. Use command "python" with args ["-m", "mind", "mcp"]'); e.currentTarget.textContent = 'Copied!'; setTimeout(() => e.currentTarget.textContent = 'Copy', 2000); }}>Copy</button>
+				<button class="copy-btn" onclick={(e) => handleCopy('Add Mind MCP server to my config. Use command "python" with args ["-m", "mind", "mcp"]', 'MCP config prompt', e)}>Copy</button>
 				<p class="prompt-text">Add Mind MCP server to my config. Use command "python" with args ["-m", "mind", "mcp"]</p>
 			</div>
 			<div class="step-note">Claude will set it up for you. Restart Claude Code after, and Mind works automatically.</div>

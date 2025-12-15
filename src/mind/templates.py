@@ -16,7 +16,9 @@ SESSION_TEMPLATE = """# Session: {date}
 """
 
 MEMORY_TEMPLATE = """<!-- MIND MEMORY - Append as you work. Write naturally.
-Keywords: decided, problem, learned, tried, fixed, blocked, KEY, important -->
+Keywords: decided, problem, learned, tried, fixed, blocked, KEY, important
+Wikilinks: Use [[MEMORY#L123]] to link to specific lines (Obsidian-compatible)
+Sync: To sync across devices, add .mind/ folder to your Obsidian vault -->
 
 # {project_name}
 
@@ -82,6 +84,7 @@ This project uses Mind for persistent memory across sessions.
 - `mind_checkpoint()` - Force process pending memories
 - `mind_edges(intent)` - Check for gotchas before coding
 - `mind_status()` - Check memory health
+- `mind_spawn_helper(problem)` - Package problem for fresh agent investigation
 
 ---
 

@@ -173,6 +173,20 @@ Suggestions:
 - Built-in sync service (leverage existing tools)
 - Obsidian plugin (future nice-to-have)
 
+## Obsidian Cloud Sync
+
+Want to sync your Mind memory across devices? Add `.mind/` to an Obsidian vault:
+
+1. **Simple:** Copy/symlink `.mind/` into your vault folder
+2. **Advanced:** Create a central vault for all project `.mind/` folders
+3. **Sync:** Use Obsidian Sync, iCloud, Syncthing, or any file sync
+
+Benefits:
+- Graph view shows connections between decisions, learnings, problems
+- Search across all memories with Obsidian's search
+- Wikilinks `[[MEMORY#L123]]` navigate between related entries
+- Version history via Obsidian's built-in git or sync versioning
+
 ## Dependencies
 
 - `sentence-transformers` (already installed)

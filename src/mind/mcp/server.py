@@ -29,6 +29,7 @@ from ..self_improve import (
     get_confidence_stats,
     filter_by_confidence,
 )
+from ..similarity import semantic_similarity, semantic_search, semantic_search_strings
 
 
 # Gap threshold for session detection (30 minutes)
@@ -159,8 +160,153 @@ def extract_promotable_learnings(session_content: str) -> list[dict]:
     return learnings
 
 
+def check_novelty_and_link(
+    new_content: str,
+    memory_file: Path,
+    novelty_threshold: float = 0.5,
+    supersede_confidence: float = 0.7,
+) -> dict:
+    """Check if content is novel vs existing memory, and determine link/supersede.
+
+    Args:
+        new_content: The content to check
+        memory_file: Path to MEMORY.md
+        novelty_threshold: Below this similarity = novel (will promote)
+        supersede_confidence: Above this confidence = supersede old entry
+
+    Returns:
+        Dict with:
+        - is_novel: True if should promote (not a duplicate)
+        - action: 'add' (new), 'link' (similar exists, low confidence), 'supersede' (similar exists, high confidence), 'skip' (duplicate)
+        - similar_entry: The similar entry if found
+        - similarity: Similarity score if found
+    """
+    if not memory_file.exists():
+        return {"is_novel": True, "action": "add", "similar_entry": None, "similarity": 0}
+
+    # Parse memory file
+    parser = Parser()
+    content = memory_file.read_text(encoding="utf-8")
+    result = parser.parse(content, str(memory_file))
+
+    if not result.entities:
+        return {"is_novel": True, "action": "add", "similar_entry": None, "similarity": 0}
+
+    # Find most similar existing entry
+    best_match = None
+    best_similarity = 0.0
+
+    for entity in result.entities:
+        similarity = semantic_similarity(new_content, entity.content)
+        if similarity > best_similarity:
+            best_similarity = similarity
+            best_match = entity
+
+    # Determine action based on similarity
+    if best_similarity < novelty_threshold:
+        # Novel - no similar entry exists
+        return {"is_novel": True, "action": "add", "similar_entry": None, "similarity": best_similarity}
+
+    if best_similarity > 0.9:
+        # Almost identical - skip (duplicate)
+        return {
+            "is_novel": False,
+            "action": "skip",
+            "similar_entry": {
+                "content": best_match.content,
+                "line": best_match.source_line,
+                "type": best_match.type.value,
+            },
+            "similarity": best_similarity,
+        }
+
+    # Similar entry exists - check confidence for link vs supersede
+    # For memory entries, we use similarity as a proxy for confidence
+    # Higher similarity to existing = more likely the new is a refinement (supersede)
+    # The idea: if you're saying almost the same thing again, you probably learned more
+    confidence = best_similarity
+
+    if confidence >= supersede_confidence:
+        # High confidence - supersede
+        return {
+            "is_novel": True,
+            "action": "supersede",
+            "similar_entry": {
+                "content": best_match.content,
+                "line": best_match.source_line,
+                "type": best_match.type.value,
+                "confidence": confidence,
+            },
+            "similarity": best_similarity,
+        }
+    else:
+        # Low confidence - link
+        return {
+            "is_novel": True,
+            "action": "link",
+            "similar_entry": {
+                "content": best_match.content,
+                "line": best_match.source_line,
+                "type": best_match.type.value,
+                "confidence": confidence,
+            },
+            "similarity": best_similarity,
+        }
+
+
+def format_with_link(content: str, similar_entry: dict) -> str:
+    """Format content with wikilink to similar entry.
+
+    Args:
+        content: The new content
+        similar_entry: Dict with content, line, type of similar entry
+
+    Returns:
+        Content with wikilink appended
+    """
+    # Create wikilink in Obsidian format
+    line = similar_entry.get("line", 0)
+    entry_type = similar_entry.get("type", "entry")
+    link = f"[[MEMORY#L{line}]]"
+    return f"{content} (see also: {link})"
+
+
+def mark_as_superseded(memory_file: Path, line_number: int) -> bool:
+    """Mark an entry in MEMORY.md as superseded.
+
+    Args:
+        memory_file: Path to MEMORY.md
+        line_number: Line number of entry to mark
+
+    Returns:
+        True if successful
+    """
+    if not memory_file.exists():
+        return False
+
+    lines = memory_file.read_text(encoding="utf-8").split("\n")
+
+    if line_number < 1 or line_number > len(lines):
+        return False
+
+    # Mark the line as superseded
+    idx = line_number - 1
+    if not lines[idx].startswith("[superseded]"):
+        lines[idx] = f"[superseded] {lines[idx]}"
+
+    memory_file.write_text("\n".join(lines), encoding="utf-8")
+    return True
+
+
 def append_to_memory(project_path: Path, learnings: list[dict]) -> int:
-    """Append promoted learnings to MEMORY.md."""
+    """Append promoted learnings to MEMORY.md with novelty checking.
+
+    Uses semantic similarity to:
+    - Skip duplicates (>90% similar)
+    - Link to similar entries (50-90% similar, low confidence)
+    - Supersede old entries (50-90% similar, high confidence)
+    - Add new entries (<50% similar)
+    """
     if not learnings:
         return 0
 
@@ -168,15 +314,44 @@ def append_to_memory(project_path: Path, learnings: list[dict]) -> int:
     if not memory_file.exists():
         return 0
 
-    content = memory_file.read_text(encoding="utf-8")
+    promoted = []
+    skipped = 0
+    superseded = 0
+
+    for learning in learnings:
+        content = learning["content"]
+
+        # Check novelty and get action
+        result = check_novelty_and_link(content, memory_file)
+
+        if result["action"] == "skip":
+            skipped += 1
+            continue
+
+        if result["action"] == "link" and result["similar_entry"]:
+            # Add with wikilink to similar entry
+            content = format_with_link(content, result["similar_entry"])
+
+        if result["action"] == "supersede" and result["similar_entry"]:
+            # Mark old entry as superseded
+            mark_as_superseded(memory_file, result["similar_entry"]["line"])
+            superseded += 1
+
+        promoted.append({"type": learning["type"], "content": content})
+
+    if not promoted:
+        return 0
+
+    # Read current content (may have been modified by supersede)
+    current_content = memory_file.read_text(encoding="utf-8")
 
     # Add learnings at the end
     additions = f"\n\n<!-- Promoted from SESSION.md on {date.today().isoformat()} -->\n"
-    for learning in learnings:
+    for learning in promoted:
         additions += f"{learning['content']}\n"
 
-    memory_file.write_text(content + additions, encoding="utf-8")
-    return len(learnings)
+    memory_file.write_text(current_content + additions, encoding="utf-8")
+    return len(promoted)
 
 
 # State file management

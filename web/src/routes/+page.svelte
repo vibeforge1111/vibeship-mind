@@ -2,10 +2,10 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 
-	// Amplitude tracking helper
+	// Amplitude tracking helper - always include source to distinguish from Scanner
 	function track(event: string, properties?: Record<string, any>) {
 		if (browser && typeof window !== 'undefined' && (window as any).amplitude) {
-			(window as any).amplitude.track(event, properties);
+			(window as any).amplitude.track(event, { ...properties, source: 'mind' });
 		}
 	}
 

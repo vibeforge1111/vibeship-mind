@@ -5,6 +5,27 @@ All notable changes to Mind will be documented in this file.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-12-15
+
+### Added
+- **Semantic similarity engine** - TF-IDF based similarity for smarter memory operations
+- **Semantic search** - `mind_search()` now uses semantic matching, not just keywords
+- **Loop detection** - Warns when logging rejected approaches similar to previous ones
+- **Loop warning severity** - Critical/High/Moderate levels with methodology hints
+- **Smart promotion** - Novelty checking prevents duplicate memories, links or supersedes similar entries
+- **Bug memory filter** - Scores bugs for reusability (platform/library bugs promoted, one-off bugs skipped)
+- **Memory → Session retrieval** - Relevant memories surfaced when logging experiences/blockers
+- **mind_spawn_helper tool** - Package problems for fresh agent investigation when stuck
+- **Obsidian compatibility** - Wikilink format hints in docs, `.mind/` folder works as Obsidian vault
+
+### Fixed
+- `mind_spawn_helper` undefined function error (parse_session_content)
+
+### Changed
+- Now 13 MCP tools (was 12)
+
+---
+
 ## [2.1.0] - 2025-12-13
 
 ### Added

@@ -1377,6 +1377,29 @@ def create_server() -> Server:
                     "required": ["index"],
                 },
             ),
+            Tool(
+                name="mind_spawn_helper",
+                description="Package current problem for a fresh agent investigation. Use when stuck after 3+ failed attempts. Returns a structured prompt that can be used to spawn a helper agent via Claude Code's Task tool.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "problem": {
+                            "type": "string",
+                            "description": "What you're stuck on",
+                        },
+                        "attempts": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "What you've already tried",
+                        },
+                        "hypothesis": {
+                            "type": "string",
+                            "description": "Your current theory about the root cause",
+                        },
+                    },
+                    "required": ["problem"],
+                },
+            ),
         ]
 
     @server.call_tool()
@@ -1407,6 +1430,8 @@ def create_server() -> Server:
             return await handle_log(arguments)
         elif name == "mind_reminder_done":
             return await handle_reminder_done(arguments)
+        elif name == "mind_spawn_helper":
+            return await handle_spawn_helper(arguments)
         else:
             return [TextContent(type="text", text=f"Unknown tool: {name}")]
 
@@ -2416,6 +2441,77 @@ async def handle_reminder_done(args: dict[str, Any]) -> list[TextContent]:
         }
 
     return [TextContent(type="text", text=json.dumps(output, indent=2))]
+
+
+async def handle_spawn_helper(args: dict[str, Any]) -> list[TextContent]:
+    """Handle mind_spawn_helper tool - package problem for fresh agent investigation."""
+    problem = args.get("problem")
+    attempts = args.get("attempts", [])
+    hypothesis = args.get("hypothesis", "")
+
+    if not problem:
+        return [TextContent(type="text", text="Error: problem description is required")]
+
+    project_path = get_current_project()
+    if not project_path:
+        return [TextContent(type="text", text="Error: No Mind project found")]
+
+    # Get current session state
+    session_state = None
+    session_file = get_session_file(project_path)
+    if session_file.exists():
+        session_content = session_file.read_text(encoding="utf-8")
+        session_state = parse_session_content(session_content)
+
+    # Build the agent prompt
+    rejected_approaches = session_state.get("rejected", []) if session_state else []
+    all_attempts = list(set(attempts + rejected_approaches))  # Combine and dedupe
+
+    agent_prompt = f"""## Investigation Task
+
+**Problem:** {problem}
+
+**Previous Attempts (DO NOT REPEAT THESE):**
+{chr(10).join(f"- {a}" for a in all_attempts) if all_attempts else "- (none documented)"}
+
+"""
+    if hypothesis:
+        agent_prompt += f"""**Current Hypothesis:** {hypothesis}
+
+"""
+
+    agent_prompt += """**Your Task:**
+1. Read the relevant code files to understand the context
+2. Identify what the previous attempts might have missed
+3. Look for root causes in different areas than already tried
+4. Either:
+   a) Implement a fix if you find the solution
+   b) Return a detailed analysis of what you found
+
+**Important:**
+- Do NOT try any approach listed under "Previous Attempts"
+- If you identify the same root cause as the hypothesis, dig deeper
+- Check for edge cases, race conditions, or assumptions that might be wrong
+- Consider if the problem is actually in a different location than expected
+
+Return your findings with:
+- What you discovered
+- Why previous attempts didn't work
+- Your recommended solution (or next investigation direction)
+"""
+
+    output = {
+        "success": True,
+        "agent_prompt": agent_prompt,
+        "usage": (
+            "Use Claude Code's Task tool with subagent_type='Explore' or 'general-purpose' "
+            "and pass the agent_prompt as the prompt parameter."
+        ),
+        "problem_summary": problem,
+        "attempts_count": len(all_attempts),
+    }
+
+    return [TextContent(type="text", text=mindful_response("spawn", output, "Agent prompt packaged"))]
 
 
 def run_server() -> None:

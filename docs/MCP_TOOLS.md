@@ -1,6 +1,6 @@
 # Mind MCP Tools
 
-<!-- doc-version: 2.1.0 | last-updated: 2025-12-13 -->
+<!-- doc-version: 2.2.0 | last-updated: 2025-12-15 -->
 
 Mind has **12 MCP tools**. The architecture is stateless - tools load and process on demand.
 
@@ -39,7 +39,7 @@ mind_log(message, type="experience")
 | `experience` | SESSION.md | Raw moments, thoughts |
 | `blocker` | SESSION.md | Things stopping progress |
 | `assumption` | SESSION.md | What you're assuming true |
-| `rejected` | SESSION.md | What didn't work and why |
+| `rejected` | SESSION.md | What didn't work and why (triggers loop detection) |
 | `decision` | MEMORY.md | Decided X because Y |
 | `learning` | MEMORY.md | Learned that X |
 | `problem` | MEMORY.md | Problem: X |
@@ -61,7 +61,7 @@ Returns session state with experience, blockers, rejected, assumptions.
 
 ### mind_search
 
-Search across memories when CLAUDE.md context isn't enough.
+Semantic search across memories when CLAUDE.md context isn't enough.
 
 ```python
 mind_search(query, scope="project", types=None, limit=10)
@@ -69,6 +69,8 @@ mind_search(query, scope="project", types=None, limit=10)
 
 - `scope` - "project" (current) or "all" (all registered projects)
 - `types` - Filter: "decision", "issue", "learning"
+
+**Semantic matching:** Uses TF-IDF similarity to rank results by relevance, not just keyword match. Returns `relevance` score (0-1) for each result.
 
 ### mind_status
 
@@ -151,6 +153,24 @@ mind_add_global_edge(title, description, workaround, detection, stack_tags=None,
 ```
 
 Use for platform/language issues, not project-specific. Project-specific gotchas go in MEMORY.md Gotchas section.
+
+---
+
+## Loop Detection
+
+When logging `type="rejected"`, Mind checks for similar previous rejections using semantic similarity.
+
+**Severity levels:**
+| Similarity | Severity | Meaning |
+|------------|----------|---------|
+| >95% | Critical | Exact match - you've tried this before |
+| >80% | High | Very similar approach |
+| >60% | Moderate | Similar enough to reconsider |
+
+**Response includes:**
+- `loop_warning` - Details of the similar rejection
+- `methodology` - Steps to break out of the loop
+- `spawn_suggestion` - Hint to use `mind_blocker()` or ask user for help
 
 ---
 

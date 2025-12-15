@@ -1,6 +1,6 @@
 # Mind
 
-<!-- doc-version: 2.1.1 | last-updated: 2025-12-15 -->
+<!-- doc-version: 2.2.0 | last-updated: 2025-12-15 -->
 
 > Mind gives Claude a mind - not just memory across sessions, but focus within them. It remembers what worked, what didn't, and what it's supposed to be building.
 
@@ -116,6 +116,15 @@ MCP config for source install:
 
 ---
 
+## What's New in 2.2.0
+
+- **Semantic Search** - `mind_search()` uses TF-IDF similarity, not just keywords
+- **Loop Detection** - Warns when you're about to repeat a rejected approach
+- **Smart Promotion** - Deduplicates memories, links related entries
+- **Memory <-> Session Flow** - Relevant memories surface when logging blockers
+
+---
+
 ## MCP Tools (12 total)
 
 **Core:**
@@ -134,7 +143,7 @@ MCP config for source install:
 | Tool | What it does |
 |------|--------------|
 | `mind_session()` | Check current session state |
-| `mind_search(query)` | Search past memories |
+| `mind_search(query)` | Semantic search past memories |
 | `mind_status()` | Check memory health |
 | `mind_reminders()` | List pending reminders |
 

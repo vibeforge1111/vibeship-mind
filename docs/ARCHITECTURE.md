@@ -1,6 +1,6 @@
 # Mind Architecture (v2)
 
-<!-- doc-version: 2.1.0 | last-updated: 2025-12-13 -->
+<!-- doc-version: 2.2.0 | last-updated: 2025-12-15 -->
 
 ## Overview
 
@@ -269,7 +269,28 @@ Last: Hero component CSS animations
 <!-- MIND:END -->
 ```
 
-### 5. Parser
+### 5. Semantic Similarity Engine
+
+Mind uses TF-IDF based similarity for intelligent memory operations:
+
+**Loop Detection:**
+When logging a `rejected` approach, Mind checks similarity against previous rejections. If >60% similar, it warns with severity levels:
+- Critical (>95%): Exact match - you've tried this before
+- High (>80%): Very similar approach
+- Moderate (>60%): Similar enough to reconsider
+
+**Smart Promotion:**
+When promoting SESSION.md items to MEMORY.md, Mind checks novelty:
+- Novel content: Added normally
+- Duplicate (>90%): Skipped
+- Similar (70-90%): Links to existing entry or supersedes it
+
+**Semantic Search:**
+`mind_search()` ranks results by TF-IDF relevance, not just keyword match.
+
+Lightweight implementation - no embeddings, no external API, works offline.
+
+### 6. Parser
 
 Loose extraction from natural language:
 
@@ -289,12 +310,12 @@ Loose extraction from natural language:
 
 See [archive/PARSER.md](archive/PARSER.md) for full specification.
 
-### 6. MCP Server (12 tools)
+### 7. MCP Server (12 tools)
 
 | Tool | Purpose | When to Use |
 |------|---------|-------------|
 | `mind_recall` | Load session context | **FIRST every session** |
-| `mind_log` | Log to session or memory | As you work |
+| `mind_log` | Log to session or memory (with loop detection) | As you work |
 | `mind_session` | Get current session state | Feeling lost or off-track |
 | `mind_search` | Semantic search | CLAUDE.md context isn't enough |
 | `mind_status` | Check health | Debugging |

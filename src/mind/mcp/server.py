@@ -2461,7 +2461,12 @@ async def handle_spawn_helper(args: dict[str, Any]) -> list[TextContent]:
     session_file = get_session_file(project_path)
     if session_file.exists():
         session_content = session_file.read_text(encoding="utf-8")
-        session_state = parse_session_content(session_content)
+        session_state = {
+            "experience": parse_session_section(session_content, "Experience"),
+            "blockers": parse_session_section(session_content, "Blockers"),
+            "rejected": parse_session_section(session_content, "Rejected"),
+            "assumptions": parse_session_section(session_content, "Assumptions"),
+        }
 
     # Build the agent prompt
     rejected_approaches = session_state.get("rejected", []) if session_state else []

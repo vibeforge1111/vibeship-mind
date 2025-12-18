@@ -1,6 +1,6 @@
 # Mind
 
-<!-- doc-version: 2.2.0 | last-updated: 2025-12-15 -->
+<!-- doc-version: 2.3.0 | last-updated: 2025-12-18 -->
 
 > Mind gives Claude a mind - not just memory across sessions, but focus within them. It remembers what worked, what didn't, and what it's supposed to be building.
 
@@ -45,6 +45,11 @@ Optional tools are there when you want them, but the core memory flow runs hands
 
 ```bash
 pip install vibeship-mind
+```
+
+To upgrade to the latest version:
+```bash
+pip install vibeship-mind --upgrade
 ```
 
 ### 2. Initialize in your project
@@ -116,7 +121,13 @@ MCP config for source install:
 
 ---
 
-## What's New in 2.2.0
+## What's New in 2.3.0
+
+- **Logging Levels** - Choose Efficient/Balanced/Detailed modes to control what gets logged
+- **Usage-Based Retention** - Memories decay if unused, stay relevant if accessed frequently
+- **413 Tests** - Comprehensive test coverage for stability
+
+### Previous (2.2.0)
 
 - **Semantic Search** - `mind_search()` uses TF-IDF similarity, not just keywords
 - **Loop Detection** - Warns when you're about to repeat a rejected approach

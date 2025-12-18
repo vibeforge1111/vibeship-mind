@@ -393,7 +393,7 @@ Done.`,
 
 <section class="features">
 	<h2><span class="warning-badge">!</span> without Mind</h2>
-	<p class="section-subtitle">Without memory, Claude starts every session blank. These problems go away.</p>
+	<p class="section-subtitle">Every vibe coder knows these struggles that come from LLMs not having enough memory:</p>
 
 	<div class="feature-grid">
 		<div class="feature">

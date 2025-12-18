@@ -1,6 +1,6 @@
 [project]
 name = "vibeship-mind"
-version = "2.2.0"
+version = "2.3.0"
 description = "File-based memory system for AI coding assistants"
 readme = "README.md"
 requires-python = ">=3.11"

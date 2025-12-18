@@ -1515,6 +1515,7 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
     # SESSION.md handling - process old session if gap detected
     promoted_count = 0
     learning_styles_promoted = 0
+    decayed_count = 0
     session_content = None
     if gap_detected:
         old_session = read_session_file(project_path)
@@ -1525,6 +1526,11 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
 
             # Clear SESSION.md for new session
             clear_session_file(project_path)
+
+        # Apply memory decay (usage-based retention)
+        from ..retention import decay_memories
+        decay_result = decay_memories(project_path)
+        decayed_count = decay_result.get("decayed", 0)
 
         # Phase 6: Initialize pattern metadata for decay tracking
         # Phase 9: Extract and promote learning styles from feedback
@@ -1854,6 +1860,13 @@ async def handle_search(args: dict[str, Any]) -> list[TextContent]:
         project_path = get_current_project()
         if project_path:
             touch_activity(project_path)
+
+            # Track search result access for usage-based retention
+            if merged:
+                from ..retention import track_memory_access
+                for result in merged[:3]:  # Track top 3 results
+                    if "title" in result:
+                        track_memory_access(project_path, result["title"])
 
     match_count = len(output.get("results", []))
     message = f"Found {match_count} matches" if match_count else "No matches found"
@@ -2278,6 +2291,8 @@ def auto_categorize_session_type(message: str) -> str:
 
 async def handle_log(args: dict[str, Any]) -> list[TextContent]:
     """Handle mind_log tool - route to SESSION.md, MEMORY.md, or SELF_IMPROVE.md based on type."""
+    from ..logging_levels import get_logging_level, should_log_message
+
     message = args.get("message", "")
     explicit_type = args.get("type", None)
 
@@ -2296,6 +2311,21 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
     project_path = get_current_project()
     if not project_path:
         return [TextContent(type="text", text="Error: No Mind project found")]
+
+    # Check logging level filtering
+    logging_level = get_logging_level(project_path)
+    should_log, skip_reason = should_log_message(message, entry_type, logging_level)
+
+    if not should_log:
+        # Return early - message filtered based on logging level
+        output = {
+            "success": True,
+            "action": "filtered",
+            "type": entry_type,
+            "logging_level": logging_level,
+            "reason": skip_reason,
+        }
+        return [TextContent(type="text", text=mindful_response("skip", output, skip_reason or "Filtered"))]
 
     # Handle reinforce type specially - boosts pattern confidence
     if entry_type == "reinforce":

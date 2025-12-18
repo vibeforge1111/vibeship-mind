@@ -685,19 +685,27 @@ Done.`,
 		</div>
 		<div class="privacy-grid">
 			<div class="privacy-item">
-				<span class="privacy-check">&#10003;</span>
+				<svg class="privacy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+				</svg>
 				<span>All data stored locally in your <code>.mind/</code> folder</span>
 			</div>
 			<div class="privacy-item">
-				<span class="privacy-check">&#10003;</span>
+				<svg class="privacy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+				</svg>
 				<span>We have zero access to your IDE or memories</span>
 			</div>
 			<div class="privacy-item">
-				<span class="privacy-check">&#10003;</span>
+				<svg class="privacy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+				</svg>
 				<span>MCP server runs 100% on your computer</span>
 			</div>
 			<div class="privacy-item">
-				<span class="privacy-check">&#10003;</span>
+				<svg class="privacy-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+					<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+				</svg>
 				<span>No cloud. No tracking. No telemetry.</span>
 			</div>
 		</div>
@@ -1284,7 +1292,7 @@ Done.`,
 	.privacy-item {
 		display: flex;
 		align-items: center;
-		gap: var(--space-2);
+		gap: var(--space-3);
 		padding: var(--space-4);
 		background: var(--bg-primary);
 		color: var(--text-secondary);
@@ -1292,9 +1300,8 @@ Done.`,
 		text-align: left;
 	}
 
-	.privacy-check {
+	.privacy-item .privacy-icon {
 		color: var(--green-dim);
-		font-weight: bold;
 		flex-shrink: 0;
 	}
 

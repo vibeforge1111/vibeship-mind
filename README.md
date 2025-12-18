@@ -225,12 +225,12 @@ python -m mind list
 ## The Problem This Solves
 
 **Across sessions:**
-- "What did we decide yesterday?" → Forgotten
-- "What gotchas did we hit?" → Re-discovered every time
+- "What did we decide yesterday?" -> Forgotten
+- "What gotchas did we hit?" -> Re-discovered every time
 
 **Within sessions:**
-- "Didn't we already try that?" → Suggests same failed fix 3 times
-- "What are we building again?" → Drifts into rabbit holes
+- "Didn't we already try that?" -> Suggests same failed fix 3 times
+- "What are we building again?" -> Drifts into rabbit holes
 
 **Mind fixes both.** Two layers of memory, zero friction.
 
@@ -241,12 +241,12 @@ python -m mind list
 ```
 your-project/
 ├── .mind/
-│   ├── MEMORY.md     ← Long-term memory (persists)
-│   ├── SESSION.md    ← Short-term focus (cleared each session)
-│   ├── REMINDERS.md  ← Time and context-based reminders
-│   ├── config.json   ← Feature flags for experiments
-│   └── state.json    ← Timestamps for session detection
-└── CLAUDE.md         ← Mind injects context here
+│   ├── MEMORY.md     <- Long-term memory (persists)
+│   ├── SESSION.md    <- Short-term focus (cleared each session)
+│   ├── REMINDERS.md  <- Time and context-based reminders
+│   ├── config.json   <- Feature flags for experiments
+│   └── state.json    <- Timestamps for session detection
+└── CLAUDE.md         <- Mind injects context here
 ```
 
 ---

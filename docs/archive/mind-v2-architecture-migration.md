@@ -1,4 +1,4 @@
-# Mind v2 Architecture Migration: Daemon → MCP-Only
+# Mind v2 Architecture Migration: Daemon -> MCP-Only
 
 ## Executive Summary
 
@@ -35,7 +35,7 @@ KEEP all of these:
 ├── .mind/MEMORY.md format and structure
 ├── .mind/state.json (repurposed slightly)
 ├── .mind/.index/ directory and embeddings
-├── Loose parser (natural language → structured entities)
+├── Loose parser (natural language -> structured entities)
 ├── Entity extraction logic
 ├── Confidence scoring
 ├── Context generation algorithm
@@ -64,29 +64,29 @@ MODIFY these:
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  User starts Claude Code session                            │
-│                        ↓                                    │
+│                        v                                    │
 │  Claude reads CLAUDE.md (automatic behavior)                │
-│                        ↓                                    │
+│                        v                                    │
 │  CLAUDE.md says: "call mind.recall() first"                 │
-│                        ↓                                    │
+│                        v                                    │
 │  Claude calls mind.recall()                                 │
-│                        ↓                                    │
+│                        v                                    │
 │  MCP checks state.json:                                     │
 │    - last_activity timestamp                                │
 │    - MEMORY.md file hash                                    │
-│                        ↓                                    │
+│                        v                                    │
 │  Gap > 30 min OR hash changed?                              │
-│    YES → Parse new entries, regenerate context              │
-│    NO  → Return cached context                              │
-│                        ↓                                    │
+│    YES -> Parse new entries, regenerate context              │
+│    NO  -> Return cached context                              │
+│                        v                                    │
 │  Update last_activity = now                                 │
-│                        ↓                                    │
+│                        v                                    │
 │  Return context to Claude                                   │
-│                        ↓                                    │
+│                        v                                    │
 │  Claude works, writes directly to MEMORY.md (no tool call)  │
-│                        ↓                                    │
+│                        v                                    │
 │  User leaves (no explicit end session needed)               │
-│                        ↓                                    │
+│                        v                                    │
 │  Next session: recall() detects gap, processes new entries  │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -485,13 +485,13 @@ Or defer to `mind search --global` for explicit cross-project queries.
 
 **Before (Daemon):**
 ```
-Daemon watches → Detects inactivity → Processes → Writes to CLAUDE.md
+Daemon watches -> Detects inactivity -> Processes -> Writes to CLAUDE.md
                  (proactive)          (eager)     (pre-baked)
 ```
 
 **After (MCP):**
 ```
-recall() called → Checks timestamps → Processes if needed → Returns context
+recall() called -> Checks timestamps -> Processes if needed -> Returns context
                   (reactive)          (lazy)                (on-demand)
 ```
 

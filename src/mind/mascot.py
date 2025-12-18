@@ -5,15 +5,6 @@ including Windows cp1252 encoding.
 """
 
 
-def can_use_unicode() -> bool:
-    """Check if terminal supports Unicode output.
-
-    Always returns False - we use ASCII-only for compatibility.
-    Kept for API compatibility with existing code.
-    """
-    return False
-
-
 # Mindful's expressions - eyes and mouth change with state
 # ASCII-only for maximum compatibility (Windows cp1252, etc.)
 EXPRESSIONS = {
@@ -54,16 +45,12 @@ ACTION_EMOTIONS = {
     "reinforce": "success",  # Pattern reinforcement
 }
 
-# Alias for backwards compatibility
-EXPRESSIONS_ASCII = EXPRESSIONS
 
-
-def get_mindful(emotion: str = "idle", fancy: bool = True, message: str = "") -> str:
+def get_mindful(emotion: str = "idle", message: str = "") -> str:
     """Get Mindful ASCII art with given emotion.
 
     Args:
         emotion: One of the EXPRESSIONS keys
-        fancy: Ignored - always uses ASCII for compatibility
         message: Optional message to show next to Mindful
 
     Returns:
@@ -71,7 +58,6 @@ def get_mindful(emotion: str = "idle", fancy: bool = True, message: str = "") ->
     """
     eyes, mouth = EXPRESSIONS.get(emotion, EXPRESSIONS["idle"])
 
-    # Always use ASCII art for compatibility
     lines = [
         "    .======.",
         f"   .| {eyes} |.",
@@ -94,12 +80,11 @@ def get_mindful(emotion: str = "idle", fancy: bool = True, message: str = "") ->
     return "\n".join(lines)
 
 
-def get_mindful_compact(emotion: str = "idle", fancy: bool = True) -> str:
+def get_mindful_compact(emotion: str = "idle") -> str:
     """Get a compact single-line representation of Mindful.
 
     Args:
         emotion: One of the EXPRESSIONS keys
-        fancy: Ignored - always uses ASCII for compatibility
 
     Returns:
         Single-line string with Mindful face
@@ -108,13 +93,12 @@ def get_mindful_compact(emotion: str = "idle", fancy: bool = True) -> str:
     return f"[{eyes}] {mouth}"
 
 
-def mindful_says(action: str, message: str, fancy: bool = True) -> str:
+def mindful_says(action: str, message: str) -> str:
     """Get Mindful with appropriate emotion for an action, with message.
 
     Args:
         action: Mind action (recall, log, search, etc.)
         message: Message to display
-        fancy: Ignored - always uses ASCII for compatibility
 
     Returns:
         Multi-line string with Mindful and message
@@ -123,13 +107,12 @@ def mindful_says(action: str, message: str, fancy: bool = True) -> str:
     return get_mindful(emotion, message=message)
 
 
-def mindful_line(action: str, message: str, fancy: bool = True) -> str:
+def mindful_line(action: str, message: str) -> str:
     """Get a single-line Mindful output for terminal.
 
     Args:
         action: Mind action (recall, log, search, etc.)
         message: Message to display
-        fancy: Ignored - always uses ASCII for compatibility
 
     Returns:
         Single line: [mindful face] action | message
@@ -142,21 +125,20 @@ def mindful_line(action: str, message: str, fancy: bool = True) -> str:
 
 # Quick test
 if __name__ == "__main__":
-    fancy = can_use_unicode()
-    print(f"=== Mindful Emotions (fancy={fancy}) ===\n")
+    print("=== Mindful Emotions ===\n")
 
     for emotion in ["idle", "happy", "thinking", "searching", "warning", "excited", "shy", "sleepy", "error"]:
         print(f"{emotion.upper()}:")
-        print(get_mindful(emotion, fancy=fancy))
+        print(get_mindful(emotion))
         print()
 
     print("=== Action Examples ===\n")
-    print(mindful_says("recall", "Loaded 36 memories", fancy=fancy))
+    print(mindful_says("recall", "Loaded 36 memories"))
     print()
-    print(mindful_says("warning", "3 rejected approaches!", fancy=fancy))
+    print(mindful_says("warning", "3 rejected approaches!"))
     print()
 
     print("=== Compact Lines ===\n")
-    print(mindful_line("recall", "Loaded 36 memories", fancy=fancy))
-    print(mindful_line("log", "Experience -> SESSION.md", fancy=fancy))
-    print(mindful_line("warning", "3 rejected - slow down!", fancy=fancy))
+    print(mindful_line("recall", "Loaded 36 memories"))
+    print(mindful_line("log", "Experience -> SESSION.md"))
+    print(mindful_line("warning", "3 rejected - slow down!"))

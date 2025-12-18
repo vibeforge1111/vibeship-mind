@@ -94,9 +94,9 @@ When Claude surfaces a due reminder, it asks:
 >
 > Want to work on this now, or should I remind you later? (You can say 'snooze', 'next session', 'in a week', etc.)"
 
-- "snooze" / no time specified → next session (default)
-- "next session" → next session
-- "in a week" / "tomorrow" / specific date → parse and set
+- "snooze" / no time specified -> next session (default)
+- "next session" -> next session
+- "in a week" / "tomorrow" / specific date -> parse and set
 
 ---
 

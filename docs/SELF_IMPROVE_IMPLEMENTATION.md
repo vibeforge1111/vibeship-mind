@@ -41,7 +41,7 @@ All phases are enabled by default. To disable specific phases:
 
 **The Self-Correcting Loop:**
 ```
-User works → Mind suggests → User accepts/ignores/corrects → Mind learns → Better suggestions
+User works -> Mind suggests -> User accepts/ignores/corrects -> Mind learns -> Better suggestions
 ```
 
 Currently broken at step 4. Phases 6-8 fix this:

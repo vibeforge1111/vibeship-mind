@@ -14,7 +14,7 @@ from mcp.types import TextContent, Tool
 
 from ..config import is_mascot_enabled
 from ..context import ContextGenerator
-from ..mascot import get_mindful, mindful_line, can_use_unicode, ACTION_EMOTIONS
+from ..mascot import get_mindful, mindful_line, ACTION_EMOTIONS
 from ..parser import Entity, EntityType, Parser
 from ..storage import ProjectsRegistry, get_mind_home, get_self_improve_path
 from ..templates import SESSION_TEMPLATE
@@ -55,13 +55,12 @@ def mindful_response(action: str, data: dict, message: str = "", project_path: O
     mascot_enabled = is_mascot_enabled(project_path) if project_path else True
 
     if mascot_enabled:
-        fancy = can_use_unicode()
         emotion = ACTION_EMOTIONS.get(action, "idle")
 
         # Add mindful to response
         data["mindful"] = {
             "emotion": emotion,
-            "art": get_mindful(emotion, fancy=fancy),
+            "art": get_mindful(emotion),
             "says": message,
         }
 

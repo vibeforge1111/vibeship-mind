@@ -30,8 +30,8 @@ decided to move auth to same domain because of the Safari issue.
 
 **Mind detects:**
 ```
-JWT decision ← mentioned in → same-domain decision
-Safari issue ← caused → same-domain decision
+JWT decision <- mentioned in -> same-domain decision
+Safari issue <- caused -> same-domain decision
 ```
 
 **Output in MIND:CONTEXT:**

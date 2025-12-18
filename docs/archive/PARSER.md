@@ -201,8 +201,8 @@ def extract_project_edges(content: str) -> list[Edge]:
     for line in gotchas_match.group(1).split('\n'):
         line = line.strip()
         if line.startswith('-') or line.startswith('*'):
-            # Parse: "- Thing → Workaround" or "- Thing - Workaround"
-            parts = re.split(r'\s*[→\-:]\s*', line.lstrip('-* '), maxsplit=1)
+            # Parse: "- Thing -> Workaround" or "- Thing - Workaround"
+            parts = re.split(r'\s*[->\-:]\s*', line.lstrip('-* '), maxsplit=1)
             edge = Edge(
                 title=parts[0].strip(),
                 workaround=parts[1].strip() if len(parts) > 1 else None,
@@ -217,15 +217,15 @@ def extract_project_edges(content: str) -> list[Edge]:
 
 ```markdown
 ## Gotchas
-- Safari ITP blocks cross-domain cookies → use same-domain auth
+- Safari ITP blocks cross-domain cookies -> use same-domain auth
 - Our API rate limits to 100/min
 - Edge functions timeout at 10s - use serverless for webhooks
 ```
 
 Extracts:
-1. `Safari ITP blocks cross-domain cookies` → workaround: `use same-domain auth`
-2. `Our API rate limits to 100/min` → workaround: None
-3. `Edge functions timeout at 10s` → workaround: `use serverless for webhooks`
+1. `Safari ITP blocks cross-domain cookies` -> workaround: `use same-domain auth`
+2. `Our API rate limits to 100/min` -> workaround: None
+3. `Edge functions timeout at 10s` -> workaround: `use serverless for webhooks`
 
 ---
 

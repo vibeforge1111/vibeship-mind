@@ -42,11 +42,11 @@ Mind gives Claude persistent memory through simple markdown files. No database, 
 ├────────────────────────────────────────────────────────────────┤
 │  Persists forever across all sessions                          │
 │                                                                │
-│  • Decisions    →  "decided X because Y"                       │
-│  • Learnings    →  "learned that X", "TIL: X"                  │
-│  • Problems     →  "problem: X"                                │
-│  • Progress     →  "fixed: X"                                  │
-│  • Gotchas      →  Project-specific traps                      │
+│  • Decisions    ->  "decided X because Y"                       │
+│  • Learnings    ->  "learned that X", "TIL: X"                  │
+│  • Problems     ->  "problem: X"                                │
+│  • Progress     ->  "fixed: X"                                  │
+│  • Gotchas      ->  Project-specific traps                      │
 └────────────────────────────────────────────────────────────────┘
                               ▲
                               │ promotes valuable items
@@ -58,10 +58,10 @@ Mind gives Claude persistent memory through simple markdown files. No database, 
 ├────────────────────────────────────────────────────────────────┤
 │  Cleared on new session, captures raw experience               │
 │                                                                │
-│  • Experience   →  Raw moments, thoughts                       │
-│  • Blockers     →  Things stopping progress                    │
-│  • Rejected     →  What didn't work and why                    │
-│  • Assumptions  →  What I'm assuming true                      │
+│  • Experience   ->  Raw moments, thoughts                       │
+│  • Blockers     ->  Things stopping progress                    │
+│  • Rejected     ->  What didn't work and why                    │
+│  • Assumptions  ->  What I'm assuming true                      │
 └────────────────────────────────────────────────────────────────┘
 ```
 

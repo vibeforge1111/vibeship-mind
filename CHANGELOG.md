@@ -14,7 +14,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Loop warning severity** - Critical/High/Moderate levels with methodology hints
 - **Smart promotion** - Novelty checking prevents duplicate memories, links or supersedes similar entries
 - **Bug memory filter** - Scores bugs for reusability (platform/library bugs promoted, one-off bugs skipped)
-- **Memory → Session retrieval** - Relevant memories surfaced when logging experiences/blockers
+- **Memory -> Session retrieval** - Relevant memories surfaced when logging experiences/blockers
 - **mind_spawn_helper tool** - Package problems for fresh agent investigation when stuck
 - **Obsidian compatibility** - Wikilink format hints in docs, `.mind/` folder works as Obsidian vault
 

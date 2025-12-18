@@ -487,8 +487,8 @@ Everyone else:
 
 ### Phase 4: Learning Loop (V1.2)
 
-- [ ] Sharp edge hits → Mind blind spots
-- [ ] Mind corrections → Spawner skill level
+- [ ] Sharp edge hits -> Mind blind spots
+- [ ] Mind corrections -> Spawner skill level
 - [ ] Bidirectional tracking
 - [ ] Combined warnings
 
@@ -559,7 +559,7 @@ uv run mind doctor
 | Both tools installed | >30% of users | Install analytics |
 | Cross-tool usage | >50% when both present | Tool call correlation |
 | Blind spot prevention | >30% caught by Mind first | Warning comparison |
-| Skill relevance | >80% loaded skills used | Skill → action tracking |
+| Skill relevance | >80% loaded skills used | Skill -> action tracking |
 | Time to ship | 30% faster with both | Project duration |
 | User satisfaction | >4.5 stars | Feedback surveys |
 

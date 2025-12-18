@@ -19,9 +19,9 @@ A lightweight, ephemeral file that Claude maintains and checks during work.
 
 ```
 .mind/
-├── MEMORY.md    → Long-term (persists across sessions)
-├── SESSION.md   → Short-term (this session only)
-└── state.json   → Timestamps and hashes
+├── MEMORY.md    -> Long-term (persists across sessions)
+├── SESSION.md   -> Short-term (this session only)
+└── state.json   -> Timestamps and hashes
 ```
 
 ---
@@ -67,9 +67,9 @@ Implement JWT authentication for API routes
 - Use existing User table
 
 ## Tried (didn't work)
-- httpOnly cookies for JWT → Safari blocks in iframe, SameSite issues
-- bcrypt with default rounds (10) → tests timeout, too slow for CI
-- localStorage + Authorization header → works but XSS concerns noted
+- httpOnly cookies for JWT -> Safari blocks in iframe, SameSite issues
+- bcrypt with default rounds (10) -> tests timeout, too slow for CI
+- localStorage + Authorization header -> works but XSS concerns noted
 
 ## Discovered
 - User table missing `email_verified` column - migration needed
@@ -117,7 +117,7 @@ Keep entries brief. One line each. This file is for you, not documentation.
 
 Bad:  "We attempted to use bcrypt with the default cost factor of 10 rounds, 
        but this caused the test suite to timeout because..."
-Good: "bcrypt default rounds (10) → tests timeout"
+Good: "bcrypt default rounds (10) -> tests timeout"
 ```
 
 ---
@@ -126,20 +126,20 @@ Good: "bcrypt default rounds (10) → tests timeout"
 
 ```
 Session Start
-     ↓
+     v
 recall() returns cross-session context from MEMORY.md
-     ↓
+     v
 Claude checks SESSION.md (may have stale content from last session)
-     ↓
+     v
 Claude clears or updates SESSION.md with current focus
-     ↓
+     v
 Claude works, updating SESSION.md as things happen:
-  - Failures → "Tried"
-  - Findings → "Discovered"  
-  - Scope changes → "Focus" / "Out of Scope"
-     ↓
+  - Failures -> "Tried"
+  - Findings -> "Discovered"  
+  - Scope changes -> "Focus" / "Out of Scope"
+     v
 Session ends (user leaves)
-     ↓
+     v
 Next session: recall() processes SESSION.md
   - Moves important learnings to MEMORY.md
   - Clears SESSION.md for fresh start
@@ -206,7 +206,7 @@ function extractLearnings(sessionContent: string): Learning[] {
   const learnings = [];
   
   // "Tried" items that mention specific tech become gotchas
-  // "Safari blocks X" → Gotcha: Safari iframe cookie behavior
+  // "Safari blocks X" -> Gotcha: Safari iframe cookie behavior
   const triedSection = parseSection(sessionContent, 'Tried');
   for (const item of triedSection) {
     if (hasSpecificTech(item) || hasEnvironmentDetail(item)) {
@@ -215,7 +215,7 @@ function extractLearnings(sessionContent: string): Learning[] {
   }
   
   // "Discovered" items about project structure persist
-  // "rateLimit middleware at /lib/..." → Learning
+  // "rateLimit middleware at /lib/..." -> Learning
   const discoveredSection = parseSection(sessionContent, 'Discovered');
   for (const item of discoveredSection) {
     if (hasFilePath(item) || hasProjectStructure(item)) {
@@ -233,9 +233,9 @@ function extractLearnings(sessionContent: string): Learning[] {
 
 When Claude starts looping, user can say:
 
-- "Check SESSION.md" → Claude re-reads and adjusts
-- "Add X to tried" → Claude updates the file
-- "That's out of scope" → Claude adds to Out of Scope and refocuses
+- "Check SESSION.md" -> Claude re-reads and adjusts
+- "Add X to tried" -> Claude updates the file
+- "That's out of scope" -> Claude adds to Out of Scope and refocuses
 
 These are lightweight corrections, not full re-explanations.
 
@@ -247,7 +247,7 @@ These are lightweight corrections, not full re-explanations.
 ┌─────────────────────────────────────────────────────────────┐
 │                      USER + CLAUDE                          │
 └─────────────────────────────────────────────────────────────┘
-                            ↓↑
+                            v^
 ┌─────────────────────────────────────────────────────────────┐
 │  SESSION.md (Short-Term)                                    │
 │  ├── Updated constantly during work                         │
@@ -255,7 +255,7 @@ These are lightweight corrections, not full re-explanations.
 │  ├── Cleared each new session                               │
 │  └── Cost: FREE (just file edits)                          │
 └─────────────────────────────────────────────────────────────┘
-                            ↓↑
+                            v^
 ┌─────────────────────────────────────────────────────────────┐
 │  MEMORY.md (Long-Term)                                      │
 │  ├── Decisions, gotchas, learnings                          │
@@ -302,7 +302,7 @@ These are lightweight corrections, not full re-explanations.
 - [ ] Add SESSION.md template to `mind init`
 - [ ] Update CLAUDE.md template with session protocol
 - [ ] Add SESSION.md processing to `recall()`
-- [ ] Add promotion logic (SESSION → MEMORY)
+- [ ] Add promotion logic (SESSION -> MEMORY)
 - [ ] Add `mind.session()` tool for manual check (optional)
 - [ ] Update docs
 

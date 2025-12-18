@@ -236,30 +236,30 @@ This gets promoted to SELF_IMPROVE.md with `FEEDBACK:` marker.
 ### Session to Memory (Existing)
 
 ```
-SESSION.md → (30 min gap) → MEMORY.md
+SESSION.md -> (30 min gap) -> MEMORY.md
 
 Promotion rules:
-- Rejected approaches with tech patterns → decisions
-- Discoveries with file paths → learnings
-- Blockers with error codes → problems
+- Rejected approaches with tech patterns -> decisions
+- Discoveries with file paths -> learnings
+- Blockers with error codes -> problems
 ```
 
 ### Memory to Self-Improve (New)
 
 ```
-MEMORY.md → (on session end) → SELF_IMPROVE.md
+MEMORY.md -> (on session end) -> SELF_IMPROVE.md
 
 Promotion rules:
-- KEY: markers → Always promote
-- SKILL: markers → Promote with stack tag
-- PREFERENCE: markers → Promote to preferences
-- Patterns detected in feedback → Extract and promote
+- KEY: markers -> Always promote
+- SKILL: markers -> Promote with stack tag
+- PREFERENCE: markers -> Promote to preferences
+- Patterns detected in feedback -> Extract and promote
 ```
 
 ### Self-Improve to Context (New)
 
 ```
-SELF_IMPROVE.md → (mind_recall) → CLAUDE.md context
+SELF_IMPROVE.md -> (mind_recall) -> CLAUDE.md context
 
 Injection rules:
 - Filter by project stack
@@ -294,7 +294,7 @@ User works with Claude
          │ mind_recall()
          ▼
 ┌─────────────────┐
-│  CLAUDE.md      │ ← Injected: context + intuitions
+│  CLAUDE.md      │ <- Injected: context + intuitions
 │  (delivered)    │
 └─────────────────┘
 ```
@@ -784,7 +784,7 @@ When user hits a Spawner sharp edge, Mind learns it as a personal blind spot:
 SPAWNER: Sharp edge triggered - "async client component"
          User wrote async function in 'use client' component
 
-MIND: Logs → BLIND_SPOT: [nextjs] tends to write async client components
+MIND: Logs -> BLIND_SPOT: [nextjs] tends to write async client components
 
 NEXT PROJECT: Mind warns BEFORE Spawner even checks
               "WATCH: This is a client component - remember async doesn't work here"
@@ -820,7 +820,7 @@ MIND: "You've built 3 apps that pivoted mid-development.
        Last time you wrote: 'Should have validated the problem first.'
        Want to do user research before coding?"
 
-RESULT: User validates → builds something people actually want
+RESULT: User validates -> builds something people actually want
 ```
 
 #### 5. UX Excellence Loop
@@ -849,13 +849,13 @@ Every architectural decision improves future projects:
 
 ```
 PROJECT 1: User builds with bad state management
-           → Pain, refactor, Mind learns
+           -> Pain, refactor, Mind learns
 
 PROJECT 3: Mind warns about state before Spawner loads
-           → User picks right pattern first time
+           -> User picks right pattern first time
 
 PROJECT 10: User has compound wisdom of 10 architectures
-            → Spawner skills + Mind patterns = senior architect
+            -> Spawner skills + Mind patterns = senior architect
 ```
 
 ---
@@ -955,19 +955,19 @@ When Claude starts a session:
 │                         DATA FLOW                                 │
 ├──────────────────────────────────────────────────────────────────┤
 │                                                                   │
-│  SPAWNER → MIND                                                   │
+│  SPAWNER -> MIND                                                   │
 │  ─────────────                                                    │
-│  • Sharp edge hits → BLIND_SPOT entries                          │
-│  • Stack detection → Filter SELF_IMPROVE by stack                │
-│  • Skill usage → Track which skills helped                       │
-│  • Guardrail failures → Pattern for future warning               │
+│  • Sharp edge hits -> BLIND_SPOT entries                          │
+│  • Stack detection -> Filter SELF_IMPROVE by stack                │
+│  • Skill usage -> Track which skills helped                       │
+│  • Guardrail failures -> Pattern for future warning               │
 │                                                                   │
-│  MIND → SPAWNER                                                   │
+│  MIND -> SPAWNER                                                   │
 │  ─────────────                                                    │
-│  • User preferences → Filter skill recommendations               │
-│  • Blind spots → Prioritize relevant sharp edges                 │
-│  • Skill level per domain → Adjust guidance depth                │
-│  • Past decisions → Inform architecture choices                  │
+│  • User preferences -> Filter skill recommendations               │
+│  • Blind spots -> Prioritize relevant sharp edges                 │
+│  • Skill level per domain -> Adjust guidance depth                │
+│  • Past decisions -> Inform architecture choices                  │
 │                                                                   │
 └──────────────────────────────────────────────────────────────────┘
 ```
@@ -1003,8 +1003,8 @@ When Claude starts a session:
 - [ ] Cross-tool blind spot format
 
 #### Phase 3: Learning Loop (V1.2)
-- [ ] Spawner sharp edge hits → Mind blind spots
-- [ ] Mind corrections → Spawner skill level adjustment
+- [ ] Spawner sharp edge hits -> Mind blind spots
+- [ ] Mind corrections -> Spawner skill level adjustment
 - [ ] Bidirectional improvement tracking
 - [ ] Combined intuition system
 
@@ -1042,7 +1042,7 @@ What users will say:
 |--------|--------|----------------|
 | Cross-tool usage | >50% use both | Analytics on tool calls |
 | Blind spot prevention | >30% caught by Mind before Spawner | Compare warnings |
-| Skill relevance | >80% loaded skills used | Track skill → action |
+| Skill relevance | >80% loaded skills used | Track skill -> action |
 | User preference accuracy | >90% correct | Corrections needed |
 | Compound learning | 2x better by project 5 | Quality metrics over time |
 | Time to ship | 30% faster with both | Project duration tracking |

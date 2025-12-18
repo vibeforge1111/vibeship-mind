@@ -61,7 +61,7 @@ After discovery, create a brief summary of what exists and where.
 ### Evaluate Against These Criteria
 
 #### 2.1 Memory Structure
-- [ ] **Hierarchical organization**: Are memories structured (identity → projects → sessions → moments) or flat?
+- [ ] **Hierarchical organization**: Are memories structured (identity -> projects -> sessions -> moments) or flat?
 - [ ] **Memory types/categories**: Does the schema distinguish between preferences, facts, workflows, corrections?
 - [ ] **Metadata richness**: Do memories have timestamps, confidence scores, source tracking, context tags?
 - [ ] **Relationships**: Can memories reference or relate to each other?
@@ -88,7 +88,7 @@ interface Memory {
 #### 2.2 Session Management
 - [ ] **Clear session boundaries**: Is there defined start/end logic?
 - [ ] **Session state persistence**: Is in-session context tracked properly?
-- [ ] **Promotion logic**: What triggers session insight → persistent memory?
+- [ ] **Promotion logic**: What triggers session insight -> persistent memory?
 - [ ] **Session summarization**: Does session end trigger any learning?
 
 **What good looks like:**
@@ -294,10 +294,10 @@ describe('Edge Cases', () => {
 
 ```typescript
 describe('Full Flow Integration', () => {
-  it('should complete: user statement → memory creation → retrieval → use → feedback → improvement');
-  it('should complete: contradiction introduced → detected → resolved → old memory superseded');
-  it('should complete: session insight → repeated → promoted → persisted');
-  it('should complete: memory decays → gets reinforced → confidence restored');
+  it('should complete: user statement -> memory creation -> retrieval -> use -> feedback -> improvement');
+  it('should complete: contradiction introduced -> detected -> resolved -> old memory superseded');
+  it('should complete: session insight -> repeated -> promoted -> persisted');
+  it('should complete: memory decays -> gets reinforced -> confidence restored');
 });
 ```
 

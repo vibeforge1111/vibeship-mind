@@ -708,8 +708,9 @@ Done.`,
 	.subtitle {
 		font-size: var(--text-lg);
 		color: var(--text-secondary);
-		max-width: 500px;
+		max-width: 550px;
 		margin: 0 auto var(--space-8);
+		line-height: 1.8;
 	}
 
 	.terminal {
@@ -749,7 +750,7 @@ Done.`,
 
 	.terminal-body {
 		padding: var(--space-4);
-		font-size: var(--text-sm);
+		font-size: var(--text-base);
 		min-height: 280px;
 	}
 
@@ -807,6 +808,8 @@ Done.`,
 		color: var(--text-secondary);
 		margin-top: calc(-1 * var(--space-4));
 		margin-bottom: var(--space-6);
+		font-size: var(--text-lg);
+		line-height: 1.7;
 	}
 
 	section h2 {
@@ -833,14 +836,15 @@ Done.`,
 
 	.feature h3 {
 		font-family: var(--font-mono);
-		font-size: var(--text-base);
+		font-size: var(--text-lg);
 		margin-bottom: var(--space-2);
 		color: var(--green-dim);
 	}
 
 	.feature p {
-		font-size: var(--text-sm);
+		font-size: var(--text-base);
 		color: var(--text-secondary);
+		line-height: 1.7;
 	}
 
 	/* Reminders */
@@ -1044,7 +1048,7 @@ Done.`,
 		font-size: var(--text-lg);
 		color: var(--text-primary);
 		opacity: 0.93;
-		line-height: 1.6;
+		line-height: 1.7;
 		margin: 0;
 	}
 
@@ -1082,9 +1086,9 @@ Done.`,
 	}
 
 	.usage-tag .tag-desc {
-		font-size: var(--text-lg);
+		font-size: var(--text-base);
 		color: var(--text-secondary);
-		line-height: 1.5;
+		line-height: 1.7;
 	}
 
 	/* Get Started CTA */
@@ -1102,6 +1106,8 @@ Done.`,
 	.get-started-cta > p {
 		color: var(--text-secondary);
 		margin-bottom: var(--space-6);
+		font-size: var(--text-lg);
+		line-height: 1.7;
 	}
 
 	.install-steps {
@@ -1126,9 +1132,10 @@ Done.`,
 	}
 
 	.step-explanation {
-		font-size: var(--text-sm);
+		font-size: var(--text-base);
 		color: var(--text-secondary);
 		margin-bottom: var(--space-2);
+		line-height: 1.6;
 	}
 
 	.install-preview {
@@ -1304,7 +1311,7 @@ Done.`,
 	}
 
 	footer p {
-		font-size: var(--text-sm);
+		font-size: var(--text-base);
 		color: var(--text-tertiary);
 	}
 
@@ -1338,8 +1345,9 @@ Done.`,
 	}
 
 	.arch-desc {
-		font-size: var(--text-sm);
+		font-size: var(--text-base);
 		color: var(--text-tertiary);
+		line-height: 1.6;
 	}
 
 	.claude-code-box {
@@ -1473,7 +1481,8 @@ Done.`,
 		text-align: center;
 		color: var(--text-secondary);
 		margin-bottom: var(--space-4);
-		font-size: var(--text-sm);
+		font-size: var(--text-base);
+		line-height: 1.6;
 	}
 
 	.filter-examples {
@@ -1496,7 +1505,7 @@ Done.`,
 
 	.filter-input {
 		flex: 1;
-		font-size: var(--text-sm);
+		font-size: var(--text-base);
 		color: var(--text-secondary);
 		font-style: italic;
 	}

@@ -19,15 +19,15 @@
   --font-serif: 'Instrument Serif', Georgia, serif;
   --font-sans: 'Geist Sans', 'Geist', system-ui, sans-serif;
 
-  /* Font sizes */
-  --text-xs: 0.65rem;
-  --text-sm: 0.75rem;
-  --text-base: 0.85rem;
-  --text-lg: 1rem;
+  /* Font sizes - optimized for readability */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
   --text-xl: 1.25rem;
   --text-2xl: 1.5rem;
-  --text-3xl: 2rem;
-  --text-4xl: 2.5rem;
+  --text-3xl: 2.5rem;
+  --text-4xl: 3rem;
 
   /* Spacing */
   --space-1: 0.25rem;
@@ -161,7 +161,7 @@
 
 /* Base Styles */
 html {
-  font-size: 14px;
+  font-size: 16px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   scroll-behavior: smooth;
@@ -171,7 +171,7 @@ body {
   font-family: var(--font-mono);
   background-color: var(--bg-primary);
   color: var(--text-primary);
-  line-height: 1.6;
+  line-height: 1.7;
   min-height: 100vh;
 }
 

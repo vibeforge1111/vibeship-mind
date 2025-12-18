@@ -799,11 +799,44 @@ def append_memory_entry(project_path: Path, entry: str, entry_type: str = "gener
 
 
 # SESSION.md writing helpers
+def repair_session_file(project_path: Path) -> bool:
+    """Repair a malformed SESSION.md by ensuring all sections exist.
+
+    Returns True if repair was needed and performed.
+    """
+    session_file = get_session_file(project_path)
+
+    if not session_file.exists():
+        clear_session_file(project_path)
+        return True
+
+    session_content = session_file.read_text(encoding="utf-8")
+
+    # Required sections
+    required_sections = ["Experience", "Blockers", "Rejected", "Assumptions"]
+    missing_sections = []
+
+    for section in required_sections:
+        pattern = rf"## {re.escape(section)}\s*\n"
+        if not re.search(pattern, session_content):
+            missing_sections.append(section)
+
+    if not missing_sections:
+        return False  # No repair needed
+
+    # Add missing sections at the end
+    for section in missing_sections:
+        session_content += f"\n## {section}\n\n"
+
+    session_file.write_text(session_content, encoding="utf-8")
+    return True
+
+
 def update_session_section(project_path: Path, section_name: str, content: str, append: bool = False) -> bool:
-    """Update a section in SESSION.md."""
+    """Update a section in SESSION.md. Auto-repairs if section missing."""
     session_file = get_session_file(project_path)
     if not session_file.exists():
-        return False
+        clear_session_file(project_path)
 
     session_content = session_file.read_text(encoding="utf-8")
 
@@ -812,7 +845,20 @@ def update_session_section(project_path: Path, section_name: str, content: str, 
     match = re.search(pattern, session_content)
 
     if not match:
-        return False
+        # Section missing - try to repair
+        repair_session_file(project_path)
+        session_content = session_file.read_text(encoding="utf-8")
+        match = re.search(pattern, session_content)
+
+        if not match:
+            # Still missing after repair - add it manually
+            session_content += f"\n## {section_name}\n\n"
+            session_file.write_text(session_content, encoding="utf-8")
+            session_content = session_file.read_text(encoding="utf-8")
+            match = re.search(pattern, session_content)
+
+            if not match:
+                return False  # Give up
 
     insert_pos = match.end()
 
@@ -2184,13 +2230,68 @@ async def handle_reminders(args: dict[str, Any]) -> list[TextContent]:
     return [TextContent(type="text", text=mindful_response("reminders", output, message))]
 
 
+def auto_categorize_session_type(message: str) -> str:
+    """Auto-detect session type from message content.
+
+    Patterns detected:
+    - rejected: "tried X, didn't work", "X failed", "won't work", "rejected"
+    - blocker: "stuck", "can't", "blocked", "don't know how"
+    - assumption: "assuming", "I think", "probably", "should be"
+    - experience: default for everything else
+
+    Returns:
+        One of: "rejected", "blocker", "assumption", "experience"
+    """
+    msg_lower = message.lower()
+
+    # Rejected patterns - things that didn't work
+    rejected_patterns = [
+        "tried", "didn't work", "doesn't work", "won't work", "failed",
+        "rejected", "ruled out", "not going to work", "abandoned",
+        "gave up on", "scrapped", "discarded", "nope", "no good",
+        "too complex", "too slow", "too much", "overkill",
+    ]
+    if any(p in msg_lower for p in rejected_patterns):
+        return "rejected"
+
+    # Blocker patterns - stuck on something
+    blocker_patterns = [
+        "stuck", "blocked", "can't figure", "don't know how",
+        "no idea", "confused", "lost", "help", "struggling",
+        "hitting a wall", "dead end", "roadblock",
+    ]
+    if any(p in msg_lower for p in blocker_patterns):
+        return "blocker"
+
+    # Assumption patterns - things being assumed true
+    assumption_patterns = [
+        "assuming", "assume", "i think", "probably", "should be",
+        "i believe", "expecting", "guessing", "hypothesis",
+        "if this is true", "based on", "seems like",
+    ]
+    if any(p in msg_lower for p in assumption_patterns):
+        return "assumption"
+
+    # Default to experience
+    return "experience"
+
+
 async def handle_log(args: dict[str, Any]) -> list[TextContent]:
     """Handle mind_log tool - route to SESSION.md, MEMORY.md, or SELF_IMPROVE.md based on type."""
     message = args.get("message", "")
-    entry_type = args.get("type", "experience")
+    explicit_type = args.get("type", None)
 
     if not message:
         return [TextContent(type="text", text="Error: message is required")]
+
+    # Auto-categorize if type not explicitly provided or is "experience" (default)
+    # This allows explicit types to override, but auto-detects for convenience
+    if explicit_type is None or explicit_type == "experience":
+        entry_type = auto_categorize_session_type(message)
+        was_auto = entry_type != "experience" and explicit_type != entry_type
+    else:
+        entry_type = explicit_type
+        was_auto = False
 
     project_path = get_current_project()
     if not project_path:
@@ -2307,6 +2408,11 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
             "type": entry_type,
             "target": target,
         }
+
+        # Indicate if auto-categorized
+        if was_auto:
+            output["auto_categorized"] = True
+            output["detected_as"] = entry_type
 
         # Add loop warning if detected (for rejected type)
         if entry_type == "rejected" and loop_warning:

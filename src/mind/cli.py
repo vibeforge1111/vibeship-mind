@@ -11,8 +11,17 @@ from .context import update_claude_md
 from .detection import detect_stack
 from .parser import InlineScanner, Parser
 from .storage import ProjectsRegistry, get_global_mind_dir, get_self_improve_path
-from .config import create_default_config
+from .config import create_default_config, load_config, save_config
 from .templates import GITIGNORE_CONTENT, MEMORY_TEMPLATE, SESSION_TEMPLATE, REMINDERS_TEMPLATE, SELF_IMPROVE_TEMPLATE
+from .preferences import (
+    has_existing_preferences,
+    load_global_preferences,
+    save_global_preferences,
+    get_default_preferences,
+    update_last_project,
+)
+from .stack import detect_stack as detect_editor_stack, inject_mind_instructions, get_stack_display_name
+from .health import auto_repair
 
 
 @click.group()
@@ -24,10 +33,13 @@ def cli():
 
 @cli.command()
 @click.argument("path", default=".", type=click.Path(exists=True, file_okay=False))
-def init(path: str):
+@click.option("--quick", "-q", is_flag=True, help="Skip interactive setup, use defaults or existing preferences")
+def init(path: str, quick: bool):
     """Initialize Mind for a project.
 
     PATH is the project directory to initialize. Defaults to current directory.
+
+    Interactive setup asks 3 questions on first install. Use --quick to skip.
 
     When running from another directory via uv --directory, you MUST specify
     the target path explicitly:
@@ -43,9 +55,42 @@ def init(path: str):
         click.echo("If you meant to init a different project, specify the path:", err=True)
         click.echo("  uv --directory /path/to/vibeship-mind run mind init /path/to/your/project", err=True)
         click.echo()
-    mind_dir = project_path / ".mind"
+
+    click.echo()
+    click.echo("Welcome to Mind! Let me set things up for you.")
+    click.echo()
+
+    # Check for existing preferences
+    existing_prefs = load_global_preferences()
+
+    if existing_prefs and not quick:
+        # Returning user - offer to reuse preferences
+        click.echo("Found your Mind preferences from other projects:")
+        click.echo(f"  - Logging: {existing_prefs.get('logging_level', 'balanced').title()}")
+        click.echo(f"  - Auto-promote: {'Yes' if existing_prefs.get('auto_promote', True) else 'No'}")
+        click.echo(f"  - Memory aging: {existing_prefs.get('retention_mode', 'smart').title()}")
+        click.echo()
+
+        reuse = click.confirm("Use these settings?", default=True)
+        if reuse:
+            prefs = existing_prefs
+        else:
+            prefs = _interactive_setup()
+    elif quick and existing_prefs:
+        # Quick mode with existing prefs
+        prefs = existing_prefs
+    elif quick:
+        # Quick mode without existing prefs - use defaults
+        prefs = get_default_preferences()
+    else:
+        # First install - interactive setup
+        prefs = _interactive_setup()
+
+    # Save preferences globally
+    save_global_preferences(prefs)
 
     # Create .mind directory
+    mind_dir = project_path / ".mind"
     mind_dir.mkdir(exist_ok=True)
 
     # Ensure global Mind directory exists with SELF_IMPROVE.md
@@ -61,9 +106,13 @@ def init(path: str):
     gitignore = mind_dir / ".gitignore"
     gitignore.write_text(GITIGNORE_CONTENT)
 
-    # Detect stack
+    # Detect tech stack
     stack = detect_stack(project_path)
     stack_str = ", ".join(stack) if stack else "(add your stack)"
+
+    # Detect editor stack
+    editor_stack = detect_editor_stack(project_path)
+    editor_name = get_stack_display_name(editor_stack)
 
     # Create MEMORY.md (don't overwrite if exists)
     memory_file = mind_dir / "MEMORY.md"
@@ -95,38 +144,141 @@ def init(path: str):
     else:
         click.echo("[.] .mind/REMINDERS.md already exists (preserved)")
 
-    # Create config.json (don't overwrite if exists)
+    # Create/update config.json with user preferences
     config_file = mind_dir / "config.json"
     if not config_file.exists():
-        create_default_config(project_path)
+        # Create new config with preferences
+        config = {
+            "version": 2,
+            "mascot": True,
+            "logging": {
+                "level": prefs.get("logging_level", "balanced"),
+                "auto_categorize": True,
+            },
+            "session": {
+                "auto_promote": prefs.get("auto_promote", True),
+                "promote_threshold": 0.5,
+            },
+            "memory": {
+                "retention_mode": prefs.get("retention_mode", "smart"),
+                "decay_period_days": 30,
+                "decay_rate": 0.1,
+                "min_relevance": 0.2,
+            },
+            "health": {
+                "auto_repair": True,
+            },
+            "stack": {
+                "detected": editor_stack,
+                "config_file": str(inject_mind_instructions(project_path, editor_stack)["config_file"].name),
+            },
+            "self_improve": {
+                "enabled": True,
+                "decay": True,
+                "reinforcement": True,
+                "contradiction": True,
+                "learning_style": True,
+            },
+        }
+        save_config(project_path, config)
         click.echo("[+] Created .mind/config.json")
     else:
         click.echo("[.] .mind/config.json already exists (preserved)")
 
-    # Update CLAUDE.md
+    # Inject Mind instructions into editor config file
+    inject_result = inject_mind_instructions(project_path, editor_stack)
+    if inject_result["success"]:
+        if inject_result["action"] == "created":
+            click.echo(f"[+] Added Mind instructions to {inject_result['config_file'].name}")
+        elif inject_result["action"] == "updated":
+            click.echo(f"[+] Updated Mind instructions in {inject_result['config_file'].name}")
+        else:
+            click.echo(f"[.] Mind instructions already in {inject_result['config_file'].name}")
+
+    # Also update CLAUDE.md with MIND:CONTEXT (for backwards compatibility)
     update_claude_md(project_path, stack)
     click.echo("[+] Updated CLAUDE.md with MIND:CONTEXT")
 
     # Show detected stack
+    click.echo(f"[+] Detected editor: {editor_name}")
     if stack:
-        click.echo(f"[+] Detected stack: {', '.join(stack)}")
+        click.echo(f"[+] Detected tech stack: {', '.join(stack)}")
     else:
-        click.echo("[.] No stack detected (update .mind/MEMORY.md manually)")
+        click.echo("[.] No tech stack detected (update .mind/MEMORY.md manually)")
+
+    # Update last project in global preferences
+    update_last_project(project_path)
 
     # Register project
     registry = ProjectsRegistry.load()
     registry.register(project_path, stack)
     click.echo("[+] Registered project with Mind")
 
+    # Run auto-repair to ensure everything is healthy
+    repair_result = auto_repair(project_path)
+    if repair_result["repaired_count"] > 0:
+        click.echo(f"[+] Auto-repaired {repair_result['repaired_count']} issue(s)")
+
     click.echo()
-    click.echo("Mind initialized! Ready to remember.")
+    click.echo("Mind is ready! I'll remember what matters.")
     click.echo()
-    click.echo("MCP tools available:")
-    click.echo("  - mind_recall() : Load session context (call first!)")
-    click.echo("  - mind_session() : Get current session state")
-    click.echo("  - mind_search() : Search memories")
-    click.echo("  - mind_checkpoint() : Force process pending memories")
-    click.echo("  - mind_edges() : Check for gotchas")
+    click.echo("Settings:")
+    click.echo(f"  - Logging: {prefs.get('logging_level', 'balanced').title()}")
+    click.echo(f"  - Auto-promote: {'Yes' if prefs.get('auto_promote', True) else 'No'}")
+    click.echo(f"  - Memory aging: {prefs.get('retention_mode', 'smart').title()}")
+
+
+def _interactive_setup() -> dict:
+    """Run interactive setup questions and return preferences."""
+    click.echo()
+
+    # Question 1: Logging level
+    click.echo("? How much should I remember?")
+    logging_choices = [
+        ("balanced", "Balanced - Key moments + context (recommended)"),
+        ("efficient", "Efficient - Only critical decisions and blockers"),
+        ("detailed", "Detailed - Everything, compacted to Memory periodically"),
+    ]
+    for i, (_, desc) in enumerate(logging_choices, 1):
+        click.echo(f"  {i}. {desc}")
+
+    logging_choice = click.prompt("Choose", type=click.IntRange(1, 3), default=1)
+    logging_level = logging_choices[logging_choice - 1][0]
+    click.echo()
+
+    # Question 2: Auto-promote
+    click.echo("? Should learnings auto-promote to long-term memory?")
+    promote_choices = [
+        (True, "Yes - Good insights move from Session to Memory automatically"),
+        (False, "No - I'll decide what to keep"),
+    ]
+    for i, (_, desc) in enumerate(promote_choices, 1):
+        click.echo(f"  {i}. {desc}")
+
+    promote_choice = click.prompt("Choose", type=click.IntRange(1, 2), default=1)
+    auto_promote = promote_choices[promote_choice - 1][0]
+    click.echo()
+
+    # Question 3: Retention mode
+    click.echo("? How should memories age over time?")
+    retention_choices = [
+        ("smart", "Smart - Frequently-used memories stay strong, unused ones fade"),
+        ("keep_all", "Keep all - Everything stays at full strength forever"),
+    ]
+    for i, (_, desc) in enumerate(retention_choices, 1):
+        click.echo(f"  {i}. {desc}")
+
+    retention_choice = click.prompt("Choose", type=click.IntRange(1, 2), default=1)
+    retention_mode = retention_choices[retention_choice - 1][0]
+    click.echo()
+
+    return {
+        "version": 1,
+        "logging_level": logging_level,
+        "auto_promote": auto_promote,
+        "retention_mode": retention_mode,
+        "created": date.today().isoformat(),
+    }
 
 
 @cli.command()

@@ -75,6 +75,8 @@
 	.navbar-logo-img {
 		width: 24px;
 		height: 24px;
+		position: relative;
+		left: -1px;
 	}
 
 	/* Logo is white - invert to black in light mode, keep white in dark mode */
@@ -88,14 +90,19 @@
 
 	.navbar-logo-text {
 		font-family: 'Instrument Serif', Georgia, serif;
-		font-size: 1.44rem;
+		font-size: 1.36rem;
 		color: var(--text-primary);
+		position: relative;
+		top: 1px;
+		left: -1px;
 	}
 
 	.navbar-logo-product {
 		font-family: 'Instrument Serif', Georgia, serif;
-		font-size: 1.44rem;
+		font-size: 1.36rem;
 		color: var(--green-dim);
+		position: relative;
+		top: 1px;
 	}
 
 	.navbar-right {

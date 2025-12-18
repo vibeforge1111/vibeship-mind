@@ -127,7 +127,7 @@ MCP config for source install:
 - **Usage-Based Retention** - Memories decay if unused, stay relevant if accessed frequently
 - **413 Tests** - Comprehensive test coverage for stability
 
-**To upgrade:** `pip install vibeship-mind --upgrade`
+**To upgrade to the newest version:** `pip install vibeship-mind --upgrade` (don't need to do this if you are just installing now)
 
 ### Previous (2.2.0)
 

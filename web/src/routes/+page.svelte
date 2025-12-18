@@ -377,8 +377,16 @@ Done.`,
 	</div>
 
 	<div class="cta">
-		<a href="https://github.com/vibeforge1111/vibeship-mind" class="btn btn-primary btn-lg">
-			Get Started
+		<a href="#get-started" class="btn btn-mind btn-lg">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M12 2a8 8 0 0 1 8 8c0 2.5-1 4.5-2.5 6l-.5.5v3.5a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2v-3.5l-.5-.5C5 14.5 4 12.5 4 10a8 8 0 0 1 8-8z"/>
+				<path d="M9.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+				<path d="M14.5 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z"/>
+				<path d="M9 13h6"/>
+				<path d="M10 17v3"/>
+				<path d="M14 17v3"/>
+			</svg>
+			Give Your LLM a Mind
 		</a>
 	</div>
 </div>
@@ -665,7 +673,7 @@ Done.`,
 	</div>
 </section>
 
-<section class="get-started-cta">
+<section class="get-started-cta" id="get-started">
 	<h2>Ready to Give Claude a <span class="highlight">Mind</span>?</h2>
 	<p>3 steps. Zero friction.</p>
 
@@ -709,13 +717,6 @@ Done.`,
 	</div>
 </section>
 
-<footer>
-	<p>
-		Built by <a href="https://x.com/meta_alchemist" target="_blank">@meta_alchemist</a>
-		&nbsp;·&nbsp;
-		A <a href="https://vibeship.co" target="_blank">vibeship.co</a> project
-	</p>
-</footer>
 
 <style>
 	.hero {
@@ -790,7 +791,8 @@ Done.`,
 	.terminal-body {
 		padding: var(--space-4);
 		font-size: var(--text-base);
-		min-height: 280px;
+		height: 340px;
+		overflow-y: auto;
 	}
 
 	.line {
@@ -834,6 +836,31 @@ Done.`,
 
 	.cta {
 		margin-top: var(--space-6);
+	}
+
+	.btn-mind {
+		border: 1px solid var(--green-dim);
+		background: var(--bg-inverse);
+		color: var(--text-inverse);
+		display: inline-flex;
+		align-items: center;
+		gap: var(--space-2);
+		box-shadow: var(--shadow-glow-green);
+	}
+
+	.btn-mind:hover {
+		background: var(--green-dim);
+		color: var(--bg-primary);
+		box-shadow: 0 0 30px rgba(0, 196, 154, 0.4);
+	}
+
+	.btn-mind svg {
+		flex-shrink: 0;
+		color: var(--green-dim);
+	}
+
+	.btn-mind:hover svg {
+		color: var(--bg-primary);
 	}
 
 	/* Features */
@@ -1183,7 +1210,6 @@ Done.`,
 		padding: var(--space-12) 0;
 		border-top: 1px solid var(--border);
 		text-align: center;
-		background: linear-gradient(180deg, transparent 0%, rgba(0, 255, 136, 0.02) 100%);
 	}
 
 	.get-started-cta h2 {
@@ -1390,21 +1416,6 @@ Done.`,
 		color: var(--green-dim);
 	}
 
-	/* Footer */
-	footer {
-		padding: var(--space-8) 0;
-		border-top: 1px solid var(--border);
-		text-align: center;
-	}
-
-	footer p {
-		font-size: var(--text-base);
-		color: var(--text-tertiary);
-	}
-
-	footer a {
-		color: var(--text-secondary);
-	}
 
 	/* Architecture Flow */
 	.architecture-flow {

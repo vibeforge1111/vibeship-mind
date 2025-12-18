@@ -1,51 +1,36 @@
-"""Mindful - Mind's ASCII mascot with emotions."""
+"""Mindful - Mind's ASCII mascot with emotions.
 
-import os
-import sys
+Uses ASCII-only characters for maximum compatibility across all terminals,
+including Windows cp1252 encoding.
+"""
 
 
 def can_use_unicode() -> bool:
     """Check if terminal supports Unicode output.
 
-    Returns True by default. Set MIND_ASCII=1 to force ASCII fallback.
-    Set MIND_UNICODE=1 to force Unicode even on Windows.
+    Always returns False - we use ASCII-only for compatibility.
+    Kept for API compatibility with existing code.
     """
-    # Allow forcing ASCII via env var
-    if os.environ.get("MIND_ASCII", "").lower() in ("1", "true", "yes"):
-        return False
-
-    # Allow forcing Unicode via env var (overrides Windows detection)
-    if os.environ.get("MIND_UNICODE", "").lower() in ("1", "true", "yes"):
-        return True
-
-    # Check if stdout encoding supports Unicode
-    # Windows cp1252 doesn't support box drawing characters
-    try:
-        encoding = sys.stdout.encoding or ""
-        if encoding.lower() in ("cp1252", "cp1251", "ascii", "latin-1", "latin1"):
-            return False
-    except Exception:
-        pass
-
-    return True
+    return False
 
 
 # Mindful's expressions - eyes and mouth change with state
+# ASCII-only for maximum compatibility (Windows cp1252, etc.)
 EXPRESSIONS = {
-    "idle": ("◎  ◎", "╧╧"),
-    "happy": ("◠  ◠", "◡◡"),
-    "thinking": ("◎  ◎", "~~"),
-    "success": ("^  ^", "▽▽"),
-    "searching": ("◎  ◎", ".."),
-    "curious": ("◎  ◎", "??"),
-    "warning": ("◉  ◉", "!!"),
-    "alert": ("●  ●", "<>"),
-    "sleepy": ("ᴗ  ᴗ", ".."),
-    "confused": ("◎  ◎", "??"),
-    "sad": ("◡  ◡", "nn"),
-    "shy": ("◦  ◦", "><"),
-    "excited": ("★  ★", "○○"),
-    "focused": ("◉  ◉", "──"),
+    "idle": ("o  o", "--"),
+    "happy": ("^  ^", "vv"),
+    "thinking": ("o  o", "~~"),
+    "success": ("^  ^", "vv"),
+    "searching": ("o  o", ".."),
+    "curious": ("o  o", "??"),
+    "warning": ("O  O", "!!"),
+    "alert": ("O  O", "<>"),
+    "sleepy": ("-  -", ".."),
+    "confused": ("o  o", "??"),
+    "sad": ("v  v", "nn"),
+    "shy": (".  .", "><"),
+    "excited": ("*  *", "oo"),
+    "focused": ("O  O", "--"),
     "error": ("x  x", "##"),
 }
 
@@ -69,24 +54,8 @@ ACTION_EMOTIONS = {
     "reinforce": "success",  # Pattern reinforcement
 }
 
-# ASCII fallback for Windows cp1252
-EXPRESSIONS_ASCII = {
-    "idle": ("o  o", "--"),
-    "happy": ("^  ^", "vv"),
-    "thinking": ("o  o", "~~"),
-    "success": ("^  ^", "vv"),
-    "searching": ("o  o", ".."),
-    "curious": ("o  o", "??"),
-    "warning": ("O  O", "!!"),
-    "alert": ("O  O", "<>"),
-    "sleepy": ("-  -", ".."),
-    "confused": ("o  o", "??"),
-    "sad": ("v  v", "nn"),
-    "shy": (".  .", "><"),
-    "excited": ("*  *", "oo"),
-    "focused": ("O  O", "--"),
-    "error": ("x  x", "##"),
-}
+# Alias for backwards compatibility
+EXPRESSIONS_ASCII = EXPRESSIONS
 
 
 def get_mindful(emotion: str = "idle", fancy: bool = True, message: str = "") -> str:
@@ -94,33 +63,23 @@ def get_mindful(emotion: str = "idle", fancy: bool = True, message: str = "") ->
 
     Args:
         emotion: One of the EXPRESSIONS keys
-        fancy: Use Unicode box drawing (False for ASCII fallback)
+        fancy: Ignored - always uses ASCII for compatibility
         message: Optional message to show next to Mindful
 
     Returns:
         Multi-line string with Mindful ASCII art
     """
-    expressions = EXPRESSIONS if fancy else EXPRESSIONS_ASCII
-    eyes, mouth = expressions.get(emotion, expressions["idle"])
+    eyes, mouth = EXPRESSIONS.get(emotion, EXPRESSIONS["idle"])
 
-    if fancy:
-        lines = [
-            "    ╔══════╗",
-            f"   ╔╣ {eyes} ╠╗",
-            "   ║╚══╤╤══╝║",
-            f"   ╠═══{mouth}═══╣",
-            "   ╚╤══════╤╝",
-            "    ╘══╧╧══╛",
-        ]
-    else:
-        lines = [
-            "    .======.",
-            f"   .| {eyes} |.",
-            "   |'==||=='|",
-            f"   |==={mouth}===|",
-            "   '|======|'",
-            "    '==||=='",
-        ]
+    # Always use ASCII art for compatibility
+    lines = [
+        "    .======.",
+        f"   .| {eyes} |.",
+        "   |'==||=='|",
+        f"   |==={mouth}===|",
+        "   '|======|'",
+        "    '==||=='",
+    ]
 
     if message:
         # Add message next to Mindful (middle line)
@@ -140,18 +99,13 @@ def get_mindful_compact(emotion: str = "idle", fancy: bool = True) -> str:
 
     Args:
         emotion: One of the EXPRESSIONS keys
-        fancy: Use Unicode characters (False for ASCII fallback)
+        fancy: Ignored - always uses ASCII for compatibility
 
     Returns:
         Single-line string with Mindful face
     """
-    expressions = EXPRESSIONS if fancy else EXPRESSIONS_ASCII
-    eyes, mouth = expressions.get(emotion, expressions["idle"])
-
-    if fancy:
-        return f"╔╣ {eyes} ╠╗ {mouth}"
-    else:
-        return f"[{eyes}] {mouth}"
+    eyes, mouth = EXPRESSIONS.get(emotion, EXPRESSIONS["idle"])
+    return f"[{eyes}] {mouth}"
 
 
 def mindful_says(action: str, message: str, fancy: bool = True) -> str:
@@ -160,13 +114,13 @@ def mindful_says(action: str, message: str, fancy: bool = True) -> str:
     Args:
         action: Mind action (recall, log, search, etc.)
         message: Message to display
-        fancy: Use Unicode (False for ASCII fallback)
+        fancy: Ignored - always uses ASCII for compatibility
 
     Returns:
         Multi-line string with Mindful and message
     """
     emotion = ACTION_EMOTIONS.get(action, "idle")
-    return get_mindful(emotion, fancy, message)
+    return get_mindful(emotion, message=message)
 
 
 def mindful_line(action: str, message: str, fancy: bool = True) -> str:
@@ -175,20 +129,14 @@ def mindful_line(action: str, message: str, fancy: bool = True) -> str:
     Args:
         action: Mind action (recall, log, search, etc.)
         message: Message to display
-        fancy: Use Unicode (False for ASCII fallback)
+        fancy: Ignored - always uses ASCII for compatibility
 
     Returns:
         Single line: [mindful face] action | message
     """
     emotion = ACTION_EMOTIONS.get(action, "idle")
-    expressions = EXPRESSIONS if fancy else EXPRESSIONS_ASCII
-    eyes, mouth = expressions.get(emotion, expressions["idle"])
-
-    if fancy:
-        face = f"({eyes[0]}{mouth}{eyes[-1]})"
-    else:
-        face = f"({eyes[0]}{mouth}{eyes[-1]})"
-
+    eyes, mouth = EXPRESSIONS.get(emotion, EXPRESSIONS["idle"])
+    face = f"({eyes[0]}{mouth}{eyes[-1]})"
     return f"{face} mind_{action} | {message}"
 
 

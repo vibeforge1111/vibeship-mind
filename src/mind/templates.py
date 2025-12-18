@@ -51,14 +51,14 @@ This project uses Mind for persistent memory across sessions.
 1. **Session Start**: ALWAYS call `mind_recall()` before responding to the first message. This loads context from previous sessions.
 
 2. **During Work**: Use `mind_log(message, type)` to capture what happens:
-   - `mind_log("chose X over Y - simpler", type="decision")` → MEMORY.md
-   - `mind_log("API returns 500 on large payloads", type="problem")` → MEMORY.md
-   - `mind_log("Safari needs vendor prefix for X", type="learning")` → MEMORY.md
-   - `mind_log("resolved by increasing timeout", type="progress")` → MEMORY.md
-   - `mind_log("working on auth flow", type="experience")` → SESSION.md
-   - `mind_log("build keeps failing", type="blocker")` → SESSION.md
-   - `mind_log("tried Redis - too complex", type="rejected")` → SESSION.md
-   - `mind_log("assuming user has stable internet", type="assumption")` → SESSION.md
+   - `mind_log("chose X over Y - simpler", type="decision")` -> MEMORY.md
+   - `mind_log("API returns 500 on large payloads", type="problem")` -> MEMORY.md
+   - `mind_log("Safari needs vendor prefix for X", type="learning")` -> MEMORY.md
+   - `mind_log("resolved by increasing timeout", type="progress")` -> MEMORY.md
+   - `mind_log("working on auth flow", type="experience")` -> SESSION.md
+   - `mind_log("build keeps failing", type="blocker")` -> SESSION.md
+   - `mind_log("tried Redis - too complex", type="rejected")` -> SESSION.md
+   - `mind_log("assuming user has stable internet", type="assumption")` -> SESSION.md
 
 3. **Session End**: Summarize with `## DATE | what happened | mood: X`
 

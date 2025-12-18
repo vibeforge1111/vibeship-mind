@@ -1695,6 +1695,12 @@ Done.`,
 			min-height: 300px;
 		}
 
+		.terminal-body {
+			height: auto;
+			min-height: 340px;
+			overflow-y: visible;
+		}
+
 		.reminders-grid {
 			grid-template-columns: 1fr;
 		}

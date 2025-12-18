@@ -123,18 +123,18 @@ MCP config for source install:
 
 ## What's New in 2.3.0
 
-- ✓ **Logging Levels** - Choose Efficient/Balanced/Detailed modes to control what gets logged
-- ✓ **Usage-Based Retention** - Memories decay if unused, stay relevant if accessed frequently
-- ✓ **413 Tests** - Comprehensive test coverage for stability
+- **Logging Levels** - Choose Efficient/Balanced/Detailed modes to control what gets logged
+- **Usage-Based Retention** - Memories decay if unused, stay relevant if accessed frequently
+- **413 Tests** - Comprehensive test coverage for stability
 
 **To upgrade:** `pip install vibeship-mind --upgrade`
 
 ### Previous (2.2.0)
 
-- ✓ **Semantic Search** - `mind_search()` uses TF-IDF similarity, not just keywords
-- ✓ **Loop Detection** - Warns when you're about to repeat a rejected approach
-- ✓ **Smart Promotion** - Deduplicates memories, links related entries
-- ✓ **Memory <-> Session Flow** - Relevant memories surface when logging blockers
+- **Semantic Search** - `mind_search()` uses TF-IDF similarity, not just keywords
+- **Loop Detection** - Warns when you're about to repeat a rejected approach
+- **Smart Promotion** - Deduplicates memories, links related entries
+- **Memory <-> Session Flow** - Relevant memories surface when logging blockers
 
 ---
 

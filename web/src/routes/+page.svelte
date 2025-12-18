@@ -384,38 +384,77 @@ Done.`,
 </div>
 
 <section class="features">
-	<h2>Why Mind?</h2>
+	<h2><span class="warning-badge">!</span> without Mind</h2>
 	<p class="section-subtitle">Without memory, Claude starts every session blank. These problems go away.</p>
 
 	<div class="feature-grid">
 		<div class="feature">
+			<div class="feature-icon">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+					<circle cx="12" cy="12" r="10"/>
+					<path d="M12 6v6l4 2"/>
+				</svg>
+			</div>
 			<h3>Rabbit Holes</h3>
 			<p>Claude goes down the wrong path for an hour before you notice. Mind tracks what's been tried so it doesn't loop.</p>
 		</div>
 
 		<div class="feature">
+			<div class="feature-icon">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+					<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+					<circle cx="12" cy="7" r="4"/>
+				</svg>
+			</div>
 			<h3>Doesn't Remember You</h3>
 			<p>Your preferences, your stack, your way of doing things - gone every session. Mind remembers who it's working with.</p>
 		</div>
 
 		<div class="feature">
+			<div class="feature-icon">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+					<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+					<polyline points="7 10 12 15 17 10"/>
+					<line x1="12" y1="15" x2="12" y2="3"/>
+				</svg>
+			</div>
 			<h3>Session Memory Lost</h3>
 			<p>Terminal closes. All that context? Vanished. Mind persists what matters between sessions.</p>
 		</div>
 
 		<div class="feature">
+			<div class="feature-icon">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+					<rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+					<line x1="9" y1="9" x2="15" y2="15"/>
+					<line x1="15" y1="9" x2="9" y2="15"/>
+				</svg>
+			</div>
 			<h3>Forgets What's Built</h3>
 			<p>Claude references features that don't exist, or rebuilds things you have. Mind tracks what's done vs not.</p>
 		</div>
 
 		<div class="feature">
+			<div class="feature-icon">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+					<polyline points="16 18 22 12 16 6"/>
+					<polyline points="8 6 2 12 8 18"/>
+					<line x1="12" y1="2" x2="12" y2="22"/>
+				</svg>
+			</div>
 			<h3>Spaghetti Code</h3>
 			<p>No memory means disconnected updates. Claude patches on patches. Mind keeps the full picture for coherent changes.</p>
 		</div>
 
-		<div class="feature feature-highlight">
-			<h3>2 Commands to Fix All This</h3>
-			<p>pip install, mind init. These problems stop. Fully automated after.</p>
+		<div class="feature">
+			<div class="feature-icon">
+				<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+					<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+					<path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+				</svg>
+			</div>
+			<h3>No Reminders for Future</h3>
+			<p>"Remind me to add rate limiting before launch" - gone next session. Mind keeps context-triggered and time-based reminders.</p>
 		</div>
 	</div>
 </section>
@@ -812,6 +851,23 @@ Done.`,
 		line-height: 1.7;
 	}
 
+	.warning-badge {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 32px;
+		height: 32px;
+		background: var(--red);
+		color: #fff;
+		font-family: var(--font-mono);
+		font-size: 1.25rem;
+		font-weight: 700;
+		border-radius: 4px;
+		margin-right: var(--space-2);
+		vertical-align: middle;
+		transform: rotate(-3deg);
+	}
+
 	section h2 {
 		text-align: center;
 		margin-bottom: var(--space-8);
@@ -827,18 +883,49 @@ Done.`,
 		padding: var(--space-5);
 		background: var(--bg-secondary);
 		border: 1px solid var(--border);
+		transition: all var(--transition-fast);
+		cursor: default;
 	}
 
-	.feature-highlight {
-		border-color: var(--green-dim);
+	.feature:hover {
+		border-color: var(--red);
+		box-shadow: 0 0 20px rgba(255, 77, 77, 0.15);
+	}
+
+	.feature-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 40px;
+		height: 40px;
 		background: var(--bg-tertiary);
+		border: 1px solid var(--border);
+		margin-bottom: var(--space-3);
+		color: var(--text-secondary);
+		transition: all var(--transition-fast);
+	}
+
+	.feature:hover .feature-icon {
+		border-color: var(--red);
+		color: var(--red);
+	}
+
+	.feature-icon svg {
+		display: block;
+		width: 20px;
+		height: 20px;
 	}
 
 	.feature h3 {
 		font-family: var(--font-mono);
 		font-size: var(--text-lg);
 		margin-bottom: var(--space-2);
-		color: var(--green-dim);
+		color: var(--text-primary);
+		transition: color var(--transition-fast);
+	}
+
+	.feature:hover h3 {
+		color: var(--red);
 	}
 
 	.feature p {
@@ -1398,14 +1485,25 @@ Done.`,
 		flex: 1;
 		padding: var(--space-3);
 		border: 1px dashed var(--border);
+		transition: all 0.2s ease;
 	}
 
 	.storage-side.long-term {
 		border-color: var(--green-dim);
 	}
 
+	.storage-side.long-term:hover {
+		background: rgba(0, 196, 154, 0.03);
+		border-style: solid;
+	}
+
 	.storage-side.short-term {
 		border-color: var(--orange);
+	}
+
+	.storage-side.short-term:hover {
+		background: rgba(217, 119, 87, 0.03);
+		border-style: solid;
 	}
 
 	.storage-header {

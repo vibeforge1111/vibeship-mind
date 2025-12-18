@@ -724,7 +724,7 @@ Done.`,
 				<button class="copy-btn" onclick={(e) => handleCopy('pip install vibeship-mind', 'pip install', e)}>Copy</button>
 				<code>pip install vibeship-mind</code>
 			</div>
-			<div class="step-note">To upgrade: <code>pip install vibeship-mind --upgrade</code></div>
+			<div class="step-note">To upgrade to the newest version: <code>pip install vibeship-mind --upgrade</code> (don't need to do this if you are just installing now)</div>
 		</div>
 
 		<div class="install-step">

@@ -12,7 +12,7 @@ from .detection import detect_stack
 from .parser import InlineScanner, Parser
 from .storage import ProjectsRegistry, get_global_mind_dir, get_self_improve_path
 from .config import create_default_config
-from .templates import GITIGNORE_CONTENT, MEMORY_TEMPLATE, SESSION_TEMPLATE, SELF_IMPROVE_TEMPLATE
+from .templates import GITIGNORE_CONTENT, MEMORY_TEMPLATE, SESSION_TEMPLATE, REMINDERS_TEMPLATE, SELF_IMPROVE_TEMPLATE
 
 
 @click.group()
@@ -86,6 +86,14 @@ def init(path: str):
         click.echo("[+] Created .mind/SESSION.md")
     else:
         click.echo("[.] .mind/SESSION.md already exists (preserved)")
+
+    # Create REMINDERS.md (don't overwrite if exists)
+    reminders_file = mind_dir / "REMINDERS.md"
+    if not reminders_file.exists():
+        reminders_file.write_text(REMINDERS_TEMPLATE)
+        click.echo("[+] Created .mind/REMINDERS.md")
+    else:
+        click.echo("[.] .mind/REMINDERS.md already exists (preserved)")
 
     # Create config.json (don't overwrite if exists)
     config_file = mind_dir / "config.json"

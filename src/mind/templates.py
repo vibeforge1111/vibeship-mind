@@ -101,6 +101,19 @@ GITIGNORE_CONTENT = """# Mind files are personal/local - don't commit
 !.gitignore
 """
 
+REMINDERS_TEMPLATE = """<!-- MIND REMINDERS - Time and context-based reminders
+Use mind_remind(message, when) to add reminders.
+
+Time-based: "next session", "tomorrow", "in 3 days", "2025-12-25"
+Context-based: "when I mention auth", "when we work on database"
+
+Format: - [ ] message | due: DATE | type: TYPE
+Mark done: - [x] message | due: DATE | type: TYPE | done: DATE -->
+
+# Reminders
+
+"""
+
 SELF_IMPROVE_TEMPLATE = """<!-- MIND SELF-IMPROVEMENT - Cross-project patterns about YOU
 This file lives in ~/.mind/ and persists across all projects.
 It helps Claude remember your patterns, preferences, and blind spots. -->

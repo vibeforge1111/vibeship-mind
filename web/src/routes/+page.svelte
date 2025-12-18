@@ -673,6 +673,38 @@ Done.`,
 	</div>
 </section>
 
+<section class="privacy-section">
+	<h2>We <span class="highlight">Mind</span> Your Privacy</h2>
+	<div class="privacy-card">
+		<div class="privacy-card-header">
+			<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+				<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+				<path d="M9 12l2 2 4-4"/>
+			</svg>
+			<p>Everything stays on your machine. Always.</p>
+		</div>
+		<div class="privacy-grid">
+			<div class="privacy-item">
+				<span class="privacy-check">&#10003;</span>
+				<span>All data stored locally in your <code>.mind/</code> folder</span>
+			</div>
+			<div class="privacy-item">
+				<span class="privacy-check">&#10003;</span>
+				<span>We have zero access to your IDE or memories</span>
+			</div>
+			<div class="privacy-item">
+				<span class="privacy-check">&#10003;</span>
+				<span>MCP server runs 100% on your computer</span>
+			</div>
+			<div class="privacy-item">
+				<span class="privacy-check">&#10003;</span>
+				<span>No cloud. No tracking. No telemetry.</span>
+			</div>
+		</div>
+		<a href="/privacy" class="privacy-policy-link">Read our Privacy Policy &rarr;</a>
+	</div>
+</section>
+
 <section class="get-started-cta" id="get-started">
 	<h2>Ready to Give Claude a <span class="highlight">Mind</span>?</h2>
 	<p>3 steps. Zero friction.</p>
@@ -684,6 +716,7 @@ Done.`,
 				<button class="copy-btn" onclick={(e) => handleCopy('pip install vibeship-mind', 'pip install', e)}>Copy</button>
 				<code>pip install vibeship-mind</code>
 			</div>
+			<div class="step-note">To upgrade: <code>pip install vibeship-mind --upgrade</code></div>
 		</div>
 
 		<div class="install-step">
@@ -1203,6 +1236,94 @@ Done.`,
 		font-size: var(--text-base);
 		color: var(--text-secondary);
 		line-height: 1.7;
+	}
+
+	/* Privacy Section */
+	.privacy-section {
+		padding: var(--space-12) 0;
+		border-top: 1px solid var(--border);
+		text-align: center;
+	}
+
+	.privacy-section h2 {
+		margin-bottom: var(--space-6);
+	}
+
+	.privacy-card {
+		max-width: 500px;
+		margin: 0 auto;
+		border: 1px solid var(--green-dim);
+		background: linear-gradient(135deg, rgba(0, 196, 154, 0.03) 0%, transparent 100%);
+		box-shadow: 0 0 20px rgba(0, 196, 154, 0.1);
+	}
+
+	.privacy-card-header {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: var(--space-3);
+		padding: var(--space-4);
+		border-bottom: 1px solid rgba(0, 196, 154, 0.2);
+		color: var(--green-dim);
+	}
+
+	.privacy-card-header p {
+		margin: 0;
+		font-size: var(--text-lg);
+		color: var(--text-primary);
+		font-weight: 500;
+	}
+
+	.privacy-grid {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: 1px;
+		background: rgba(0, 196, 154, 0.1);
+	}
+
+	.privacy-item {
+		display: flex;
+		align-items: center;
+		gap: var(--space-2);
+		padding: var(--space-4);
+		background: var(--bg-primary);
+		color: var(--text-secondary);
+		font-size: var(--text-sm);
+		text-align: left;
+	}
+
+	.privacy-check {
+		color: var(--green-dim);
+		font-weight: bold;
+		flex-shrink: 0;
+	}
+
+	.privacy-item code {
+		background: var(--bg-secondary);
+		padding: 0.1em 0.3em;
+		border-radius: 3px;
+		font-size: 0.85em;
+	}
+
+	.privacy-policy-link {
+		display: block;
+		padding: var(--space-3);
+		color: var(--text-tertiary);
+		font-size: var(--text-sm);
+		text-decoration: none;
+		border-top: 1px solid rgba(0, 196, 154, 0.2);
+		transition: all var(--transition-fast);
+	}
+
+	.privacy-policy-link:hover {
+		color: var(--green-dim);
+		background: rgba(0, 196, 154, 0.05);
+	}
+
+	@media (max-width: 600px) {
+		.privacy-grid {
+			grid-template-columns: 1fr;
+		}
 	}
 
 	/* Get Started CTA */

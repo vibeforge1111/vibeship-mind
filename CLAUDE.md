@@ -4,42 +4,44 @@ This project uses Mind for persistent memory across sessions.
 
 ### Required Protocol
 
-1. **Session Start**: ALWAYS call `mind_recall()` before responding to the first message. This loads context from previous sessions.
+1. **Session Start**: ALWAYS call `mind_recall()` before responding to the first message.
 
-2. **During Work**: Use `mind_log(message, type)` to capture what happens:
-   - `mind_log("chose X over Y - simpler", type="decision")` -> MEMORY.md
-   - `mind_log("API returns 500 on large payloads", type="problem")` -> MEMORY.md
-   - `mind_log("Safari needs vendor prefix for X", type="learning")` -> MEMORY.md
-   - `mind_log("resolved by increasing timeout", type="progress")` -> MEMORY.md
-   - `mind_log("working on auth flow", type="experience")` -> SESSION.md
-   - `mind_log("build keeps failing", type="blocker")` -> SESSION.md
-   - `mind_log("tried Redis - too complex", type="rejected")` -> SESSION.md
-   - `mind_log("assuming user has stable internet", type="assumption")` -> SESSION.md
+2. **During Work**: Log actively to SESSION.md (ephemeral) and MEMORY.md (permanent):
 
-3. **Session End**: Summarize with `## DATE | what happened | mood: X`
+   **SESSION.md types - USE FREQUENTLY (cleared between sessions):**
+   - `mind_log("reading auth module", type="experience")` - What you're doing NOW
+   - `mind_log("can't find token validation", type="blocker")` - What's blocking you
+   - `mind_log("tried Redis - overkill", type="rejected")` - What didn't work
+   - `mind_log("assuming stable internet", type="assumption")` - What you're assuming
 
-### Two-Layer Memory
+   **MEMORY.md types - For important discoveries:**
+   - `mind_log("chose X over Y - simpler", type="decision")`
+   - `mind_log("Safari needs vendor prefix", type="learning")`
+   - `mind_log("API returns 500 on large payloads", type="problem")`
+   - `mind_log("resolved by increasing timeout", type="progress")`
 
-**MEMORY.md** (permanent, cross-session):
-- Decisions, learnings, problems, progress
-- Use types: `decision`, `learning`, `problem`, `progress`
+### SESSION.md Logging (IMPORTANT)
 
-**SESSION.md** (ephemeral, within-session):
-- Raw experience, blockers, rejected approaches, assumptions
-- Use types: `experience`, `blocker`, `rejected`, `assumption`
-- Valuable items get promoted to MEMORY.md on session gap (>30 min)
+**Log to SESSION.md frequently as you work.** This prevents loops - repeating failed fixes, forgetting what you tried.
+
+| When | Type | Example |
+|------|------|---------|
+| Starting a task | `experience` | "investigating login bug" |
+| Making an assumption | `assumption` | "assuming user wants client-side validation" |
+| Trying an approach | `experience` | "trying Redis for caching" |
+| Something didn't work | `rejected` | "Redis too complex for this use case" |
+| Getting stuck | `blocker` | "can't find where session is stored" |
+
+**Rule: Log every 2-3 tool calls. If in doubt, log it - SESSION.md clears anyway.**
 
 ### Tools Available
 
-- `mind_recall()` - Load session context (CALL FIRST!)
-- `mind_log(msg, type)` - Log to session or memory (routes by type)
-- `mind_session()` - Get current session state
-- `mind_blocker(description)` - Log blocker + auto-search memory for solutions
+- `mind_recall()` - Load context (CALL FIRST!)
+- `mind_log(msg, type)` - Log to SESSION.md or MEMORY.md
+- `mind_session()` - Check current session state
+- `mind_blocker(desc)` - Log blocker + auto-search for solutions
 - `mind_search(query)` - Find specific memories
-- `mind_remind(msg, when)` - Set time or context reminder
-- `mind_checkpoint()` - Force process pending memories
-- `mind_edges(intent)` - Check for gotchas before coding
-- `mind_status()` - Check memory health
+- `mind_remind(msg, when)` - Set reminders
 
 ---
 

@@ -27,7 +27,7 @@ def _inject_context(claude_md: Path, context: str) -> None:
     if claude_md.exists():
         content = claude_md.read_text()
 
-        # Remove existing MIND:CONTEXT section
+        # Remove existing MIND:CONTEXT section (including MIND:END marker)
         content = re.sub(
             r"<!-- MIND:CONTEXT.*?<!-- MIND:END -->\n*",
             "",
@@ -35,7 +35,32 @@ def _inject_context(claude_md: Path, context: str) -> None:
             flags=re.DOTALL,
         )
 
-        # Inject at top
+        # Remove orphaned MIND:CONTEXT sections (without MIND:END)
+        # These can occur from interrupted inits or corrupted files
+        content = re.sub(
+            r"<!-- MIND:CONTEXT[^>]*-->\n## Stack\n[^\n]*\n\n## Gotchas\n[^\n]*\n*",
+            "",
+            content,
+            flags=re.DOTALL,
+        )
+
+        # Remove old Mind template section (## Memory (Mind) up to first ---)
+        # This handles the case where the template was previously injected
+        content = re.sub(
+            r"^## Memory \(Mind\).*?^---\n*",
+            "",
+            content,
+            flags=re.DOTALL | re.MULTILINE,
+        )
+
+        # Remove old MIND:VERSION markers
+        content = re.sub(
+            r"<!-- MIND:VERSION:\d+ -->\n*",
+            "",
+            content,
+        )
+
+        # Inject at top, preserving any remaining user content
         content = context + "\n\n" + content.lstrip()
     else:
         # Create new CLAUDE.md

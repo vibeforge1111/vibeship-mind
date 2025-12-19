@@ -887,14 +887,44 @@ def update_session_section(project_path: Path, section_name: str, content: str, 
 
 
 def get_current_project() -> Optional[Path]:
-    """Get the current project path from CWD."""
-    cwd = Path.cwd()
+    """Get the current project path.
 
-    # Check if CWD has .mind directory
+    Priority order:
+    1. MIND_PROJECT environment variable (explicit override)
+    2. PWD environment variable (shell's working directory, may differ from Python's cwd)
+    3. Python's cwd (Path.cwd())
+    4. Walk up parent directories looking for .mind
+
+    This handles the case where the MCP server is started with a different
+    working directory than where the user is actually working (e.g., when
+    uv --directory points to the Mind package location).
+    """
+    # Priority 1: Explicit MIND_PROJECT override
+    mind_project = os.environ.get("MIND_PROJECT")
+    if mind_project:
+        path = Path(mind_project)
+        if (path / ".mind").exists():
+            return path
+
+    # Priority 2: PWD environment variable (shell's actual working directory)
+    # This is important because `uv --directory` changes Python's cwd but
+    # the shell's PWD may still reflect the user's actual project
+    pwd = os.environ.get("PWD")
+    if pwd:
+        path = Path(pwd)
+        if (path / ".mind").exists():
+            return path
+        # Also check parent directories of PWD
+        for parent in path.parents:
+            if (parent / ".mind").exists():
+                return parent
+
+    # Priority 3: Python's cwd
+    cwd = Path.cwd()
     if (cwd / ".mind").exists():
         return cwd
 
-    # Check parent directories
+    # Priority 4: Walk up parent directories from cwd
     for parent in cwd.parents:
         if (parent / ".mind").exists():
             return parent
@@ -1485,6 +1515,8 @@ def create_server() -> Server:
 
 async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
     """Handle mind_recall tool - main session context loader with SESSION.md support."""
+    from ..health import auto_repair
+
     project_path_str = args.get("project_path")
     force_refresh = args.get("force_refresh", False)
 
@@ -1500,6 +1532,9 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
     memory_file = project_path / ".mind" / "MEMORY.md"
     if not memory_file.exists():
         return [TextContent(type="text", text="Error: No MEMORY.md found. Run 'mind init' first.")]
+
+    # Run auto-repair to fix any missing files (e.g., REMINDERS.md for older projects)
+    auto_repair(project_path)
 
     # Load state
     state = load_state(project_path)

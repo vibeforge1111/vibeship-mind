@@ -235,6 +235,114 @@ python -m mind list
 
 ---
 
+## Useful Prompts for Claude
+
+Copy-paste these prompts to Claude to get the most out of Mind:
+
+### 1. Check Health
+```
+Check Mind's health and tell me if anything needs attention
+```
+
+### 2. View Session State
+```
+Show me my current session state - what have we tried and what's blocked?
+```
+
+### 3. Review Decisions
+```
+What decisions have we made in this project?
+```
+
+### 4. Search Memories
+```
+Search my memories for anything related to [topic]
+```
+
+### 5. Find Gotchas
+```
+What gotchas or learnings do we have about [topic]?
+```
+
+### 6. Log a Decision
+```
+Log this as a decision: [your decision and reasoning]
+```
+
+### 7. Set Time Reminder
+```
+Remind me to [task] tomorrow
+```
+
+### 8. Set Context Reminder
+```
+Remind me to [task] when we work on [feature]
+```
+
+### 9. List Reminders
+```
+Show me all my pending reminders
+```
+
+### 10. Complete Reminder
+```
+Mark reminder [number] as done
+```
+
+### 11. Check Progress
+```
+What were we working on? Check the session
+```
+
+### 12. Log Failed Approach
+```
+Log that we tried [approach] and it didn't work because [reason]
+```
+
+### 13. Review Assumptions
+```
+What assumptions are we making right now?
+```
+
+### 14. Log a Learning
+```
+Log this learning: [what you discovered]
+```
+
+### 15. Log a Blocker
+```
+I'm stuck on [problem] - log it and search for solutions
+```
+
+### 16. Check for Gotchas Before Coding
+```
+Before I implement [feature], check for any gotchas
+```
+
+### 17. Force Memory Sync
+```
+Force process any pending memories now
+```
+
+### 18. Add Project Gotcha
+```
+Add this as a project gotcha: [issue and workaround]
+```
+
+### 19. Upgrade Mind
+```
+Help me upgrade Mind to the latest version
+```
+Then run: `pip install vibeship-mind --upgrade`
+
+### 20. Initialize New Project
+```
+Initialize Mind in [project path]
+```
+Then run: `python -m mind init /path/to/project`
+
+---
+
 ## The Problem This Solves
 
 **Across sessions:**

@@ -2481,9 +2481,26 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
         target = "MEMORY.md"
         message = formatted if entry_type in memory_types else message
 
+        # v3: Add to memory for retrieval
+        if V3_AVAILABLE:
+            try:
+                v3_bridge = get_v3_bridge(project_path)
+                v3_bridge.add_memory(formatted, entry_type)
+            except Exception:
+                pass  # v3 is optional
+
     if success:
         # Keep session alive - user is actively working
         touch_activity(project_path)
+
+        # v3: Record session events for hooks
+        if V3_AVAILABLE and entry_type in session_types:
+            try:
+                v3_bridge = get_v3_bridge(project_path)
+                v3_bridge.record_session_event(f"[{entry_type}] {message}")
+            except Exception:
+                pass  # v3 is optional
+
         output = {
             "success": True,
             "logged": message,

@@ -149,10 +149,16 @@ class PromptSubmitHook:
             content_lower = memory["content"].lower()
             content_words = set(content_lower.split())
 
-            # Simple relevance: word overlap
+            # Relevance: word overlap scored by the smaller set
+            # Using min(query, memory) length prevents both short and long queries
+            # from being penalized. Examples:
+            # - "Redis" (1 word) matching memory with "redis" → 1/1 = 1.0
+            # - 20-word query with 4 matches in 10-word memory → 4/10 = 0.4
             overlap = query_words & content_words
             if overlap:
-                score = len(overlap) / max(len(query_words), 1)
+                # Score by overlap / smaller set size
+                min_size = min(len(query_words), len(content_words))
+                score = len(overlap) / max(min_size, 1)
                 if score >= self.config.min_relevance_score:
                     relevant.append({
                         **memory,

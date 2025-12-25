@@ -6,3 +6,10 @@ Hybrid search combining:
 - Reranking (cross-encoder scoring)
 - Context injection via UserPromptSubmit hook
 """
+from .embeddings import EmbeddingService, EmbeddingConfig, HashEmbedding
+
+__all__ = [
+    "EmbeddingService",
+    "EmbeddingConfig",
+    "HashEmbedding",
+]

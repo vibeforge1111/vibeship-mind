@@ -7,9 +7,14 @@ Hybrid search combining:
 - Context injection via UserPromptSubmit hook
 """
 from .embeddings import EmbeddingService, EmbeddingConfig, HashEmbedding
+from .search import HybridSearch, SearchConfig, SearchResult, SearchMode
 
 __all__ = [
     "EmbeddingService",
     "EmbeddingConfig",
     "HashEmbedding",
+    "HybridSearch",
+    "SearchConfig",
+    "SearchResult",
+    "SearchMode",
 ]

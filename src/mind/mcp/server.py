@@ -31,6 +31,13 @@ from ..self_improve import (
 )
 from ..legacy.similarity import semantic_similarity, semantic_search, semantic_search_strings
 
+# v3 integration (parallel operation mode)
+try:
+    from ..v3.bridge import get_v3_bridge, V3Bridge
+    V3_AVAILABLE = True
+except ImportError:
+    V3_AVAILABLE = False
+
 
 # Gap threshold for session detection (30 minutes)
 GAP_THRESHOLD_MS = 30 * 60 * 1000
@@ -1758,6 +1765,15 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
                 else:
                     context = context + f"\n\n{memories_section}"
 
+    # v3 bridge integration (parallel operation)
+    v3_stats = None
+    if V3_AVAILABLE:
+        try:
+            v3_bridge = get_v3_bridge(project_path)
+            v3_stats = v3_bridge.get_stats()
+        except Exception:
+            pass  # v3 is optional, don't break recall on errors
+
     # Build self_improve summary for output
     self_improve_summary = None
     if self_improve_data.all_patterns():
@@ -1803,6 +1819,7 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
         } for r in context_reminders] if context_reminders else [],
         "self_improve": self_improve_summary,
         "intuitions": intuitions_output,
+        "v3": v3_stats,
         "session_info": {
             "last_session": datetime.fromtimestamp(state["last_activity"] / 1000).isoformat() if state.get("last_activity") else None,
             "gap_detected": gap_detected,

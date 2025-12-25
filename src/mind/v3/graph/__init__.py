@@ -9,3 +9,11 @@ LanceDB-backed graph for storing:
 - Precedents (links between decisions)
 - Outcomes (what actually happened)
 """
+from .store import GraphStore, get_embedding, generate_id, EMBED_DIM
+
+__all__ = [
+    "GraphStore",
+    "get_embedding",
+    "generate_id",
+    "EMBED_DIM",
+]

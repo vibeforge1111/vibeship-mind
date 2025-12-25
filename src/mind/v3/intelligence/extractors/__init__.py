@@ -6,6 +6,7 @@
 """
 from .decision import Decision, LocalDecisionExtractor
 from .entity import Entity, EntityType, LocalEntityExtractor
+from .pattern import Pattern, PatternType, LocalPatternDetector
 
 __all__ = [
     "Decision",
@@ -13,4 +14,7 @@ __all__ = [
     "Entity",
     "EntityType",
     "LocalEntityExtractor",
+    "Pattern",
+    "PatternType",
+    "LocalPatternDetector",
 ]

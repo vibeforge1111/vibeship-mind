@@ -5,3 +5,18 @@ Model cascade for AI-powered extraction:
 - Tier 2: Fast API (Haiku, cheap)
 - Tier 3: Powerful API (Sonnet/Opus, deep reasoning)
 """
+from .cascade import (
+    ModelTier,
+    ModelCascade,
+    CascadeConfig,
+    ExtractionResult,
+    Extractor,
+)
+
+__all__ = [
+    "ModelTier",
+    "ModelCascade",
+    "CascadeConfig",
+    "ExtractionResult",
+    "Extractor",
+]

@@ -9,13 +9,14 @@ Complete guide to the v3 architecture - what's changed, how to use it, and what'
 | Event Sourcing | Ready | Captures all events with timestamps |
 | Graph Storage | Ready | LanceDB-based vector storage |
 | Intelligence Layer | Ready | Model cascade + extractors |
-| Retrieval System | Ready | Embeddings, hybrid search, reranking |
-| Memory System | Ready | Working memory, consolidation, decay |
+| Retrieval System | **Active** | Embeddings, hybrid search, reranking |
+| Memory System | **Active** | Working memory, consolidation, decay |
 | Autonomy System | Ready | Confidence tracking, feedback loops |
-| Claude Code Hooks | Ready | Prompt submit, session end |
-| MCP Integration | **Live** | Running in parallel with legacy |
+| Claude Code Hooks | **Active** | Prompt submit, session end |
+| MCP Integration | **Active** | Context injection enabled |
+| MEMORY.md Seeding | **Active** | Seeds from existing memories |
 
-**Current Mode:** Observation (v3 captures alongside legacy, doesn't replace yet)
+**Current Mode:** Phase C - Full Operation (v3 injects context, legacy as backup)
 
 ---
 
@@ -95,9 +96,11 @@ After `mind_recall()`, look for the `v3` field in the response:
   "v3": {
     "enabled": true,
     "hooks_initialized": true,
+    "seeded_from_memory": 15,
+    "context_injected": true,
     "retrieval": {
-      "total_retrievals": 0,
-      "memory_count": 5
+      "total_retrievals": 1,
+      "memory_count": 18
     },
     "session_events": 3
   }
@@ -110,9 +113,11 @@ After `mind_recall()`, look for the `v3` field in the response:
 |-------|---------|
 | `enabled` | v3 bridge is active |
 | `hooks_initialized` | Prompt and session hooks ready |
-| `memory_count` | Memories added this session |
+| `seeded_from_memory` | Memories loaded from MEMORY.md |
+| `memory_count` | Total memories (seeded + new) |
 | `session_events` | Session events captured |
 | `total_retrievals` | Times context was retrieved |
+| `context_injected` | Whether v3 added context this recall |
 
 ---
 
@@ -124,11 +129,16 @@ Use this to verify v3 is working correctly:
 - [ ] `mind_recall()` returns `v3` field in response
 - [ ] `v3.enabled` is `true`
 - [ ] `v3.hooks_initialized` is `true`
+- [ ] `v3.seeded_from_memory` > 0 (loaded existing memories)
 
 ### During Work
 - [ ] `mind_log("doing X", type="experience")` increments `session_events`
 - [ ] `mind_log("decided Y", type="decision")` increments `memory_count`
 - [ ] No errors in responses
+
+### Context Injection (Phase C)
+- [ ] `v3.context_injected` is `true` when relevant context found
+- [ ] Context includes `## Relevant Context` section from v3
 
 ### Session End
 - [ ] Session events were captured
@@ -138,27 +148,28 @@ Use this to verify v3 is working correctly:
 
 ## What's Operational
 
-### Fully Working
+### Fully Working (Phase C Active)
 
-1. **Event Capture**: All `mind_log` calls feed v3
-2. **Session Tracking**: Session events recorded in v3 bridge
-3. **Memory Storage**: Decisions/learnings added to v3 memory
-4. **Parallel Operation**: v3 runs alongside legacy safely
-5. **Stats Reporting**: v3 stats included in `mind_recall()` response
+1. **MEMORY.md Seeding**: Loads existing memories on startup
+2. **Event Capture**: All `mind_log` calls feed v3
+3. **Session Tracking**: Session events recorded in v3 bridge
+4. **Memory Storage**: Decisions/learnings added to v3 memory
+5. **Context Injection**: v3 injects relevant context during recall
+6. **Semantic Retrieval**: v3 searches memories based on session context
+7. **Stats Reporting**: v3 stats included in `mind_recall()` response
 
-### Not Yet Active (Phase C)
+### Not Yet Active (Phase D)
 
-1. **Context Injection**: v3 doesn't inject context into prompts yet (legacy still does this)
-2. **Semantic Retrieval**: v3 memories aren't searched yet for context
-3. **Session Consolidation**: Session end hook isn't called automatically
+1. **Legacy Deprecation**: Legacy still runs as backup
+2. **Full LanceDB Storage**: Currently using in-memory for v3
 
-### Future Phases
+### Migration Phases
 
 | Phase | Description | Status |
 |-------|-------------|--------|
 | A | Implement v3 hooks | Done |
-| B | Parallel operation | **Current** |
-| C | Gradual replacement | Next |
+| B | Parallel operation | Done |
+| C | Context injection active | **Current** |
 | D | Deprecate legacy | Future |
 
 ---
@@ -291,4 +302,4 @@ uv run pytest tests/v3/ -v
 ---
 
 *Last updated: 2025-12-26*
-*v3 Status: Observation Mode (Phase B)*
+*v3 Status: Full Operation (Phase C)*

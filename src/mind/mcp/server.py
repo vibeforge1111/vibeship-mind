@@ -13,9 +13,9 @@ from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
 from ..config import is_mascot_enabled
-from ..context import ContextGenerator
+from ..legacy.context import ContextGenerator
 from ..mascot import get_mindful, mindful_line, ACTION_EMOTIONS
-from ..parser import Entity, EntityType, Parser
+from ..legacy.parser import Entity, EntityType, Parser
 from ..storage import ProjectsRegistry, get_mind_home, get_self_improve_path
 from ..templates import SESSION_TEMPLATE
 from ..self_improve import (
@@ -29,7 +29,7 @@ from ..self_improve import (
     get_confidence_stats,
     filter_by_confidence,
 )
-from ..similarity import semantic_similarity, semantic_search, semantic_search_strings
+from ..legacy.similarity import semantic_similarity, semantic_search, semantic_search_strings
 
 
 # Gap threshold for session detection (30 minutes)
@@ -109,7 +109,7 @@ def parse_session_section(content: str, section_name: str) -> list[str]:
 
 
 # Semantic similarity module - for loop detection and search
-from ..similarity import find_similar_rejection, semantic_search, semantic_search_strings
+from ..legacy.similarity import find_similar_rejection, semantic_search, semantic_search_strings
 
 
 def extract_promotable_learnings(session_content: str) -> list[dict]:

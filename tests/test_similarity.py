@@ -1,7 +1,7 @@
 """Tests for semantic similarity loop detection and search."""
 
 import pytest
-from mind.similarity import (
+from mind.legacy.similarity import (
     semantic_similarity,
     find_similar_rejection,
     semantic_search,

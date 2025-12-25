@@ -7,9 +7,9 @@ from pathlib import Path
 import click
 
 from . import __version__
-from .context import update_claude_md
+from .legacy.context import update_claude_md
 from .detection import detect_stack
-from .parser import InlineScanner, Parser
+from .legacy.parser import InlineScanner, Parser
 from .storage import ProjectsRegistry, get_global_mind_dir, get_self_improve_path
 from .config import create_default_config, load_config, save_config
 from .templates import GITIGNORE_CONTENT, MEMORY_TEMPLATE, SESSION_TEMPLATE, REMINDERS_TEMPLATE, SELF_IMPROVE_TEMPLATE

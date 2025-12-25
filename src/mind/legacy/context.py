@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from .parser import Entity, EntityType, IssueStatus, ParseResult, SessionSummary
-from .templates import CONTEXT_TEMPLATE
+from ..templates import CONTEXT_TEMPLATE
 
 
 def generate_context(stack: list[str]) -> str:

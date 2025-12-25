@@ -9,3 +9,52 @@ Autonomy levels (1-5):
 
 Mind earns trust through demonstrated good judgment.
 """
+from .confidence import (
+    ConfidenceTracker,
+    ConfidenceConfig,
+    ConfidenceScore,
+    ActionOutcome,
+    OutcomeType,
+)
+from .levels import (
+    AutonomyLevel,
+    AutonomyManager,
+    AutonomyConfig,
+    ActionPolicy,
+)
+from .feedback import (
+    FeedbackLoop,
+    FeedbackConfig,
+    UserFeedback,
+    FeedbackType,
+    FeedbackEffect,
+)
+from .dashboard import (
+    ObservabilityDashboard,
+    DashboardConfig,
+    SystemHealth,
+    MetricSnapshot,
+    TrendDirection,
+)
+
+__all__ = [
+    "ConfidenceTracker",
+    "ConfidenceConfig",
+    "ConfidenceScore",
+    "ActionOutcome",
+    "OutcomeType",
+    "AutonomyLevel",
+    "AutonomyManager",
+    "AutonomyConfig",
+    "ActionPolicy",
+    "FeedbackLoop",
+    "FeedbackConfig",
+    "UserFeedback",
+    "FeedbackType",
+    "FeedbackEffect",
+    "ObservabilityDashboard",
+    "DashboardConfig",
+    "SystemHealth",
+    "MetricSnapshot",
+    "TrendDirection",
+]

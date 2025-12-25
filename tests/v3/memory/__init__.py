@@ -1,1 +1,1 @@
-"""Tests for Mind v3 cognitive memory."""
+"""Tests for Mind v3 memory system."""

@@ -14,3 +14,42 @@ Processes:
 - Decay: Active -> Dormant
 - Reinforcement: Use -> Strengthen
 """
+from .working_memory import (
+    WorkingMemory,
+    WorkingMemoryConfig,
+    MemoryItem,
+    MemoryType,
+)
+from .consolidation import (
+    MemoryConsolidator,
+    ConsolidationConfig,
+    ConsolidatedPattern,
+)
+from .decay import (
+    DecayManager,
+    DecayConfig,
+    DecayCurve,
+)
+from .reinforcement import (
+    ReinforcementManager,
+    ReinforcementConfig,
+    ReinforcementEvent,
+    FeedbackType,
+)
+
+__all__ = [
+    "WorkingMemory",
+    "WorkingMemoryConfig",
+    "MemoryItem",
+    "MemoryType",
+    "MemoryConsolidator",
+    "ConsolidationConfig",
+    "ConsolidatedPattern",
+    "DecayManager",
+    "DecayConfig",
+    "DecayCurve",
+    "ReinforcementManager",
+    "ReinforcementConfig",
+    "ReinforcementEvent",
+    "FeedbackType",
+]

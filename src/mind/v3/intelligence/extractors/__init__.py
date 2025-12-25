@@ -5,8 +5,12 @@
 - Pattern extractor: Detect recurring behaviors and preferences
 """
 from .decision import Decision, LocalDecisionExtractor
+from .entity import Entity, EntityType, LocalEntityExtractor
 
 __all__ = [
     "Decision",
     "LocalDecisionExtractor",
+    "Entity",
+    "EntityType",
+    "LocalEntityExtractor",
 ]

@@ -33,7 +33,7 @@ from ..legacy.similarity import semantic_similarity, semantic_search, semantic_s
 
 # v3 integration (parallel operation mode)
 try:
-    from ..v3.bridge import get_v3_bridge, V3Bridge
+    from ..v3.bridge import get_v3_bridge, V3Bridge, v3_context_for_recall
     V3_AVAILABLE = True
 except ImportError:
     V3_AVAILABLE = False
@@ -1767,10 +1767,24 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
 
     # v3 bridge integration (parallel operation)
     v3_stats = None
+    v3_context_injected = False
     if V3_AVAILABLE:
         try:
             v3_bridge = get_v3_bridge(project_path)
             v3_stats = v3_bridge.get_stats()
+
+            # Phase C: Inject v3 context using session experiences as query
+            if session_content:
+                experiences = parse_session_section(session_content, "Experience")
+                if experiences:
+                    session_query = " ".join(experiences[-3:])  # Use recent experiences
+                    new_context = v3_context_for_recall(project_path, context, session_query)
+                    if new_context != context:
+                        context = new_context
+                        v3_context_injected = True
+
+            if v3_context_injected:
+                v3_stats["context_injected"] = True
         except Exception:
             pass  # v3 is optional, don't break recall on errors
 

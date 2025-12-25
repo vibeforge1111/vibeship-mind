@@ -6,6 +6,7 @@ while maintaining backward compatibility with legacy code.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -62,6 +63,7 @@ class V3Bridge:
         # Initialize hooks
         self._prompt_hook: PromptSubmitHook | None = None
         self._session_hook: SessionEndHook | None = None
+        self._seeded_count: int = 0
 
         if self.config.enabled:
             self._init_hooks()
@@ -77,10 +79,67 @@ class V3Bridge:
                 project_path=self.project_path,
                 config=SessionEndConfig(),
             )
+            # Seed from MEMORY.md
+            self._seeded_count = self._seed_from_memory()
         except Exception:
             # Silently fail - v3 is optional
             self._prompt_hook = None
             self._session_hook = None
+
+    def _seed_from_memory(self) -> int:
+        """
+        Seed v3 memory from existing MEMORY.md.
+
+        Returns:
+            Number of memories seeded
+        """
+        if not self._prompt_hook:
+            return 0
+
+        memory_file = self.project_path / ".mind" / "MEMORY.md"
+        if not memory_file.exists():
+            return 0
+
+        try:
+            content = memory_file.read_text(encoding="utf-8")
+            count = 0
+
+            # Extract decisions
+            for match in re.finditer(r"(?:decided|chose|going with|using)[:\s]+(.+?)(?:\n|$)", content, re.IGNORECASE):
+                self._prompt_hook.add_to_memory(match.group(0).strip(), "decision")
+                count += 1
+
+            # Extract learnings
+            for match in re.finditer(r"(?:learned|discovered|realized|turns out|TIL|gotcha)[:\s]+(.+?)(?:\n|$)", content, re.IGNORECASE):
+                self._prompt_hook.add_to_memory(match.group(0).strip(), "learning")
+                count += 1
+
+            # Extract problems
+            for match in re.finditer(r"(?:problem|issue|bug|stuck on|blocked)[:\s]+(.+?)(?:\n|$)", content, re.IGNORECASE):
+                self._prompt_hook.add_to_memory(match.group(0).strip(), "problem")
+                count += 1
+
+            # Extract from Key section (important decisions)
+            key_match = re.search(r"## Key.*?\n(.*?)(?=\n## |\Z)", content, re.DOTALL)
+            if key_match:
+                for line in key_match.group(1).strip().split("\n"):
+                    line = line.strip()
+                    if line.startswith("- "):
+                        self._prompt_hook.add_to_memory(line[2:], "decision")
+                        count += 1
+
+            # Extract from Gotchas section
+            gotcha_match = re.search(r"## Gotchas.*?\n(.*?)(?=\n## |\Z)", content, re.DOTALL)
+            if gotcha_match:
+                for line in gotcha_match.group(1).strip().split("\n"):
+                    line = line.strip()
+                    if line.startswith("- "):
+                        self._prompt_hook.add_to_memory(line[2:], "learning")
+                        count += 1
+
+            return count
+        except Exception:
+            return 0
 
     def get_context_for_prompt(self, user_prompt: str) -> V3ContextResult:
         """
@@ -192,6 +251,7 @@ class V3Bridge:
         stats: dict[str, Any] = {
             "enabled": self.config.enabled,
             "hooks_initialized": self._prompt_hook is not None,
+            "seeded_from_memory": self._seeded_count,
         }
 
         if self._prompt_hook:
@@ -229,6 +289,7 @@ def get_v3_bridge(project_path: Path) -> V3Bridge:
 def v3_context_for_recall(
     project_path: Path,
     legacy_context: str,
+    session_query: str = "",
 ) -> str:
     """
     Append v3 context to legacy context for mind_recall.
@@ -239,6 +300,7 @@ def v3_context_for_recall(
     Args:
         project_path: Path to project
         legacy_context: Context from legacy ContextGenerator
+        session_query: Optional query from session experiences
 
     Returns:
         Combined context (legacy + v3)
@@ -248,8 +310,13 @@ def v3_context_for_recall(
         if not bridge.config.enabled:
             return legacy_context
 
-        # For recall, we don't have a user prompt yet
-        # Just return legacy context - v3 context comes via hooks
+        # If we have a session query, use it to find relevant v3 context
+        if session_query and bridge._prompt_hook:
+            result = bridge.get_context_for_prompt(session_query)
+            if result.success and result.items_count > 0:
+                # Append v3 context after legacy context
+                return legacy_context + "\n\n" + result.context
+
         return legacy_context
 
     except Exception:

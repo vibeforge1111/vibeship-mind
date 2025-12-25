@@ -8,6 +8,8 @@ Hybrid search combining:
 """
 from .embeddings import EmbeddingService, EmbeddingConfig, HashEmbedding
 from .search import HybridSearch, SearchConfig, SearchResult, SearchMode
+from .reranker import Reranker, RerankerConfig, SimpleReranker
+from .context_injection import ContextInjector, ContextInjectorConfig, InjectedContext
 
 __all__ = [
     "EmbeddingService",
@@ -17,4 +19,10 @@ __all__ = [
     "SearchConfig",
     "SearchResult",
     "SearchMode",
+    "Reranker",
+    "RerankerConfig",
+    "SimpleReranker",
+    "ContextInjector",
+    "ContextInjectorConfig",
+    "InjectedContext",
 ]

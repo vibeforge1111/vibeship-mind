@@ -14,6 +14,7 @@ from typing import Any
 from .graph.store import GraphStore
 from .hooks import PromptSubmitHook, PromptSubmitConfig, HookResult
 from .hooks import SessionEndHook, SessionEndConfig, SessionEndResult
+from .autonomy.tracker import AutonomyTracker
 
 
 @dataclass
@@ -69,9 +70,13 @@ class V3Bridge:
         self._session_hook: SessionEndHook | None = None
         self._seeded_count: int = 0
 
+        # Initialize autonomy tracker
+        self._autonomy: AutonomyTracker | None = None
+
         if self.config.enabled:
             self._init_storage()
             self._init_hooks()
+            self._autonomy = AutonomyTracker()
 
     def _init_storage(self) -> None:
         """Initialize persistent storage."""
@@ -291,6 +296,9 @@ class V3Bridge:
 
         if self._session_hook:
             stats["session_events"] = self._session_hook.event_count
+
+        if self._autonomy:
+            stats["autonomy"] = self._autonomy.get_summary()
 
         return stats
 

@@ -36,6 +36,7 @@ from .dashboard import (
     MetricSnapshot,
     TrendDirection,
 )
+from .tracker import AutonomyTracker
 
 __all__ = [
     "ConfidenceTracker",
@@ -57,4 +58,5 @@ __all__ = [
     "SystemHealth",
     "MetricSnapshot",
     "TrendDirection",
+    "AutonomyTracker",
 ]

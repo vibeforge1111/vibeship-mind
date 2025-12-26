@@ -1,3 +1,3 @@
 """Mind - File-based memory system for AI coding assistants."""
 
-__version__ = "2.1.2"
+__version__ = "3.0.2"

@@ -17,7 +17,7 @@ Modules:
 
 from .config import V3Settings, get_settings, reset_settings
 
-__version__ = "3.0.0-alpha"
+__version__ = "3.0.2"
 
 __all__ = [
     "V3Settings",

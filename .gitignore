@@ -58,3 +58,4 @@ Thumbs.db
 .uv/
 uv.lock
 nul
+.env.local

@@ -789,5 +789,56 @@ def generate_views(path: str):
         raise SystemExit(1)
 
 
+@cli.command("migrate")
+@click.argument("path", default=".", type=click.Path(exists=True, file_okay=False))
+@click.option("--force", is_flag=True, help="Force re-migration even if already done")
+def migrate_v3(path: str, force: bool):
+    """Migrate MEMORY.md data to v3 structured tables.
+
+    This command processes your existing MEMORY.md content and extracts:
+    - Decisions (choices made and why)
+    - Entities (files, functions, tools mentioned)
+    - Patterns (preferences, habits, avoidances)
+
+    Migration runs automatically on v3 init, but you can use this command
+    to force re-processing or see detailed migration stats.
+    """
+    project_path = Path(path).resolve()
+    mind_dir = project_path / ".mind"
+
+    if not mind_dir.exists():
+        click.echo(f"Error: {project_path} is not a Mind project.")
+        click.echo("Run 'mind init' first.")
+        raise SystemExit(1)
+
+    try:
+        from .v3.migration import migrate_project
+
+        click.echo("Migrating MEMORY.md to v3 structured tables...")
+        stats = migrate_project(project_path, force=force)
+
+        click.echo()
+        click.echo("Migration complete:")
+        click.echo(f"  Memories processed: {stats.memories_processed}")
+        click.echo(f"  Decisions extracted: {stats.decisions_added}")
+        click.echo(f"  Entities extracted: {stats.entities_added}")
+        click.echo(f"  Patterns extracted: {stats.patterns_added}")
+
+        if stats.errors:
+            click.echo()
+            click.echo(f"  Warnings: {len(stats.errors)}")
+            for err in stats.errors[:5]:  # Show first 5 errors
+                click.echo(f"    - {err[:80]}")
+            if len(stats.errors) > 5:
+                click.echo(f"    ... and {len(stats.errors) - 5} more")
+
+        click.echo()
+        click.echo("Run 'mind generate-views' to create human-readable markdown files.")
+
+    except ImportError as e:
+        click.echo(f"Error: v3 modules not available: {e}")
+        raise SystemExit(1)
+
+
 if __name__ == "__main__":
     cli()

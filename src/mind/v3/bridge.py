@@ -15,6 +15,7 @@ from .graph.store import GraphStore
 from .hooks import PromptSubmitHook, PromptSubmitConfig, HookResult
 from .hooks import SessionEndHook, SessionEndConfig, SessionEndResult
 from .autonomy.tracker import AutonomyTracker
+from .migration import MigrationManager, MigrationStats
 
 
 @dataclass
@@ -25,6 +26,7 @@ class V3Config:
     use_v3_context: bool = True
     use_v3_session: bool = True
     fallback_on_error: bool = True  # Fall back to legacy on v3 error
+    auto_migrate: bool = True  # Auto-migrate from v2 on first init
 
 
 @dataclass
@@ -70,11 +72,15 @@ class V3Bridge:
         self._session_hook: SessionEndHook | None = None
         self._seeded_count: int = 0
 
+        # Migration stats (populated on auto-migrate)
+        self._migration_stats: MigrationStats | None = None
+
         # Initialize autonomy tracker
         self._autonomy: AutonomyTracker | None = None
 
         if self.config.enabled:
             self._init_storage()
+            self._run_auto_migration()  # Migrate v2 data to v3 structured tables
             self._init_hooks()
             self._autonomy = AutonomyTracker()
 
@@ -86,6 +92,24 @@ class V3Bridge:
         except Exception:
             # Fall back to no persistence
             self._graph_store = None
+
+    def _run_auto_migration(self) -> None:
+        """
+        Automatically migrate v2 data to v3 structured tables.
+
+        This ensures users upgrading from v2 don't lose any experiences.
+        Runs once on first v3 init, then incrementally for new content.
+        """
+        if not self.config.auto_migrate or not self._graph_store:
+            return
+
+        try:
+            manager = MigrationManager(self.project_path, self._graph_store)
+            if manager.needs_migration():
+                self._migration_stats = manager.migrate()
+        except Exception:
+            # Migration is optional - don't break init if it fails
+            pass
 
     def _init_hooks(self) -> None:
         """Initialize v3 hooks."""
@@ -291,6 +315,16 @@ class V3Bridge:
             "persistent": self._graph_store is not None,
             "seeded_from_memory": self._seeded_count,
         }
+
+        # Include migration stats if available
+        if self._migration_stats:
+            stats["migration"] = {
+                "memories_processed": self._migration_stats.memories_processed,
+                "decisions_added": self._migration_stats.decisions_added,
+                "entities_added": self._migration_stats.entities_added,
+                "patterns_added": self._migration_stats.patterns_added,
+                "errors": len(self._migration_stats.errors),
+            }
 
         if self._prompt_hook:
             stats["retrieval"] = self._prompt_hook.get_retrieval_stats()

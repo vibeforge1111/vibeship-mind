@@ -115,9 +115,20 @@ class GraphStore:
             ])
             self.db.create_table("patterns", schema=schema)
 
+        # Memories table (for v3 context retrieval)
+        if "memories" not in existing:
+            schema = pa.schema([
+                pa.field("id", pa.string()),
+                pa.field("content", pa.string()),
+                pa.field("memory_type", pa.string()),
+                pa.field("timestamp", pa.string()),
+                pa.field("vector", pa.list_(pa.float32(), EMBED_DIM)),
+            ])
+            self.db.create_table("memories", schema=schema)
+
     def is_initialized(self) -> bool:
         """Check if store is properly initialized."""
-        required = {"decisions", "entities", "patterns"}
+        required = {"decisions", "entities", "patterns", "memories"}
         tables_response = self.db.list_tables()
         if hasattr(tables_response, 'tables'):
             existing = set(tables_response.tables)
@@ -380,6 +391,95 @@ class GraphStore:
         return True
 
     # =========================================================================
+    # Memory operations (for v3 context retrieval)
+    # =========================================================================
+
+    def add_memory(self, content: str, memory_type: str) -> str:
+        """
+        Add a memory for context retrieval.
+
+        Args:
+            content: Memory content
+            memory_type: Type (decision, learning, problem, etc.)
+
+        Returns:
+            Generated memory ID
+        """
+        from datetime import datetime, timezone
+
+        doc_id = generate_id("mem")
+
+        record = {
+            "id": doc_id,
+            "content": content,
+            "memory_type": memory_type,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "vector": get_embedding(content),
+        }
+
+        table = self.db.open_table("memories")
+        table.add([record])
+
+        return doc_id
+
+    def search_memories(
+        self,
+        query: str,
+        limit: int = 10,
+        memory_type: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """
+        Search memories by text similarity.
+
+        Args:
+            query: Search query
+            limit: Maximum results
+            memory_type: Optional filter by type
+
+        Returns:
+            List of matching memories with scores
+        """
+        table = self.db.open_table("memories")
+        query_vector = get_embedding(query)
+
+        search = table.search(query_vector).limit(limit)
+
+        if memory_type:
+            search = search.where(f"memory_type = '{memory_type}'", prefilter=True)
+
+        results = search.to_list()
+
+        return [
+            {
+                "id": r["id"],
+                "content": r["content"],
+                "type": r["memory_type"],
+                "timestamp": r["timestamp"],
+                "score": r.get("_distance", 0.0),
+            }
+            for r in results
+        ]
+
+    def memory_exists(self, content: str) -> bool:
+        """
+        Check if a memory with this content already exists.
+
+        Uses exact match to prevent duplicate seeding.
+        """
+        table = self.db.open_table("memories")
+        # Search for exact content match
+        results = table.search().where(
+            f"content = '{content.replace(chr(39), chr(39)+chr(39))}'",
+            prefilter=True
+        ).limit(1).to_list()
+        return len(results) > 0
+
+    def memory_count(self) -> int:
+        """Get total memory count."""
+        table = self.db.open_table("memories")
+        return table.count_rows()
+
+    # =========================================================================
     # Stats
     # =========================================================================
 
@@ -387,7 +487,7 @@ class GraphStore:
         """Get count of nodes by type."""
         counts = {}
 
-        for table_name in ["decisions", "entities", "patterns"]:
+        for table_name in ["decisions", "entities", "patterns", "memories"]:
             table = self.db.open_table(table_name)
             counts[table_name] = table.count_rows()
 

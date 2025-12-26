@@ -7,16 +7,16 @@ Complete guide to the v3 architecture - what's changed, how to use it, and what'
 | Component | Status | Notes |
 |-----------|--------|-------|
 | Event Sourcing | Ready | Captures all events with timestamps |
-| Graph Storage | Ready | LanceDB-based vector storage |
+| Graph Storage | **Active** | LanceDB-based vector storage at `.mind/v3/graph/` |
 | Intelligence Layer | Ready | Model cascade + extractors |
 | Retrieval System | **Active** | Embeddings, hybrid search, reranking |
-| Memory System | **Active** | Working memory, consolidation, decay |
+| Memory System | **Active** | Persistent memory, consolidation, decay |
 | Autonomy System | Ready | Confidence tracking, feedback loops |
 | Claude Code Hooks | **Active** | Prompt submit, session end |
 | MCP Integration | **Active** | Context injection enabled |
-| MEMORY.md Seeding | **Active** | Seeds from existing memories |
+| MEMORY.md Seeding | **Active** | Seeds on first run, then uses LanceDB |
 
-**Current Mode:** Phase C - Full Operation (v3 injects context, legacy as backup)
+**Current Mode:** Phase D1 - Persistent Storage (v3 memories survive restarts)
 
 ---
 
@@ -53,10 +53,12 @@ Complete guide to the v3 architecture - what's changed, how to use it, and what'
 ├── SESSION.md         # Ephemeral session data (cleared between sessions)
 ├── REMINDERS.md       # Scheduled reminders
 ├── state.json         # Session state tracking
-└── v3/                # v3-specific storage (future)
-    ├── events/        # Event sourcing store
-    ├── graph/         # LanceDB vector store
-    └── autonomy/      # Confidence + feedback data
+└── v3/                # v3-specific storage
+    └── graph/         # LanceDB vector store (persistent memories)
+        ├── memories.lance/   # Context retrieval memories
+        ├── decisions.lance/  # Decision tracking
+        ├── entities.lance/   # Entity storage
+        └── patterns.lance/   # Pattern recognition
 ```
 
 ### Memory Types and Destinations
@@ -96,6 +98,7 @@ After `mind_recall()`, look for the `v3` field in the response:
   "v3": {
     "enabled": true,
     "hooks_initialized": true,
+    "persistent": true,
     "seeded_from_memory": 15,
     "context_injected": true,
     "retrieval": {
@@ -113,8 +116,9 @@ After `mind_recall()`, look for the `v3` field in the response:
 |-------|---------|
 | `enabled` | v3 bridge is active |
 | `hooks_initialized` | Prompt and session hooks ready |
-| `seeded_from_memory` | Memories loaded from MEMORY.md |
-| `memory_count` | Total memories (seeded + new) |
+| `persistent` | Using LanceDB disk storage (survives restarts) |
+| `seeded_from_memory` | Memories in store (seeded on first run) |
+| `memory_count` | Total memories in LanceDB |
 | `session_events` | Session events captured |
 | `total_retrievals` | Times context was retrieved |
 | `context_injected` | Whether v3 added context this recall |
@@ -158,10 +162,9 @@ Use this to verify v3 is working correctly:
 6. **Semantic Retrieval**: v3 searches memories based on session context
 7. **Stats Reporting**: v3 stats included in `mind_recall()` response
 
-### Not Yet Active (Phase D)
+### Not Yet Active (Phase D2)
 
-1. **Legacy Deprecation**: Legacy still runs as backup
-2. **Full LanceDB Storage**: Currently using in-memory for v3
+1. **Legacy Deprecation**: Legacy still runs as backup for mind_search, mind_blocker
 
 ### Migration Phases
 
@@ -169,8 +172,9 @@ Use this to verify v3 is working correctly:
 |-------|-------------|--------|
 | A | Implement v3 hooks | Done |
 | B | Parallel operation | Done |
-| C | Context injection active | **Current** |
-| D | Deprecate legacy | Future |
+| C | Context injection active | Done |
+| D1 | LanceDB persistence | **Current** |
+| D2 | Deprecate legacy | Future |
 
 ---
 
@@ -302,4 +306,4 @@ uv run pytest tests/v3/ -v
 ---
 
 *Last updated: 2025-12-26*
-*v3 Status: Full Operation (Phase C)*
+*v3 Status: Persistent Storage (Phase D1)*

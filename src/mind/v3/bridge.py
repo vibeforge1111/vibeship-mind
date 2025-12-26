@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from .graph.store import GraphStore
 from .hooks import PromptSubmitHook, PromptSubmitConfig, HookResult
 from .hooks import SessionEndHook, SessionEndConfig, SessionEndResult
 
@@ -60,13 +61,26 @@ class V3Bridge:
         self.project_path = project_path
         self.config = config or V3Config()
 
+        # Initialize persistent storage
+        self._graph_store: GraphStore | None = None
+
         # Initialize hooks
         self._prompt_hook: PromptSubmitHook | None = None
         self._session_hook: SessionEndHook | None = None
         self._seeded_count: int = 0
 
         if self.config.enabled:
+            self._init_storage()
             self._init_hooks()
+
+    def _init_storage(self) -> None:
+        """Initialize persistent storage."""
+        try:
+            store_path = self.project_path / ".mind" / "v3" / "graph"
+            self._graph_store = GraphStore(store_path)
+        except Exception:
+            # Fall back to no persistence
+            self._graph_store = None
 
     def _init_hooks(self) -> None:
         """Initialize v3 hooks."""
@@ -74,12 +88,13 @@ class V3Bridge:
             self._prompt_hook = PromptSubmitHook(
                 project_path=self.project_path,
                 config=PromptSubmitConfig(),
+                graph_store=self._graph_store,
             )
             self._session_hook = SessionEndHook(
                 project_path=self.project_path,
                 config=SessionEndConfig(),
             )
-            # Seed from MEMORY.md
+            # Seed from MEMORY.md (only adds new memories)
             self._seeded_count = self._seed_from_memory()
         except Exception:
             # Silently fail - v3 is optional
@@ -90,11 +105,20 @@ class V3Bridge:
         """
         Seed v3 memory from existing MEMORY.md.
 
+        Only seeds if the store is empty (first run) or has fewer
+        memories than expected. Returns existing count if already seeded.
+
         Returns:
-            Number of memories seeded
+            Number of memories in store (seeded or existing)
         """
         if not self._prompt_hook:
             return 0
+
+        # If we already have memories persisted, return that count
+        if self._graph_store:
+            existing_count = self._graph_store.memory_count()
+            if existing_count > 0:
+                return existing_count
 
         memory_file = self.project_path / ".mind" / "MEMORY.md"
         if not memory_file.exists():
@@ -251,6 +275,7 @@ class V3Bridge:
         stats: dict[str, Any] = {
             "enabled": self.config.enabled,
             "hooks_initialized": self._prompt_hook is not None,
+            "persistent": self._graph_store is not None,
             "seeded_from_memory": self._seeded_count,
         }
 

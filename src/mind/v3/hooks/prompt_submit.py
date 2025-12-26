@@ -8,7 +8,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..graph.store import GraphStore
 
 
 @dataclass
@@ -42,6 +45,7 @@ class PromptSubmitHook:
         self,
         project_path: Path,
         config: PromptSubmitConfig | None = None,
+        graph_store: "GraphStore | None" = None,
     ):
         """
         Initialize hook.
@@ -49,12 +53,14 @@ class PromptSubmitHook:
         Args:
             project_path: Path to project directory
             config: Hook configuration
+            graph_store: Optional GraphStore for persistent memory
         """
         self.project_path = project_path
         self.config = config or PromptSubmitConfig()
 
-        # In-memory storage for this session
-        self._memories: list[dict[str, Any]] = []
+        # Use GraphStore for persistence, fall back to in-memory
+        self._graph_store = graph_store
+        self._memories: list[dict[str, Any]] = []  # Fallback if no store
         self._retrieval_count: int = 0
 
     def process(self, query: str) -> HookResult:
@@ -111,10 +117,15 @@ class PromptSubmitHook:
             content: Memory content
             memory_type: Type of memory (decision, learning, pattern, etc.)
         """
-        self._memories.append({
-            "content": content,
-            "type": memory_type,
-        })
+        if self._graph_store:
+            # Use persistent storage
+            self._graph_store.add_memory(content, memory_type)
+        else:
+            # Fall back to in-memory
+            self._memories.append({
+                "content": content,
+                "type": memory_type,
+            })
 
     def get_retrieval_stats(self) -> dict:
         """
@@ -123,17 +134,22 @@ class PromptSubmitHook:
         Returns:
             Dictionary with retrieval stats
         """
+        if self._graph_store:
+            memory_count = self._graph_store.memory_count()
+        else:
+            memory_count = len(self._memories)
+
         return {
             "total_retrievals": self._retrieval_count,
-            "memory_count": len(self._memories),
+            "memory_count": memory_count,
         }
 
     def _search_memories(self, query: str) -> list[dict]:
         """
         Search memories for relevant items.
 
-        Uses simple keyword matching for now.
-        Will integrate with v3 retrieval system.
+        Uses GraphStore vector search when available,
+        falls back to keyword matching otherwise.
 
         Args:
             query: Search query
@@ -141,6 +157,21 @@ class PromptSubmitHook:
         Returns:
             List of relevant memories
         """
+        if self._graph_store:
+            # Use persistent vector search
+            results = self._graph_store.search_memories(
+                query,
+                limit=self.config.max_context_items,
+            )
+            # Convert distance to score (lower distance = higher score)
+            # LanceDB returns L2 distance, so we convert to similarity
+            for r in results:
+                distance = r.get("score", 0.0)
+                # Convert L2 distance to similarity score (0-1 range)
+                r["score"] = max(0.0, 1.0 - (distance / 2.0))
+            return [r for r in results if r["score"] >= self.config.min_relevance_score]
+
+        # Fall back to keyword matching
         query_lower = query.lower()
         query_words = set(query_lower.split())
 

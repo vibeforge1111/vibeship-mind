@@ -230,3 +230,36 @@ class TestV3ContextForRecall:
         result = v3_context_for_recall(Path("/nonexistent/path"), legacy)
 
         assert result == legacy
+
+
+class TestV3BridgeAPI:
+    """Test API integration in V3Bridge."""
+
+    @pytest.fixture
+    def bridge(self):
+        """Create bridge with temp directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield V3Bridge(project_path=Path(tmpdir))
+
+    def test_api_client_initialized(self, bridge):
+        """Bridge initializes API client from config."""
+        assert hasattr(bridge, "_api_client")
+        assert bridge._api_client is not None
+
+    def test_event_store_initialized(self, bridge):
+        """Bridge initializes event store."""
+        assert hasattr(bridge, "_event_store")
+        assert bridge._event_store is not None
+
+    def test_get_stats_includes_api(self, bridge):
+        """Stats include API status."""
+        stats = bridge.get_stats()
+        assert "api_enabled" in stats
+        # Without API key set, should be False
+        assert stats["api_enabled"] is False
+
+    @pytest.mark.asyncio
+    async def test_finalize_session_async_no_api(self, bridge):
+        """Finalize without API returns None."""
+        result = await bridge.finalize_session_async()
+        assert result is None

@@ -19,6 +19,9 @@ from .hooks import PromptSubmitHook, PromptSubmitConfig, HookResult
 from .hooks import SessionEndHook, SessionEndConfig, SessionEndResult
 from .autonomy.tracker import AutonomyTracker
 from .migration import MigrationManager, MigrationStats
+from .api.client import ClaudeClient, ClaudeConfig
+from .capture.store import SessionEventStore
+from .synthesis.session_end import SessionEndSynthesizer, SessionSummary
 
 
 @dataclass
@@ -81,11 +84,16 @@ class V3Bridge:
         # Initialize autonomy tracker
         self._autonomy: AutonomyTracker | None = None
 
+        # Initialize API client and event store
+        self._api_client: ClaudeClient | None = None
+        self._event_store: SessionEventStore | None = None
+
         if self.config.enabled:
             self._init_storage()
             self._run_auto_migration()  # Migrate v2 data to v3 structured tables
             self._init_hooks()
             self._autonomy = AutonomyTracker()
+            self._init_api()
 
     def _init_storage(self) -> None:
         """Initialize persistent storage."""
@@ -140,6 +148,16 @@ class V3Bridge:
             logger.debug("v3 hooks init failed, v3 features disabled", exc_info=True)
             self._prompt_hook = None
             self._session_hook = None
+
+    def _init_api(self) -> None:
+        """Initialize API client and event store."""
+        try:
+            self._api_client = ClaudeClient(ClaudeConfig.from_env())
+            self._event_store = SessionEventStore(self.project_path)
+        except Exception:
+            logger.debug("v3 API init failed, API features disabled", exc_info=True)
+            self._api_client = None
+            self._event_store = None
 
     def _seed_from_memory(self) -> int:
         """
@@ -295,6 +313,36 @@ class V3Bridge:
             logger.debug("v3 finalize_session failed", exc_info=True)
             return None
 
+    async def finalize_session_async(self) -> SessionSummary | None:
+        """
+        Finalize session with AI synthesis.
+
+        Uses SessionEndSynthesizer to generate an AI-powered summary
+        of the session including decisions, learnings, and unresolved items.
+
+        Returns:
+            SessionSummary or None if API disabled or synthesis fails
+        """
+        if not self.config.enabled:
+            return None
+
+        if not self._api_client or not self._api_client.enabled:
+            return None
+
+        if not self._event_store or not self._graph_store:
+            return None
+
+        try:
+            synthesizer = SessionEndSynthesizer()
+            return await synthesizer.synthesize(
+                self._event_store,
+                self._graph_store,
+                self._api_client,
+            )
+        except Exception:
+            logger.debug("v3 finalize_session_async failed", exc_info=True)
+            return None
+
     def add_memory(self, content: str, memory_type: str) -> bool:
         """
         Add content to v3 memory for retrieval.
@@ -328,6 +376,7 @@ class V3Bridge:
             "hooks_initialized": self._prompt_hook is not None,
             "persistent": self._graph_store is not None,
             "seeded_from_memory": self._seeded_count,
+            "api_enabled": self._api_client.enabled if self._api_client else False,
         }
 
         # Include migration stats if available

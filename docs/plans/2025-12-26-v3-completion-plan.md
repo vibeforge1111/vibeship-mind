@@ -808,4 +808,602 @@ After each phase:
 
 ---
 
+## Phase 7: Missing Graph Tables (Architecture Alignment)
+
+The design document specifies 8 node types, but only 4 tables exist. Add the missing tables.
+
+### Task 7.1: Add Policy Table
+
+**Files:**
+- Modify: `src/mind/v3/graph/store.py`
+- Modify: `src/mind/v3/graph/schema.py`
+
+**Step 1: Add Policy schema**
+
+In `schema.py`:
+```python
+@dataclass
+class PolicyNode:
+    """A policy or rule that governs decisions."""
+    id: str
+    rule: str
+    scope: str  # "file", "directory", "project", "global"
+    source: str  # Where this policy came from
+    created_at: datetime = field(default_factory=datetime.now)
+    active: bool = True
+    vector: list[float] = field(default_factory=list)
+```
+
+**Step 2: Add policies table to GraphStore**
+
+In `store.py`, add table creation:
+```python
+POLICIES_SCHEMA = pa.schema([
+    pa.field("id", pa.string()),
+    pa.field("rule", pa.string()),
+    pa.field("scope", pa.string()),
+    pa.field("source", pa.string()),
+    pa.field("created_at", pa.string()),
+    pa.field("active", pa.bool_()),
+    pa.field("vector", pa.list_(pa.float32(), VECTOR_DIM)),
+])
+
+def _init_policies_table(self):
+    if "policies" not in self.db.table_names():
+        self.db.create_table("policies", schema=POLICIES_SCHEMA)
+```
+
+**Step 3: Add CRUD methods**
+
+```python
+def add_policy(self, policy: dict[str, Any]) -> str:
+    """Add a policy to the graph."""
+    policy_id = generate_id("pol")
+    vector = get_embedding(policy["rule"])
+
+    table = self.db.open_table("policies")
+    table.add([{
+        "id": policy_id,
+        "rule": policy["rule"],
+        "scope": policy.get("scope", "project"),
+        "source": policy.get("source", "inferred"),
+        "created_at": datetime.now().isoformat(),
+        "active": policy.get("active", True),
+        "vector": vector,
+    }])
+    return policy_id
+
+def search_policies(self, query: str, limit: int = 5) -> list[dict]:
+    """Search policies by semantic similarity."""
+    vector = get_embedding(query)
+    table = self.db.open_table("policies")
+    results = table.search(vector).limit(limit).to_list()
+    return results
+```
+
+**Step 4: Run tests and commit**
+
+```bash
+uv run pytest tests/v3/graph/ -v
+git add -A && git commit -m "feat(v3): add policies table to graph store"
+```
+
+---
+
+### Task 7.2: Add Exceptions Table
+
+**Files:**
+- Modify: `src/mind/v3/graph/store.py`
+- Modify: `src/mind/v3/graph/schema.py`
+
+**Step 1: Add Exception schema**
+
+```python
+@dataclass
+class ExceptionNode:
+    """An exception or override to a policy."""
+    id: str
+    policy_id: str  # Reference to overridden policy
+    condition: str  # When this exception applies
+    reason: str
+    created_at: datetime = field(default_factory=datetime.now)
+    vector: list[float] = field(default_factory=list)
+```
+
+**Step 2: Add exceptions table and methods**
+
+Similar pattern to policies table.
+
+**Step 3: Commit**
+
+```bash
+git add -A && git commit -m "feat(v3): add exceptions table to graph store"
+```
+
+---
+
+### Task 7.3: Add Precedents Table
+
+**Files:**
+- Modify: `src/mind/v3/graph/store.py`
+- Modify: `src/mind/v3/graph/schema.py`
+
+**Step 1: Add Precedent schema**
+
+```python
+@dataclass
+class PrecedentNode:
+    """A historical decision that sets precedent."""
+    id: str
+    decision_id: str  # Reference to the decision
+    context: str  # Context in which this applies
+    outcome: str  # What happened as a result
+    weight: float  # How much weight to give this precedent
+    created_at: datetime = field(default_factory=datetime.now)
+    vector: list[float] = field(default_factory=list)
+```
+
+**Step 2: Add table and methods**
+
+**Step 3: Commit**
+
+```bash
+git add -A && git commit -m "feat(v3): add precedents table to graph store"
+```
+
+---
+
+### Task 7.4: Add Outcomes Table
+
+**Files:**
+- Modify: `src/mind/v3/graph/store.py`
+- Modify: `src/mind/v3/graph/schema.py`
+
+**Step 1: Add Outcome schema**
+
+```python
+@dataclass
+class OutcomeNode:
+    """The outcome of a decision."""
+    id: str
+    decision_id: str
+    success: bool
+    feedback: str  # User feedback or observed result
+    impact: str  # "positive", "negative", "neutral"
+    created_at: datetime = field(default_factory=datetime.now)
+    vector: list[float] = field(default_factory=list)
+```
+
+**Step 2: Add table and methods**
+
+**Step 3: Commit**
+
+```bash
+git add -A && git commit -m "feat(v3): add outcomes table to graph store"
+```
+
+---
+
+### Task 7.5: Add Autonomy Table
+
+**Files:**
+- Modify: `src/mind/v3/graph/store.py`
+- Modify: `src/mind/v3/graph/schema.py`
+
+**Step 1: Add Autonomy schema**
+
+```python
+@dataclass
+class AutonomyNode:
+    """Autonomy level for a specific action type."""
+    id: str
+    action_type: str  # "file_edit", "commit", "refactor", etc.
+    level: str  # "ask", "suggest", "auto"
+    confidence: float
+    sample_count: int
+    last_updated: datetime = field(default_factory=datetime.now)
+```
+
+**Step 2: Wire to AutonomyTracker**
+
+Make AutonomyTracker persist to this table.
+
+**Step 3: Commit**
+
+```bash
+git add -A && git commit -m "feat(v3): add autonomy table and wire to tracker"
+```
+
+---
+
+## Phase 8: Intelligence Levels (Model Cascade)
+
+Implement the intelligence level system that routes to different models.
+
+### Task 8.1: Create Intelligence Router
+
+**Files:**
+- Create: `src/mind/v3/intelligence/router.py`
+
+**Step 1: Create router that selects model based on level**
+
+```python
+# src/mind/v3/intelligence/router.py
+"""Routes requests to appropriate intelligence level."""
+from __future__ import annotations
+
+from enum import Enum
+from dataclasses import dataclass
+from typing import Callable, Any
+
+class IntelligenceLevel(str, Enum):
+    LOCAL = "local"    # Regex/rule-based only
+    LOW = "low"        # Basic NLP (spaCy, etc.)
+    MEDIUM = "medium"  # AI batched (Haiku)
+    HIGH = "high"      # AI frequent (Sonnet)
+    ULTRA = "ultra"    # Real-time (Opus)
+
+
+@dataclass
+class IntelligenceRouter:
+    """Routes intelligence requests to appropriate handlers."""
+
+    level: IntelligenceLevel = IntelligenceLevel.MEDIUM
+
+    # Handler registrations
+    _local_handlers: dict[str, Callable] = None
+    _low_handlers: dict[str, Callable] = None
+    _medium_handlers: dict[str, Callable] = None
+    _high_handlers: dict[str, Callable] = None
+    _ultra_handlers: dict[str, Callable] = None
+
+    def route(self, task: str, *args, **kwargs) -> Any:
+        """Route a task to the appropriate handler based on level."""
+        handlers = self._get_handlers_for_level()
+        if task in handlers:
+            return handlers[task](*args, **kwargs)
+        # Fallback to lower levels
+        return self._fallback(task, *args, **kwargs)
+
+    def _get_handlers_for_level(self) -> dict:
+        """Get handlers for current level."""
+        level_map = {
+            IntelligenceLevel.LOCAL: self._local_handlers or {},
+            IntelligenceLevel.LOW: self._low_handlers or {},
+            IntelligenceLevel.MEDIUM: self._medium_handlers or {},
+            IntelligenceLevel.HIGH: self._high_handlers or {},
+            IntelligenceLevel.ULTRA: self._ultra_handlers or {},
+        }
+        return level_map.get(self.level, {})
+```
+
+**Step 2: Create LOCAL handlers (regex-based)**
+
+```python
+# src/mind/v3/intelligence/local.py
+"""Local intelligence handlers - no external dependencies."""
+
+import re
+from typing import Any
+
+def extract_decisions_local(text: str) -> list[dict]:
+    """Extract decisions using regex patterns."""
+    patterns = [
+        r"(?:decided|chose|going with|using)\s+(.+?)(?:\s+because|\s+since|\.|\n)",
+        r"(?:decision|choice):\s*(.+?)(?:\.|\n)",
+    ]
+    decisions = []
+    for pattern in patterns:
+        for match in re.finditer(pattern, text, re.IGNORECASE):
+            decisions.append({
+                "action": match.group(1).strip(),
+                "confidence": 0.6,  # Lower confidence for regex
+                "source": "local",
+            })
+    return decisions
+```
+
+**Step 3: Commit**
+
+```bash
+git add -A && git commit -m "feat(v3): add intelligence router with level-based dispatch"
+```
+
+---
+
+### Task 8.2: Wire Intelligence Levels to Extractors
+
+**Files:**
+- Modify: `src/mind/v3/intelligence/extractors/decision.py`
+- Modify: `src/mind/v3/intelligence/extractors/entity.py`
+
+**Step 1: Add level awareness to extractors**
+
+Make extractors use router to select extraction method.
+
+**Step 2: Commit**
+
+```bash
+git add -A && git commit -m "feat(v3): wire intelligence levels to extractors"
+```
+
+---
+
+## Phase 9: Wire Query Expansion to Retrieval
+
+Connect the QueryExpander to the PromptSubmitHook.
+
+### Task 9.1: Integrate Query Expansion
+
+**Files:**
+- Modify: `src/mind/v3/hooks/prompt_submit.py`
+
+**Step 1: Import and use QueryExpander**
+
+```python
+from ..retrieval.query_expander import QueryExpander
+
+# In __init__:
+self._query_expander = QueryExpander()
+
+# In _retrieve_relevant():
+def _retrieve_relevant(self, prompt: str, limit: int = 5) -> list[dict]:
+    """Retrieve relevant context using expanded query."""
+    # Expand the query
+    expanded = self._query_expander.expand(prompt)
+
+    # Search with both original and expanded terms
+    all_results = []
+
+    # Search with original
+    if self._graph_store:
+        results = self._graph_store.search_memories(prompt, limit=limit)
+        all_results.extend(results)
+
+        # Search with expanded query for broader matches
+        for sub_query in expanded.sub_queries[:2]:
+            results = self._graph_store.search_memories(sub_query, limit=2)
+            all_results.extend(results)
+
+        # Search for specific entities
+        for entity in expanded.entities:
+            results = self._graph_store.search_entities(entity, limit=2)
+            all_results.extend(results)
+
+    # Deduplicate and rank
+    return self._dedupe_and_rank(all_results, limit)
+```
+
+**Step 2: Run tests and commit**
+
+```bash
+uv run pytest tests/v3/hooks/ -v
+git add -A && git commit -m "feat(v3): wire query expansion to prompt submit hook"
+```
+
+---
+
+## Phase 10: Cross-Encoder Reranking
+
+Add reranking for better result quality.
+
+### Task 10.1: Implement Cross-Encoder Reranker
+
+**Files:**
+- Modify: `src/mind/v3/retrieval/reranker.py`
+
+**Step 1: Add cross-encoder implementation**
+
+The file exists with SimpleReranker. Add actual cross-encoder:
+
+```python
+class CrossEncoderReranker(Reranker):
+    """Cross-encoder based reranking using sentence-transformers."""
+
+    def __init__(self, model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"):
+        try:
+            from sentence_transformers import CrossEncoder
+            self.model = CrossEncoder(model_name)
+            self._available = True
+        except ImportError:
+            self._available = False
+
+    def rerank(self, query: str, results: list[SearchResult], top_k: int = 5) -> list[SearchResult]:
+        if not self._available or not results:
+            return results[:top_k]
+
+        # Create pairs for scoring
+        pairs = [(query, r.content) for r in results]
+
+        # Get cross-encoder scores
+        scores = self.model.predict(pairs)
+
+        # Attach scores and sort
+        for result, score in zip(results, scores):
+            result.cross_encoder_score = float(score)
+
+        return sorted(results, key=lambda r: r.cross_encoder_score, reverse=True)[:top_k]
+```
+
+**Step 2: Wire to retrieval pipeline**
+
+**Step 3: Commit**
+
+```bash
+git add -A && git commit -m "feat(v3): add cross-encoder reranking"
+```
+
+---
+
+## Phase 11: Human-Readable Views
+
+Generate markdown files from graph data.
+
+### Task 11.1: Create View Generator
+
+**Files:**
+- Create: `src/mind/v3/views/generator.py`
+- Create: `src/mind/v3/views/__init__.py`
+
+**Step 1: Create view generator**
+
+```python
+# src/mind/v3/views/generator.py
+"""Generate human-readable markdown views from graph data."""
+from __future__ import annotations
+
+from pathlib import Path
+from datetime import datetime
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..graph.store import GraphStore
+
+
+class ViewGenerator:
+    """Generates markdown views from graph store."""
+
+    def __init__(self, graph_store: "GraphStore", output_dir: Path):
+        self.graph = graph_store
+        self.output_dir = output_dir
+
+    def generate_decisions_view(self) -> Path:
+        """Generate DECISIONS.md with all decisions."""
+        decisions = self.graph.get_all_decisions()
+
+        lines = [
+            "# Decisions",
+            "",
+            f"*Generated: {datetime.now().isoformat()}*",
+            "",
+        ]
+
+        for dec in decisions:
+            lines.extend([
+                f"## {dec.get('action', 'Unknown')}",
+                "",
+                f"**Reasoning:** {dec.get('reasoning', 'N/A')}",
+                "",
+                f"**Confidence:** {dec.get('confidence', 0):.0%}",
+                "",
+                "---",
+                "",
+            ])
+
+        path = self.output_dir / "DECISIONS.md"
+        path.write_text("\n".join(lines))
+        return path
+
+    def generate_patterns_view(self) -> Path:
+        """Generate PATTERNS.md with all patterns."""
+        patterns = self.graph.get_all_patterns()
+
+        lines = [
+            "# Patterns",
+            "",
+            f"*Generated: {datetime.now().isoformat()}*",
+            "",
+        ]
+
+        for pat in patterns:
+            lines.extend([
+                f"## {pat.get('description', 'Unknown')}",
+                "",
+                f"**Type:** {pat.get('pattern_type', 'general')}",
+                f"**Confidence:** {pat.get('confidence', 0):.0%}",
+                f"**Evidence:** {pat.get('evidence_count', 0)} occurrences",
+                "",
+                "---",
+                "",
+            ])
+
+        path = self.output_dir / "PATTERNS.md"
+        path.write_text("\n".join(lines))
+        return path
+
+    def generate_policies_view(self) -> Path:
+        """Generate POLICIES.md with all policies."""
+        policies = self.graph.search_policies("", limit=100)
+
+        lines = [
+            "# Policies",
+            "",
+            f"*Generated: {datetime.now().isoformat()}*",
+            "",
+        ]
+
+        for pol in policies:
+            status = "Active" if pol.get("active", True) else "Inactive"
+            lines.extend([
+                f"## {pol.get('rule', 'Unknown')}",
+                "",
+                f"**Scope:** {pol.get('scope', 'project')}",
+                f"**Source:** {pol.get('source', 'inferred')}",
+                f"**Status:** {status}",
+                "",
+                "---",
+                "",
+            ])
+
+        path = self.output_dir / "POLICIES.md"
+        path.write_text("\n".join(lines))
+        return path
+
+    def generate_all(self) -> list[Path]:
+        """Generate all views."""
+        return [
+            self.generate_decisions_view(),
+            self.generate_patterns_view(),
+            self.generate_policies_view(),
+        ]
+```
+
+**Step 2: Add CLI command for view generation**
+
+```python
+# In cli.py
+@cli.command()
+def generate_views():
+    """Generate human-readable markdown views from graph."""
+    from .v3.views import ViewGenerator
+    from .v3.graph import GraphStore
+
+    store = GraphStore(get_project_path())
+    generator = ViewGenerator(store, get_project_path() / ".mind")
+    paths = generator.generate_all()
+
+    for path in paths:
+        click.echo(f"Generated: {path}")
+```
+
+**Step 3: Commit**
+
+```bash
+git add -A && git commit -m "feat(v3): add human-readable view generation"
+```
+
+---
+
+## Updated Summary
+
+| Phase | What It Does | Status |
+|-------|--------------|--------|
+| 1 | Wire dead code | ✅ Complete |
+| 2 | Populate tables | ✅ Complete |
+| 3 | Real embeddings | ✅ Complete |
+| 4 | Transcript watcher | ✅ Complete |
+| 5 | Query expansion | ✅ Complete |
+| 6 | Config system | ✅ Complete |
+| 7 | Missing graph tables | 🔲 Pending |
+| 8 | Intelligence levels | 🔲 Pending |
+| 9 | Wire query expansion | 🔲 Pending |
+| 10 | Cross-encoder reranking | 🔲 Pending |
+| 11 | Human-readable views | 🔲 Pending |
+
+**Completed tasks:** 15 across 6 phases
+**Remaining tasks:** 10 across 5 phases
+
+---
+
 *Document created: 2025-12-26*
+*Updated: 2025-12-26 - Added phases 7-11 for architecture alignment*

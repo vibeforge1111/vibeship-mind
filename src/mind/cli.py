@@ -74,6 +74,7 @@ def init(path: str, quick: bool):
         click.echo(f"  - Logging: {existing_prefs.get('logging_level', 'balanced').title()}")
         click.echo(f"  - Auto-promote: {'Yes' if existing_prefs.get('auto_promote', True) else 'No'}")
         click.echo(f"  - Memory aging: {existing_prefs.get('retention_mode', 'smart').title()}")
+        click.echo(f"  - Intelligence: {existing_prefs.get('intelligence_level', 'FREE')}")
         click.echo()
 
         reuse = click.confirm("Use these settings?", default=True)
@@ -231,6 +232,7 @@ def init(path: str, quick: bool):
     click.echo(f"  - Logging: {prefs.get('logging_level', 'balanced').title()}")
     click.echo(f"  - Auto-promote: {'Yes' if prefs.get('auto_promote', True) else 'No'}")
     click.echo(f"  - Memory aging: {prefs.get('retention_mode', 'smart').title()}")
+    click.echo(f"  - Intelligence: {prefs.get('intelligence_level', 'FREE')}")
 
 
 def _interactive_setup() -> dict:
@@ -277,11 +279,44 @@ def _interactive_setup() -> dict:
     retention_mode = retention_choices[retention_choice - 1][0]
     click.echo()
 
+    # Question 4: Intelligence level (API integration)
+    click.echo("? Enhanced Intelligence (optional)")
+    click.echo("  Mind can use Claude API for smarter extraction,")
+    click.echo("  session summaries, and semantic reranking.")
+    click.echo()
+    intelligence_choices = [
+        ("FREE", "FREE - Local only, no API calls ($0/mo)"),
+        ("LITE", "LITE - Haiku escalation for low-confidence (~$2/mo)"),
+        ("BALANCED", "BALANCED - Haiku + Sonnet summaries (~$15/mo)"),
+        ("PRO", "PRO - Full Haiku + Sonnet processing (~$40/mo)"),
+        ("ULTRA", "ULTRA - Opus for deep synthesis (~$150/mo)"),
+    ]
+    for i, (_, desc) in enumerate(intelligence_choices, 1):
+        click.echo(f"  {i}. {desc}")
+
+    intelligence_choice = click.prompt("Choose", type=click.IntRange(1, 5), default=1)
+    intelligence_level = intelligence_choices[intelligence_choice - 1][0]
+    click.echo()
+
+    # If non-FREE, check for API key
+    api_key_set = False
+    if intelligence_level != "FREE":
+        import os
+        existing_key = os.getenv("ANTHROPIC_API_KEY")
+        if existing_key:
+            click.echo("Found ANTHROPIC_API_KEY in environment.")
+            api_key_set = True
+        else:
+            click.echo("Note: Set ANTHROPIC_API_KEY environment variable to enable API features.")
+            click.echo("You can do this later in your shell config.")
+        click.echo()
+
     return {
         "version": 1,
         "logging_level": logging_level,
         "auto_promote": auto_promote,
         "retention_mode": retention_mode,
+        "intelligence_level": intelligence_level,
         "created": date.today().isoformat(),
     }
 

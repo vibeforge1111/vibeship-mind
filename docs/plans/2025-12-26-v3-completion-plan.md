@@ -1394,7 +1394,7 @@ git add -A && git commit -m "feat(v3): add human-readable view generation"
 | 4 | Transcript watcher | ✅ Complete |
 | 5 | Query expansion | ✅ Complete |
 | 6 | Config system | ✅ Complete |
-| 7 | Missing graph tables | 🔲 Pending |
+| 7 | Missing graph tables | ✅ Complete |
 | 8 | Intelligence levels | 🔲 Pending |
 | 9 | Wire query expansion | 🔲 Pending |
 | 10 | Cross-encoder reranking | 🔲 Pending |

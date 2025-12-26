@@ -1,0 +1,4 @@
+$98250176-b5b4-41df-8a2d-6f2f75be393d²Àid ÿÿÿÿÿÿÿÿÿ*string08&description ÿÿÿÿÿÿÿÿÿ*string08'pattern_type ÿÿÿÿÿÿÿÿÿ*string08$
+confidence ÿÿÿÿÿÿÿÿÿ*float08(evidence_count ÿÿÿÿÿÿÿÿÿ*int32084vector ÿÿÿÿÿÿÿÿÿ*fixed_size_list:float:38408"'
+lance.auto_cleanup.older_than14days"!
+lance.auto_cleanup.interval20

@@ -1,6 +1,6 @@
 # Mind
 
-<!-- doc-version: 2.3.0 | last-updated: 2025-12-18 -->
+<!-- doc-version: 3.0.0 | last-updated: 2025-12-26 -->
 
 > Mind gives Claude a mind - not just memory across sessions, but focus within them. It remembers what worked, what didn't, and what it's supposed to be building.
 
@@ -121,13 +121,68 @@ MCP config for source install:
 
 ---
 
+## What's New in 3.0.0 (v3)
+
+Mind v3 adds a **semantic context graph** that runs alongside your existing MEMORY.md:
+
+- **Real Semantic Search** - Uses sentence-transformers (all-MiniLM-L6-v2) for meaning-based retrieval
+- **Entity Extraction** - Automatically detects files, functions, and concepts from conversations
+- **Decision Tracking** - Structured storage with reasoning, alternatives, and confidence scores
+- **Query Expansion** - Searches find related content even with different wording
+- **Cross-Encoder Reranking** - Results ranked by actual relevance, not just keyword match
+- **Pattern Detection** - Learns your preferences, habits, and blind spots over time
+- **874 Tests** - Comprehensive coverage for production stability
+
+### Upgrading from v2
+
+**No action required** - v3 runs in parallel with v2:
+
+```
+.mind/
+├── MEMORY.md          ← v2 (still works, human-readable)
+├── SESSION.md         ← v2 (session tracking)
+└── v3/
+    └── graph/         ← v3 (LanceDB vector database)
+        ├── memories.lance
+        ├── decisions.lance
+        ├── entities.lance
+        └── ...
+```
+
+Your existing MEMORY.md data is automatically migrated to v3 on first `mind_recall()`. Both systems stay in sync - every `mind_log()` writes to both v2 and v3.
+
+### Migrating Existing Memories
+
+To manually trigger migration of your MEMORY.md to the v3 graph:
+
+```
+Ask Claude: "Call mind_recall() to sync my memories to v3"
+```
+
+Or run directly:
+```bash
+python -c "from pathlib import Path; from mind.v3.bridge import get_v3_bridge; get_v3_bridge(Path('.'))"
+```
+
+### Generate Human-Readable Views
+
+Create markdown views of your v3 graph data:
+
+```bash
+mind generate-views
+```
+
+This creates `DECISIONS.md`, `PATTERNS.md`, and `POLICIES.md` in your `.mind/` folder.
+
+---
+
 ## What's New in 2.3.0
 
 - **Logging Levels** - Choose Efficient/Balanced/Detailed modes to control what gets logged
 - **Usage-Based Retention** - Memories decay if unused, stay relevant if accessed frequently
 - **413 Tests** - Comprehensive test coverage for stability
 
-**To upgrade to the newest version:** `pip install vibeship-mind --upgrade` (don't need to do this if you are just installing now)
+**To upgrade to the newest version:** `pip install vibeship-mind --upgrade`
 
 ### Previous (2.2.0)
 

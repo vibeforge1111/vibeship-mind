@@ -1,0 +1,4 @@
+$e60dbddc-68d5-4c2b-ba05-67c8311256b9²µid ÿÿÿÿÿÿÿÿÿ*string08$	policy_id ÿÿÿÿÿÿÿÿÿ*string08$	condition ÿÿÿÿÿÿÿÿÿ*string08!reason ÿÿÿÿÿÿÿÿÿ*string08%
+created_at ÿÿÿÿÿÿÿÿÿ*string084vector ÿÿÿÿÿÿÿÿÿ*fixed_size_list:float:38408"'
+lance.auto_cleanup.older_than14days"!
+lance.auto_cleanup.interval20

@@ -1,0 +1,4 @@
+$1a3260a3-8709-4f30-bbf2-6795a305b8b1²Ýid ÿÿÿÿÿÿÿÿÿ*string08!action ÿÿÿÿÿÿÿÿÿ*string08$	reasoning ÿÿÿÿÿÿÿÿÿ*string08'alternatives ÿÿÿÿÿÿÿÿÿ*string08$
+confidence ÿÿÿÿÿÿÿÿÿ*float08$	timestamp ÿÿÿÿÿÿÿÿÿ*string084vector ÿÿÿÿÿÿÿÿÿ*fixed_size_list:float:38408"!
+lance.auto_cleanup.interval20"'
+lance.auto_cleanup.older_than14days

@@ -1,6 +1,6 @@
 [project]
 name = "vibeship-mind"
-version = "3.0.0-alpha"
+version = "3.0.0"
 description = "Context graph memory system for AI coding assistants"
 readme = "README.md"
 requires-python = ">=3.11"

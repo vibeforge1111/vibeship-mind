@@ -105,43 +105,49 @@ class V3Bridge:
         """
         Seed v3 memory from existing MEMORY.md.
 
-        Only seeds if the store is empty (first run) or has fewer
-        memories than expected. Returns existing count if already seeded.
+        Now runs incrementally - checks each entry before adding to avoid
+        duplicates. Safe to call multiple times; new MEMORY.md entries
+        will be synced to v3.
 
         Returns:
-            Number of memories in store (seeded or existing)
+            Total number of memories in store after seeding
         """
         if not self._prompt_hook:
             return 0
 
-        # If we already have memories persisted, return that count
-        if self._graph_store:
-            existing_count = self._graph_store.memory_count()
-            if existing_count > 0:
-                return existing_count
-
         memory_file = self.project_path / ".mind" / "MEMORY.md"
         if not memory_file.exists():
-            return 0
+            return self._graph_store.memory_count() if self._graph_store else 0
+
+        def add_if_new(text: str, mem_type: str) -> bool:
+            """Add memory only if it doesn't already exist."""
+            text = text.strip()
+            if not text:
+                return False
+            # Check for duplicates using GraphStore
+            if self._graph_store and self._graph_store.memory_exists(text):
+                return False
+            self._prompt_hook.add_to_memory(text, mem_type)
+            return True
 
         try:
             content = memory_file.read_text(encoding="utf-8")
-            count = 0
+            added = 0
 
             # Extract decisions
             for match in re.finditer(r"(?:decided|chose|going with|using)[:\s]+(.+?)(?:\n|$)", content, re.IGNORECASE):
-                self._prompt_hook.add_to_memory(match.group(0).strip(), "decision")
-                count += 1
+                if add_if_new(match.group(0), "decision"):
+                    added += 1
 
             # Extract learnings
             for match in re.finditer(r"(?:learned|discovered|realized|turns out|TIL|gotcha)[:\s]+(.+?)(?:\n|$)", content, re.IGNORECASE):
-                self._prompt_hook.add_to_memory(match.group(0).strip(), "learning")
-                count += 1
+                if add_if_new(match.group(0), "learning"):
+                    added += 1
 
             # Extract problems
             for match in re.finditer(r"(?:problem|issue|bug|stuck on|blocked)[:\s]+(.+?)(?:\n|$)", content, re.IGNORECASE):
-                self._prompt_hook.add_to_memory(match.group(0).strip(), "problem")
-                count += 1
+                if add_if_new(match.group(0), "problem"):
+                    added += 1
 
             # Extract from Key section (important decisions)
             key_match = re.search(r"## Key.*?\n(.*?)(?=\n## |\Z)", content, re.DOTALL)
@@ -149,8 +155,8 @@ class V3Bridge:
                 for line in key_match.group(1).strip().split("\n"):
                     line = line.strip()
                     if line.startswith("- "):
-                        self._prompt_hook.add_to_memory(line[2:], "decision")
-                        count += 1
+                        if add_if_new(line[2:], "decision"):
+                            added += 1
 
             # Extract from Gotchas section
             gotcha_match = re.search(r"## Gotchas.*?\n(.*?)(?=\n## |\Z)", content, re.DOTALL)
@@ -158,12 +164,13 @@ class V3Bridge:
                 for line in gotcha_match.group(1).strip().split("\n"):
                     line = line.strip()
                     if line.startswith("- "):
-                        self._prompt_hook.add_to_memory(line[2:], "learning")
-                        count += 1
+                        if add_if_new(line[2:], "learning"):
+                            added += 1
 
-            return count
+            # Return total count (existing + newly added)
+            return self._graph_store.memory_count() if self._graph_store else added
         except Exception:
-            return 0
+            return self._graph_store.memory_count() if self._graph_store else 0
 
     def get_context_for_prompt(self, user_prompt: str) -> V3ContextResult:
         """

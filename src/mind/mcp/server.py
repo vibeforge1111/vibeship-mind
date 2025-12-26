@@ -1903,10 +1903,38 @@ async def handle_search(args: dict[str, Any]) -> list[TextContent]:
     # Also search raw content for same-session support
     raw_results = search_raw_content(raw_content, query, limit // 2)
 
-    # Merge and dedupe (prefer indexed over raw)
+    # v3: Search LanceDB for semantic matches
+    v3_results = []
+    if V3_AVAILABLE and scope == "project":
+        try:
+            project_path = get_current_project()
+            if project_path:
+                v3_bridge = get_v3_bridge(project_path)
+                if v3_bridge._graph_store:
+                    memories = v3_bridge._graph_store.search_memories(query, limit=limit)
+                    for mem in memories:
+                        # Convert L2 distance to similarity score (0-1 range)
+                        # Lower distance = more similar
+                        distance = mem.get("score", 0.0)
+                        similarity = max(0.0, 1.0 - (distance / 2.0))
+                        v3_results.append({
+                            "title": mem["content"][:60] + "..." if len(mem["content"]) > 60 else mem["content"],
+                            "content": mem["content"],
+                            "type": mem.get("type", "memory"),
+                            "relevance": similarity,
+                            "source": "v3",
+                        })
+        except Exception:
+            pass  # v3 is optional
+
+    # Merge and dedupe (prefer indexed over raw over v3)
     seen_titles = set(r["title"] for r in indexed_results)
     merged = indexed_results.copy()
     for r in raw_results:
+        if r["title"] not in seen_titles:
+            merged.append(r)
+            seen_titles.add(r["title"])
+    for r in v3_results:
         if r["title"] not in seen_titles:
             merged.append(r)
             seen_titles.add(r["title"])
@@ -2008,6 +2036,24 @@ async def handle_edges(args: dict[str, Any]) -> list[TextContent]:
             content = memory_file.read_text(encoding="utf-8")
             result = parser.parse(content, str(memory_file))
             project_edges = [{"title": e.title, "workaround": e.workaround} for e in result.project_edges]
+
+        # v3: Search LanceDB for relevant learnings/gotchas
+        if V3_AVAILABLE:
+            try:
+                v3_bridge = get_v3_bridge(project_path)
+                if v3_bridge._graph_store:
+                    # Search for learnings related to the intent
+                    memories = v3_bridge._graph_store.search_memories(intent, limit=5, memory_type="learning")
+                    for mem in memories:
+                        distance = mem.get("score", 0.0)
+                        if distance < 1.0:  # Only include reasonably similar results
+                            project_edges.append({
+                                "title": mem["content"][:60] + "..." if len(mem["content"]) > 60 else mem["content"],
+                                "workaround": mem["content"],
+                                "source": "v3",
+                            })
+            except Exception:
+                pass  # v3 is optional
 
     warnings = match_edges(intent, code, stack, global_edges, project_edges)
 
@@ -2149,10 +2195,34 @@ async def handle_blocker(args: dict[str, Any]) -> list[TextContent]:
     # Also search raw content
     raw_results = search_raw_content(raw_content, query, 3)
 
-    # Merge results
+    # v3: Search LanceDB for semantic matches
+    v3_results = []
+    if V3_AVAILABLE:
+        try:
+            v3_bridge = get_v3_bridge(project_path)
+            if v3_bridge._graph_store:
+                memories = v3_bridge._graph_store.search_memories(query, limit=5)
+                for mem in memories:
+                    distance = mem.get("score", 0.0)
+                    similarity = max(0.0, 1.0 - (distance / 2.0))
+                    v3_results.append({
+                        "title": mem["content"][:60] + "..." if len(mem["content"]) > 60 else mem["content"],
+                        "content": mem["content"],
+                        "type": mem.get("type", "memory"),
+                        "relevance": similarity,
+                        "source": "v3",
+                    })
+        except Exception:
+            pass  # v3 is optional
+
+    # Merge results (prefer indexed over raw over v3)
     seen_titles = set(r["title"] for r in indexed_results)
     merged = indexed_results.copy()
     for r in raw_results:
+        if r["title"] not in seen_titles:
+            merged.append(r)
+            seen_titles.add(r["title"])
+    for r in v3_results:
         if r["title"] not in seen_titles:
             merged.append(r)
             seen_titles.add(r["title"])

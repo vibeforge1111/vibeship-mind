@@ -315,6 +315,21 @@ class MigrationManager:
         if not memory_file.exists():
             return stats
 
+        # Handle force flag - clear existing data and marker
+        if force:
+            marker_file = self.mind_dir / "v3" / self.MIGRATION_MARKER
+            if marker_file.exists():
+                marker_file.unlink()
+
+            # Clear structured tables for fresh migration
+            for table_name in ["decisions", "patterns"]:
+                try:
+                    table = self.store.db.open_table(table_name)
+                    if table.count_rows() > 0:
+                        table.delete("id IS NOT NULL")
+                except Exception:
+                    pass  # Table might not exist yet
+
         # Import extractors
         from ..intelligence.local import (
             extract_decisions_local,

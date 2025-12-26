@@ -438,7 +438,7 @@ def doctor():
     issues = []
     warnings = []
 
-    click.echo("Mind Health Check (v2)")
+    click.echo("Mind Health Check (v3)")
     click.echo("-" * 40)
 
     # Check Mind home directory

@@ -135,7 +135,19 @@ Mind v3 adds a **semantic context graph** that runs alongside your existing MEMO
 
 ### Upgrading from v2
 
-**No action required** - v3 runs in parallel with v2:
+**Step 1: Upgrade**
+```bash
+pip install vibeship-mind --upgrade
+```
+
+**Step 2: Done.** That's it - migration is automatic.
+
+When you use Mind after upgrading, it automatically:
+- Detects your existing MEMORY.md
+- Migrates all content to v3 structured tables
+- Preserves everything - no data loss
+
+Both systems stay in sync - every `mind_log()` writes to both v2 and v3.
 
 ```
 .mind/
@@ -149,30 +161,23 @@ Mind v3 adds a **semantic context graph** that runs alongside your existing MEMO
         └── ...
 ```
 
-Your existing MEMORY.md data is automatically migrated to v3 on first `mind_recall()`. Both systems stay in sync - every `mind_log()` writes to both v2 and v3.
-
-### Migrating Existing Memories
-
-To manually trigger migration of your MEMORY.md to the v3 graph:
-
-```
-Ask Claude: "Call mind_recall() to sync my memories to v3"
-```
-
-Or run directly:
-```bash
-python -c "from pathlib import Path; from mind.v3.bridge import get_v3_bridge; get_v3_bridge(Path('.'))"
-```
-
-### Generate Human-Readable Views
-
-Create markdown views of your v3 graph data:
+### Optional: View Your Migrated Data
 
 ```bash
-mind generate-views
+# See migration stats
+mind migrate .
+
+# Generate human-readable views
+mind generate-views .
 ```
 
 This creates `DECISIONS.md`, `PATTERNS.md`, and `POLICIES.md` in your `.mind/` folder.
+
+### If Migration Didn't Run (edge cases)
+
+```bash
+mind migrate . --force
+```
 
 ---
 

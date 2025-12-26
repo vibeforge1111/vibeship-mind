@@ -1397,11 +1397,11 @@ git add -A && git commit -m "feat(v3): add human-readable view generation"
 | 7 | Missing graph tables | ✅ Complete |
 | 8 | Intelligence levels | ✅ Complete |
 | 9 | Wire query expansion | ✅ Complete |
-| 10 | Cross-encoder reranking | 🔲 Pending |
-| 11 | Human-readable views | 🔲 Pending |
+| 10 | Cross-encoder reranking | ✅ Complete |
+| 11 | Human-readable views | ✅ Complete |
 
-**Completed tasks:** 15 across 6 phases
-**Remaining tasks:** 10 across 5 phases
+**Completed tasks:** 25 across 11 phases
+**Remaining tasks:** 0
 
 ---
 

@@ -12,14 +12,20 @@ import json
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import lancedb
 import pyarrow as pa
 
+if TYPE_CHECKING:
+    from ..retrieval.embeddings import EmbeddingService
+
 
 # Embedding dimension (using small embeddings for now)
 EMBED_DIM = 384
+
+# Module-level embedding service (lazy initialized)
+_embedding_service: "EmbeddingService | None" = None
 
 
 def generate_id(prefix: str) -> str:
@@ -27,23 +33,23 @@ def generate_id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
 
 
+def _get_embedding_service() -> "EmbeddingService":
+    """Get or create the shared embedding service."""
+    global _embedding_service
+    if _embedding_service is None:
+        from ..retrieval.embeddings import EmbeddingService
+        _embedding_service = EmbeddingService()
+    return _embedding_service
+
+
 def get_embedding(text: str) -> list[float]:
     """
     Get embedding vector for text.
 
-    For now, uses a simple hash-based approach.
-    Will be replaced with real embeddings (sentence-transformers) later.
+    Uses sentence-transformers when available, falls back to hash-based.
     """
-    import hashlib
-
-    # Create deterministic pseudo-embedding from text hash
-    hash_bytes = hashlib.sha384(text.encode()).digest()
-    # Convert to floats in range [-1, 1]
-    embedding = []
-    for i in range(EMBED_DIM):
-        byte_val = hash_bytes[i % len(hash_bytes)]
-        embedding.append((byte_val / 127.5) - 1.0)
-    return embedding
+    service = _get_embedding_service()
+    return service.embed(text)
 
 
 class GraphStore:

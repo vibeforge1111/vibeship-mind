@@ -150,6 +150,20 @@ class PromptSubmitHook:
                         })
             except Exception:
                 pass  # Don't fail if extraction fails
+
+            # Extract structured decisions when memory_type is decision
+            if memory_type == "decision":
+                try:
+                    decision_extraction = self._decision_extractor.extract(content)
+                    if decision_extraction.confidence > 0.5:
+                        self._graph_store.add_decision({
+                            "action": decision_extraction.content.get("action", content),
+                            "reasoning": decision_extraction.content.get("reasoning", ""),
+                            "alternatives": decision_extraction.content.get("alternatives", []),
+                            "confidence": decision_extraction.confidence,
+                        })
+                except Exception:
+                    pass  # Don't fail if extraction fails
         else:
             # Fall back to in-memory
             self._memories.append({

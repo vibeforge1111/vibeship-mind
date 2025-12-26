@@ -771,7 +771,8 @@ def generate_views(path: str):
         from .v3.graph.store import GraphStore
         from .v3.views import ViewGenerator
 
-        store = GraphStore(project_path)
+        graph_path = mind_dir / "v3" / "graph"
+        store = GraphStore(graph_path)
         if not store.is_initialized():
             click.echo("Graph store not initialized. No views to generate.")
             raise SystemExit(1)

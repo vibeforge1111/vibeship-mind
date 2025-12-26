@@ -1,4 +1,0 @@
-$33d7f3cf-cb19-4faf-94f4-61451978f47c²Øid ÿÿÿÿÿÿÿÿÿ*string08&decision_id ÿÿÿÿÿÿÿÿÿ*string08 success ÿÿÿÿÿÿÿÿÿ*bool08#feedback ÿÿÿÿÿÿÿÿÿ*string08!impact ÿÿÿÿÿÿÿÿÿ*string08%
-created_at ÿÿÿÿÿÿÿÿÿ*string084vector ÿÿÿÿÿÿÿÿÿ*fixed_size_list:float:38408"!
-lance.auto_cleanup.interval20"'
-lance.auto_cleanup.older_than14days

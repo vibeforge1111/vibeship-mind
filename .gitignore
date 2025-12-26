@@ -47,6 +47,8 @@ htmlcov/
 data/
 *.db
 chroma/
+.mind/
+*.lance/
 
 # OS
 .DS_Store

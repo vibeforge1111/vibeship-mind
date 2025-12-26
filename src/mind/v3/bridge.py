@@ -98,6 +98,7 @@ class V3Bridge:
             self._session_hook = SessionEndHook(
                 project_path=self.project_path,
                 config=SessionEndConfig(),
+                graph_store=self._graph_store,
             )
             # Seed from MEMORY.md (only adds new memories)
             self._seeded_count = self._seed_from_memory()

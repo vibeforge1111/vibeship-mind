@@ -1,11 +1,12 @@
 """Tests for event store."""
 import pytest
+import re
 import tempfile
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
 from mind.v3.capture.events import Event, EventType, ToolCallEvent, DecisionEvent
-from mind.v3.capture.store import EventStore
+from mind.v3.capture.store import EventStore, SessionEventStore
 
 
 @pytest.fixture
@@ -122,3 +123,105 @@ class TestEventStore:
         # File should be named with date
         today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
         assert today in files[0].name
+
+
+@pytest.fixture
+def session_store():
+    """Create a temporary session event store."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        store = SessionEventStore(Path(tmpdir))
+        yield store
+
+
+class TestSessionEventStore:
+    """Test SessionEventStore class."""
+
+    def test_add_event(self, session_store):
+        """Should add events to the in-memory store."""
+        event = ToolCallEvent(tool_name="Read", tool_input={"file_path": "/foo"})
+
+        session_store.add(event)
+
+        assert len(session_store.events) == 1
+        assert session_store.events[0].tool_name == "Read"
+
+    def test_session_id_format(self, session_store):
+        """Session ID should have YYYYMMDD_HHMMSS format."""
+        # Format: YYYYMMDD_HHMMSS
+        pattern = r"^\d{8}_\d{6}$"
+        assert re.match(pattern, session_store.session_id), (
+            f"Session ID '{session_store.session_id}' doesn't match YYYYMMDD_HHMMSS format"
+        )
+
+    def test_get_events_since(self, session_store):
+        """Should filter events by timestamp."""
+        # Create event with past timestamp
+        past = datetime.now(timezone.utc) - timedelta(hours=1)
+        e1 = ToolCallEvent(tool_name="Read", tool_input={})
+        e1.timestamp = past
+        session_store.add(e1)
+
+        cutoff = datetime.now(timezone.utc) - timedelta(minutes=30)
+
+        e2 = ToolCallEvent(tool_name="Write", tool_input={})
+        session_store.add(e2)
+
+        events = session_store.get_events_since(cutoff)
+        assert len(events) == 1
+        assert events[0].tool_name == "Write"
+
+    def test_persist(self, session_store):
+        """Should save session to .mind/v3/sessions/<session_id>.json."""
+        event = ToolCallEvent(tool_name="Read", tool_input={})
+        session_store.add(event)
+
+        path = session_store.persist()
+
+        # Check path structure
+        assert path.exists()
+        assert "sessions" in str(path)
+        assert session_store.session_id in path.name
+        assert path.suffix == ".json"
+
+        # Verify content
+        import json
+        with open(path) as f:
+            data = json.load(f)
+        assert "session_id" in data
+        assert "events" in data
+        assert len(data["events"]) == 1
+
+    def test_processing_callback(self, session_store):
+        """Callback should be triggered every 10 events."""
+        callback_count = [0]  # Use list to allow mutation in callback
+
+        def callback(events):
+            callback_count[0] += 1
+
+        session_store.set_processing_callback(callback)
+
+        # Add 25 events - should trigger callback twice (at 10 and 20)
+        for i in range(25):
+            event = ToolCallEvent(tool_name=f"Tool{i}", tool_input={})
+            session_store.add(event)
+
+        assert callback_count[0] == 2
+
+    def test_clear(self, session_store):
+        """Should clear all events."""
+        session_store.add(ToolCallEvent(tool_name="Read", tool_input={}))
+        session_store.add(ToolCallEvent(tool_name="Write", tool_input={}))
+        assert len(session_store.events) == 2
+
+        session_store.clear()
+
+        assert len(session_store.events) == 0
+
+    def test_add_event_sets_session_id(self, session_store):
+        """Events should have session_id set when added."""
+        event = ToolCallEvent(tool_name="Read", tool_input={})
+        assert event.session_id is None
+
+        session_store.add(event)
+
+        assert session_store.events[0].session_id == session_store.session_id

@@ -14,6 +14,7 @@ from ..memory.decay import DecayManager, DecayConfig
 from ..memory.working_memory import WorkingMemory, MemoryItem, MemoryType
 from ..intelligence.extractors.entity import LocalEntityExtractor
 from ..intelligence.extractors.decision import LocalDecisionExtractor
+from ..retrieval.query_expander import QueryExpander, ExpanderConfig
 
 if TYPE_CHECKING:
     from ..graph.store import GraphStore
@@ -26,6 +27,8 @@ class PromptSubmitConfig:
     enabled: bool = True
     max_context_items: int = 5
     min_relevance_score: float = 0.3
+    use_query_expansion: bool = True
+    max_expanded_searches: int = 2  # Max additional searches from expansion
 
 
 @dataclass
@@ -79,6 +82,12 @@ class PromptSubmitHook:
 
         # Decision extractor for extracting structured decisions
         self._decision_extractor = LocalDecisionExtractor()
+
+        # Query expander for better retrieval
+        self._query_expander = QueryExpander(ExpanderConfig(
+            enabled=self.config.use_query_expansion,
+            max_expansions=self.config.max_expanded_searches,
+        ))
 
     def process(self, query: str) -> HookResult:
         """
@@ -205,7 +214,7 @@ class PromptSubmitHook:
         """
         Search memories for relevant items.
 
-        Uses GraphStore vector search when available,
+        Uses query expansion and GraphStore vector search when available,
         falls back to keyword matching otherwise.
 
         Args:
@@ -214,21 +223,129 @@ class PromptSubmitHook:
         Returns:
             List of relevant memories
         """
-        if self._graph_store:
-            # Use persistent vector search
-            results = self._graph_store.search_memories(
-                query,
-                limit=self.config.max_context_items,
-            )
-            # Convert distance to score (lower distance = higher score)
-            # LanceDB returns L2 distance, so we convert to similarity
-            for r in results:
-                distance = r.get("score", 0.0)
-                # Convert L2 distance to similarity score (0-1 range)
-                r["score"] = max(0.0, 1.0 - (distance / 2.0))
-            return [r for r in results if r["score"] >= self.config.min_relevance_score]
+        # Expand the query for better retrieval
+        expanded = self._query_expander.expand(query)
 
-        # Fall back to keyword matching
+        if self._graph_store:
+            return self._search_with_expansion(query, expanded)
+
+        # Fall back to keyword matching (no expansion for in-memory)
+        return self._search_in_memory(query)
+
+    def _search_with_expansion(self, query: str, expanded) -> list[dict]:
+        """
+        Search with query expansion using GraphStore.
+
+        Args:
+            query: Original query
+            expanded: ExpandedQuery with sub-queries and entities
+
+        Returns:
+            Deduplicated and ranked results
+        """
+        all_results: list[dict] = []
+        seen_ids: set[str] = set()
+
+        # Search with original query (highest priority)
+        primary_results = self._graph_store.search_memories(
+            query,
+            limit=self.config.max_context_items,
+        )
+        for r in primary_results:
+            if r["id"] not in seen_ids:
+                seen_ids.add(r["id"])
+                r["_source"] = "primary"
+                all_results.append(r)
+
+        # Search with sub-queries if enabled
+        if self.config.use_query_expansion:
+            for sub_query in expanded.sub_queries[:self.config.max_expanded_searches]:
+                sub_results = self._graph_store.search_memories(
+                    sub_query,
+                    limit=2,  # Fewer results per sub-query
+                )
+                for r in sub_results:
+                    if r["id"] not in seen_ids:
+                        seen_ids.add(r["id"])
+                        r["_source"] = "sub_query"
+                        all_results.append(r)
+
+            # Search for extracted entities
+            for entity in expanded.entities[:2]:
+                entity_results = self._graph_store.search_entities(entity, limit=2)
+                for ent in entity_results:
+                    # Convert entity to memory-like format for consistent handling
+                    mem_id = f"ent_{ent['id']}"
+                    if mem_id not in seen_ids:
+                        seen_ids.add(mem_id)
+                        all_results.append({
+                            "id": mem_id,
+                            "content": f"{ent['name']}: {ent.get('description', '')}",
+                            "type": "entity",
+                            "score": 0.0,  # Will be recalculated
+                            "_source": "entity",
+                        })
+
+        # Convert distances to scores and filter
+        scored_results = self._score_and_rank(all_results, query, expanded)
+
+        return scored_results[:self.config.max_context_items]
+
+    def _score_and_rank(self, results: list[dict], query: str, expanded) -> list[dict]:
+        """
+        Score and rank results considering source and relevance.
+
+        Args:
+            results: Raw results from searches
+            query: Original query
+            expanded: ExpandedQuery for keyword matching
+
+        Returns:
+            Scored and sorted results
+        """
+        keywords = expanded.get_keywords()
+        query_lower = query.lower()
+
+        scored = []
+        for r in results:
+            # Start with distance-based score
+            distance = r.get("score", 0.0)
+            # Convert L2 distance to similarity (0-1 range)
+            base_score = max(0.0, 1.0 - (distance / 2.0))
+
+            # Boost for primary results
+            if r.get("_source") == "primary":
+                base_score += 0.1
+
+            # Boost for keyword matches in content
+            content_lower = r.get("content", "").lower()
+            matching_keywords = sum(1 for kw in keywords if kw in content_lower)
+            keyword_boost = min(matching_keywords * 0.05, 0.2)
+            base_score += keyword_boost
+
+            # Boost for exact query substring match
+            if query_lower in content_lower:
+                base_score += 0.15
+
+            r["score"] = min(base_score, 1.0)  # Cap at 1.0
+            scored.append(r)
+
+        # Filter by minimum score and sort
+        filtered = [r for r in scored if r["score"] >= self.config.min_relevance_score]
+        filtered.sort(key=lambda x: x["score"], reverse=True)
+
+        return filtered
+
+    def _search_in_memory(self, query: str) -> list[dict]:
+        """
+        Fallback keyword-based search for in-memory storage.
+
+        Args:
+            query: Search query
+
+        Returns:
+            List of relevant memories
+        """
         query_lower = query.lower()
         query_words = set(query_lower.split())
 
@@ -238,13 +355,8 @@ class PromptSubmitHook:
             content_words = set(content_lower.split())
 
             # Relevance: word overlap scored by the smaller set
-            # Using min(query, memory) length prevents both short and long queries
-            # from being penalized. Examples:
-            # - "Redis" (1 word) matching memory with "redis" → 1/1 = 1.0
-            # - 20-word query with 4 matches in 10-word memory → 4/10 = 0.4
             overlap = query_words & content_words
             if overlap:
-                # Score by overlap / smaller set size
                 min_size = min(len(query_words), len(content_words))
                 score = len(overlap) / max(min_size, 1)
                 if score >= self.config.min_relevance_score:
@@ -255,7 +367,7 @@ class PromptSubmitHook:
 
         # Sort by score and limit
         relevant.sort(key=lambda x: x["score"], reverse=True)
-        return relevant[: self.config.max_context_items]
+        return relevant[:self.config.max_context_items]
 
     def _format_context(self, memories: list[dict]) -> str:
         """

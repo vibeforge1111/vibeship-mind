@@ -12,6 +12,15 @@ Modules:
 - memory: Cognitive memory system
 - autonomy: Progressive autonomy tracking
 - hooks: Claude Code integration hooks
+- config: Unified configuration system
 """
 
+from .config import V3Settings, get_settings, reset_settings
+
 __version__ = "3.0.0-alpha"
+
+__all__ = [
+    "V3Settings",
+    "get_settings",
+    "reset_settings",
+]

@@ -17,6 +17,7 @@ from .events import (
 )
 from .store import EventStore
 from .extractor import TranscriptExtractor
+from .watcher import TranscriptWatcher, WatcherConfig
 
 __all__ = [
     # Events
@@ -33,4 +34,7 @@ __all__ = [
     "EventStore",
     # Extractor
     "TranscriptExtractor",
+    # Watcher
+    "TranscriptWatcher",
+    "WatcherConfig",
 ]

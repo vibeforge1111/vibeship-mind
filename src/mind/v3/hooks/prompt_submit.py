@@ -15,6 +15,8 @@ from ..memory.working_memory import WorkingMemory, MemoryItem, MemoryType
 from ..intelligence.extractors.entity import LocalEntityExtractor
 from ..intelligence.extractors.decision import LocalDecisionExtractor
 from ..retrieval.query_expander import QueryExpander, ExpanderConfig
+from ..retrieval.reranker import Reranker, RerankerConfig
+from ..retrieval.search import SearchResult
 
 if TYPE_CHECKING:
     from ..graph.store import GraphStore
@@ -29,6 +31,7 @@ class PromptSubmitConfig:
     min_relevance_score: float = 0.3
     use_query_expansion: bool = True
     max_expanded_searches: int = 2  # Max additional searches from expansion
+    use_reranking: bool = True  # Enable cross-encoder reranking
 
 
 @dataclass
@@ -87,6 +90,12 @@ class PromptSubmitHook:
         self._query_expander = QueryExpander(ExpanderConfig(
             enabled=self.config.use_query_expansion,
             max_expansions=self.config.max_expanded_searches,
+        ))
+
+        # Cross-encoder reranker for result refinement
+        self._reranker = Reranker(RerankerConfig(
+            top_k=self.config.max_context_items,
+            fallback_to_simple=True,
         ))
 
     def process(self, query: str) -> HookResult:
@@ -289,6 +298,10 @@ class PromptSubmitHook:
         # Convert distances to scores and filter
         scored_results = self._score_and_rank(all_results, query, expanded)
 
+        # Apply cross-encoder reranking if enabled
+        if self.config.use_reranking and scored_results:
+            scored_results = self._apply_reranking(query, scored_results)
+
         return scored_results[:self.config.max_context_items]
 
     def _score_and_rank(self, results: list[dict], query: str, expanded) -> list[dict]:
@@ -335,6 +348,47 @@ class PromptSubmitHook:
         filtered.sort(key=lambda x: x["score"], reverse=True)
 
         return filtered
+
+    def _apply_reranking(self, query: str, results: list[dict]) -> list[dict]:
+        """
+        Apply cross-encoder reranking to results.
+
+        Args:
+            query: Original query
+            results: Scored results to rerank
+
+        Returns:
+            Reranked results
+        """
+        # Convert dicts to SearchResult objects for reranker
+        search_results = [
+            SearchResult(
+                id=r.get("id", ""),
+                content={"text": r.get("content", "")},
+                score=r.get("score", 0.0),
+                metadata={"type": r.get("type", "memory"), "_source": r.get("_source", "")},
+            )
+            for r in results
+        ]
+
+        # Apply reranking
+        reranked = self._reranker.rerank(
+            query,
+            search_results,
+            top_k=self.config.max_context_items,
+        )
+
+        # Convert back to dict format
+        return [
+            {
+                "id": sr.id,
+                "content": sr.content.get("text", ""),
+                "score": sr.score,
+                "type": sr.metadata.get("type", "memory"),
+                "_source": sr.metadata.get("_source", "reranked"),
+            }
+            for sr in reranked
+        ]
 
     def _search_in_memory(self, query: str) -> list[dict]:
         """

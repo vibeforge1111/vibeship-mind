@@ -751,6 +751,27 @@ def status(path: str):
         except:
             pass
 
+    # v3 Graph Status
+    graph_path = mind_dir / "v3" / "graph"
+    if graph_path.exists():
+        try:
+            from .v3.graph.store import GraphStore
+            store = GraphStore(graph_path)
+            counts = store.get_counts()
+            click.echo()
+            click.echo("v3 Graph: ACTIVE")
+            click.echo(f"  Memories: {counts.get('memories', 0)}")
+            click.echo(f"  Decisions: {counts.get('decisions', 0)}")
+            click.echo(f"  Entities: {counts.get('entities', 0)}")
+            click.echo(f"  Patterns: {counts.get('patterns', 0)}")
+        except Exception:
+            click.echo()
+            click.echo("v3 Graph: ERROR")
+    else:
+        click.echo()
+        click.echo("v3 Graph: NOT INITIALIZED")
+        click.echo("  Run 'mind migrate .' to enable v3 features")
+
 
 @cli.command("generate-views")
 @click.argument("path", default=".", type=click.Path(exists=True, file_okay=False))

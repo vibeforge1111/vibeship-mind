@@ -10,6 +10,7 @@ from .embeddings import EmbeddingService, EmbeddingConfig, HashEmbedding
 from .search import HybridSearch, SearchConfig, SearchResult, SearchMode
 from .reranker import Reranker, RerankerConfig, SimpleReranker
 from .context_injection import ContextInjector, ContextInjectorConfig, InjectedContext
+from .query_expander import QueryExpander, ExpanderConfig, ExpandedQuery
 
 __all__ = [
     "EmbeddingService",
@@ -25,4 +26,7 @@ __all__ = [
     "ContextInjector",
     "ContextInjectorConfig",
     "InjectedContext",
+    "QueryExpander",
+    "ExpanderConfig",
+    "ExpandedQuery",
 ]

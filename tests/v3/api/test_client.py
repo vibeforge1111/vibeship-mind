@@ -18,6 +18,7 @@ class TestClaudeConfig:
         assert config.intelligence_level == "FREE"
         assert config.max_retries == 3
         assert config.timeout == 30.0
+        assert config.max_tokens == 1024
 
     def test_config_with_custom_values(self):
         """Test ClaudeConfig with custom values."""
@@ -26,12 +27,14 @@ class TestClaudeConfig:
             intelligence_level="PRO",
             max_retries=5,
             timeout=60.0,
+            max_tokens=2048,
         )
 
         assert config.api_key == "test-key"
         assert config.intelligence_level == "PRO"
         assert config.max_retries == 5
         assert config.timeout == 60.0
+        assert config.max_tokens == 2048
 
     def test_from_env_loads_api_key(self):
         """Test from_env loads ANTHROPIC_API_KEY from environment."""
@@ -150,9 +153,9 @@ class TestClaudeClientCallMethods:
         mock_response = MagicMock()
         mock_response.content = [MagicMock(text="Mocked response")]
 
-        # Mock the anthropic client
+        # Mock the async anthropic client
         mock_anthropic_client = MagicMock()
-        mock_anthropic_client.messages.create.return_value = mock_response
+        mock_anthropic_client.messages.create = AsyncMock(return_value=mock_response)
 
         with patch.object(client, "_get_client", return_value=mock_anthropic_client):
             result = await client.call_haiku("test prompt", system="test system")
@@ -166,9 +169,9 @@ class TestClaudeClientCallMethods:
         config = ClaudeConfig(api_key="test-key", intelligence_level="PRO")
         client = ClaudeClient(config)
 
-        # Mock client that raises exception
+        # Mock async client that raises exception
         mock_anthropic_client = MagicMock()
-        mock_anthropic_client.messages.create.side_effect = Exception("API Error")
+        mock_anthropic_client.messages.create = AsyncMock(side_effect=Exception("API Error"))
 
         with patch.object(client, "_get_client", return_value=mock_anthropic_client):
             result = await client.call_haiku("test prompt")
@@ -185,7 +188,7 @@ class TestClaudeClientCallMethods:
         mock_response.content = [MagicMock(text="Response without system")]
 
         mock_anthropic_client = MagicMock()
-        mock_anthropic_client.messages.create.return_value = mock_response
+        mock_anthropic_client.messages.create = AsyncMock(return_value=mock_response)
 
         with patch.object(client, "_get_client", return_value=mock_anthropic_client):
             result = await client.call_haiku("test prompt")
@@ -212,13 +215,13 @@ class TestClaudeClientLazyInit:
             # (or handle gracefully in implementation)
 
     def test_get_client_creates_anthropic_client(self):
-        """Test _get_client creates anthropic.Anthropic instance."""
-        config = ClaudeConfig(api_key="test-key", intelligence_level="PRO")
+        """Test _get_client creates anthropic.AsyncAnthropic instance."""
+        config = ClaudeConfig(api_key="test-key", intelligence_level="PRO", timeout=45.0)
         client = ClaudeClient(config)
 
         mock_anthropic_class = MagicMock()
         mock_anthropic_module = MagicMock()
-        mock_anthropic_module.Anthropic = mock_anthropic_class
+        mock_anthropic_module.AsyncAnthropic = mock_anthropic_class
 
         with patch.dict("sys.modules", {"anthropic": mock_anthropic_module}):
             with patch("mind.v3.api.client.anthropic", mock_anthropic_module):
@@ -226,5 +229,5 @@ class TestClaudeClientLazyInit:
                 client._anthropic_client = None
                 result = client._get_client()
 
-                # Should create client with api_key
-                mock_anthropic_class.assert_called_once_with(api_key="test-key")
+                # Should create async client with api_key and timeout
+                mock_anthropic_class.assert_called_once_with(api_key="test-key", timeout=45.0)

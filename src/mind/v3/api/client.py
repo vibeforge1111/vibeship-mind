@@ -6,6 +6,7 @@ with intelligence level controls and graceful fallbacks.
 """
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from typing import Any
@@ -15,6 +16,8 @@ try:
     import anthropic
 except ImportError:
     anthropic = None  # type: ignore
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -32,12 +35,14 @@ class ClaudeConfig:
             ULTRA: Maximum quality, more API calls
         max_retries: Maximum retry attempts for failed calls.
         timeout: Request timeout in seconds.
+        max_tokens: Maximum tokens in model response.
     """
 
     api_key: str | None = None
     intelligence_level: str = "FREE"
     max_retries: int = 3
     timeout: float = 30.0
+    max_tokens: int = 1024
 
     @classmethod
     def from_env(cls) -> "ClaudeConfig":
@@ -97,24 +102,30 @@ class ClaudeClient:
 
     def _get_client(self) -> Any | None:
         """
-        Get or create the anthropic client.
+        Get or create the async anthropic client.
 
         Uses lazy initialization - client created on first use.
         Handles missing anthropic package gracefully.
 
         Returns:
-            anthropic.Anthropic instance or None if unavailable.
+            anthropic.AsyncAnthropic instance or None if unavailable.
         """
         if self._anthropic_client is not None:
             return self._anthropic_client
 
         if anthropic is None:
+            logger.debug("Anthropic SDK not installed, client unavailable")
             return None
 
         try:
-            self._anthropic_client = anthropic.Anthropic(api_key=self.config.api_key)
+            self._anthropic_client = anthropic.AsyncAnthropic(
+                api_key=self.config.api_key,
+                timeout=self.config.timeout,
+            )
+            logger.debug("Created AsyncAnthropic client")
             return self._anthropic_client
-        except Exception:
+        except (AttributeError, TypeError) as e:
+            logger.error("Failed to create Anthropic client: %s", e)
             return None
 
     async def _call_model(self, model_key: str, prompt: str, system: str = "") -> str:
@@ -130,6 +141,7 @@ class ClaudeClient:
             Model response text or empty string on error/disabled.
         """
         if not self.enabled:
+            logger.debug("Client disabled, skipping API call")
             return ""
 
         client = self._get_client()
@@ -145,22 +157,40 @@ class ClaudeClient:
             # Build request kwargs
             kwargs: dict[str, Any] = {
                 "model": model_id,
-                "max_tokens": 1024,
+                "max_tokens": self.config.max_tokens,
                 "messages": messages,
             }
 
             if system:
                 kwargs["system"] = system
 
-            response = client.messages.create(**kwargs)
+            logger.debug("Calling model %s with max_tokens=%d", model_id, self.config.max_tokens)
+            response = await client.messages.create(**kwargs)
 
             # Extract text from response
             if response.content and len(response.content) > 0:
+                logger.debug("Received response with %d content blocks", len(response.content))
                 return response.content[0].text
 
+            logger.debug("Received empty response from model")
             return ""
 
-        except Exception:
+        except (KeyError, AttributeError) as e:
+            logger.error("Unexpected error during API call: %s", e)
+            return ""
+        except Exception as e:
+            # Handle Anthropic-specific exceptions when SDK is available
+            if anthropic is not None:
+                if isinstance(e, anthropic.AuthenticationError):
+                    logger.error("Authentication failed: %s", e)
+                    return ""
+                if isinstance(e, anthropic.RateLimitError):
+                    logger.error("Rate limit exceeded: %s", e)
+                    return ""
+                if isinstance(e, anthropic.APIError):
+                    logger.error("API error: %s", e)
+                    return ""
+            logger.error("Unexpected error during API call: %s", e)
             return ""
 
     async def call_haiku(self, prompt: str, system: str = "") -> str:

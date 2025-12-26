@@ -12,6 +12,8 @@ from typing import Any, TYPE_CHECKING
 
 from ..memory.decay import DecayManager, DecayConfig
 from ..memory.working_memory import WorkingMemory, MemoryItem, MemoryType
+from ..intelligence.extractors.entity import LocalEntityExtractor
+from ..intelligence.extractors.decision import LocalDecisionExtractor
 
 if TYPE_CHECKING:
     from ..graph.store import GraphStore
@@ -72,6 +74,12 @@ class PromptSubmitHook:
         # Working memory for session tracking
         self._working_memory = WorkingMemory()
 
+        # Entity extractor for extracting entities from memories
+        self._entity_extractor = LocalEntityExtractor()
+
+        # Decision extractor for extracting structured decisions
+        self._decision_extractor = LocalDecisionExtractor()
+
     def process(self, query: str) -> HookResult:
         """
         Process user query and return relevant context.
@@ -129,6 +137,19 @@ class PromptSubmitHook:
         if self._graph_store:
             # Use persistent storage
             self._graph_store.add_memory(content, memory_type)
+
+            # Extract entities from content
+            try:
+                entity_extraction = self._entity_extractor.extract(content)
+                if entity_extraction.content.get("entities"):
+                    for ent in entity_extraction.content["entities"]:
+                        self._graph_store.add_entity({
+                            "name": ent["name"],
+                            "type": ent["type"],
+                            "description": ent.get("description") or content[:100],
+                        })
+            except Exception:
+                pass  # Don't fail if extraction fails
         else:
             # Fall back to in-memory
             self._memories.append({

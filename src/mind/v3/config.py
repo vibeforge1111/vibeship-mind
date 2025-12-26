@@ -26,6 +26,7 @@ from .hooks.prompt_submit import PromptSubmitConfig
 from .hooks.session_end import SessionEndConfig
 from .autonomy.levels import AutonomyConfig
 from .autonomy.confidence import ConfidenceConfig
+from .api.client import ClaudeConfig
 
 
 @dataclass
@@ -61,6 +62,9 @@ class V3Settings:
     # Autonomy settings
     autonomy: AutonomyConfig = field(default_factory=AutonomyConfig)
     confidence: ConfidenceConfig = field(default_factory=ConfidenceConfig)
+
+    # API settings
+    api: ClaudeConfig = field(default_factory=ClaudeConfig)
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "V3Settings":
@@ -110,6 +114,10 @@ class V3Settings:
             settings.autonomy = AutonomyConfig(**data["autonomy"])
         if "confidence" in data:
             settings.confidence = ConfidenceConfig(**data["confidence"])
+
+        # API settings
+        if "api" in data:
+            settings.api = ClaudeConfig(**data["api"])
 
         return settings
 
@@ -181,6 +189,14 @@ class V3Settings:
             self.debug = True
         if os.getenv("MIND_V3_NO_GPU"):
             self.embeddings.use_gpu = False
+
+        # API key from environment
+        api_key = os.getenv("ANTHROPIC_API_KEY")
+        if api_key:
+            self.api.api_key = api_key
+        level = os.getenv("MIND_INTELLIGENCE_LEVEL")
+        if level:
+            self.api.intelligence_level = level
 
     def to_dict(self) -> dict[str, Any]:
         """

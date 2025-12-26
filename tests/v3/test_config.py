@@ -117,3 +117,39 @@ class TestGetSettings:
         with tempfile.TemporaryDirectory() as tmpdir:
             settings = get_settings(Path(tmpdir))
             assert settings is not None
+
+
+class TestAPIConfig:
+    """Tests for API configuration in V3Settings."""
+
+    def test_default_api_config(self):
+        """Default has FREE level and None api_key."""
+        settings = V3Settings()
+        assert settings.api.intelligence_level == "FREE"
+        assert settings.api.api_key is None
+
+    def test_api_config_from_dict(self):
+        """API config loads from dict."""
+        data = {
+            "api": {
+                "api_key": "test-key-123",
+                "intelligence_level": "BALANCED",
+                "max_retries": 5,
+            }
+        }
+        settings = V3Settings.from_dict(data)
+
+        assert settings.api.api_key == "test-key-123"
+        assert settings.api.intelligence_level == "BALANCED"
+        assert settings.api.max_retries == 5
+
+    def test_api_config_from_env(self, monkeypatch):
+        """API key and level load from environment."""
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "env-key-456")
+        monkeypatch.setenv("MIND_INTELLIGENCE_LEVEL", "PRO")
+
+        settings = V3Settings()
+        settings._apply_env_overrides()
+
+        assert settings.api.api_key == "env-key-456"
+        assert settings.api.intelligence_level == "PRO"

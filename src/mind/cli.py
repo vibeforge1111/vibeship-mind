@@ -1121,5 +1121,213 @@ def search_v3(query: str, path: str, limit: int, search_type: str, as_json: bool
         raise SystemExit(1)
 
 
+@cli.command("config")
+@click.argument("path", default=".", type=click.Path(exists=True, file_okay=False))
+@click.option("--set", "set_option", multiple=True, help="Set config option (key=value)")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+def config_cmd(path: str, set_option: tuple, as_json: bool):
+    """View or modify Mind configuration.
+
+    Shows current configuration including intelligence level, API status,
+    and feature settings.
+
+    Examples:
+        mind config                           # Show current config
+        mind config --set intelligence_level=BALANCED
+        mind config --json
+    """
+    project_path = Path(path).resolve()
+    mind_dir = project_path / ".mind"
+
+    if not mind_dir.exists():
+        click.echo(f"Error: {project_path} is not a Mind project.")
+        click.echo("Run 'mind init' first.")
+        raise SystemExit(1)
+
+    # Handle setting options
+    if set_option:
+        config = load_config(project_path)
+        for opt in set_option:
+            if "=" not in opt:
+                click.echo(f"Error: Invalid option format: {opt}")
+                click.echo("Use: --set key=value")
+                raise SystemExit(1)
+
+            key, value = opt.split("=", 1)
+            key = key.strip()
+            value = value.strip()
+
+            if key == "intelligence_level":
+                valid_levels = ["FREE", "LITE", "BALANCED", "PRO", "ULTRA"]
+                if value.upper() not in valid_levels:
+                    click.echo(f"Error: Invalid intelligence level: {value}")
+                    click.echo(f"Valid levels: {', '.join(valid_levels)}")
+                    raise SystemExit(1)
+                config["intelligence_level"] = value.upper()
+                click.echo(f"Set intelligence_level = {value.upper()}")
+            elif key == "logging_level":
+                valid_levels = ["minimal", "balanced", "verbose"]
+                if value.lower() not in valid_levels:
+                    click.echo(f"Error: Invalid logging level: {value}")
+                    click.echo(f"Valid levels: {', '.join(valid_levels)}")
+                    raise SystemExit(1)
+                config["logging_level"] = value.lower()
+                click.echo(f"Set logging_level = {value.lower()}")
+            else:
+                click.echo(f"Warning: Unknown config key: {key}")
+                config[key] = value
+                click.echo(f"Set {key} = {value}")
+
+        save_config(project_path, config)
+        click.echo()
+        click.echo("Configuration saved.")
+        return
+
+    # Display current config
+    config = load_config(project_path)
+    prefs = load_global_preferences() or {}
+
+    # Get API status
+    import os
+    api_key_set = bool(os.environ.get("ANTHROPIC_API_KEY"))
+    intelligence_level = config.get("intelligence_level") or prefs.get("intelligence_level", "FREE")
+
+    output = {
+        "project": str(project_path),
+        "intelligence_level": intelligence_level,
+        "api_key_configured": api_key_set,
+        "logging_level": config.get("logging_level") or prefs.get("logging_level", "balanced"),
+        "auto_promote": config.get("auto_promote") if "auto_promote" in config else prefs.get("auto_promote", True),
+        "retention_mode": config.get("retention_mode") or prefs.get("retention_mode", "smart"),
+    }
+
+    # Check v3 status
+    graph_path = mind_dir / "v3" / "graph"
+    output["v3_enabled"] = graph_path.exists()
+
+    if as_json:
+        click.echo(json.dumps(output, indent=2))
+    else:
+        click.echo(f"Project: {project_path.name}")
+        click.echo("-" * 40)
+        click.echo(f"Intelligence Level: {output['intelligence_level']}")
+        click.echo(f"API Key Configured: {'Yes' if output['api_key_configured'] else 'No (set ANTHROPIC_API_KEY)'}")
+        click.echo(f"Logging Level: {output['logging_level']}")
+        click.echo(f"Auto-Promote: {'Yes' if output['auto_promote'] else 'No'}")
+        click.echo(f"Retention Mode: {output['retention_mode']}")
+        click.echo(f"v3 Graph: {'Enabled' if output['v3_enabled'] else 'Disabled'}")
+
+        if intelligence_level != "FREE" and not api_key_set:
+            click.echo()
+            click.echo("⚠️  Set ANTHROPIC_API_KEY to enable AI features")
+
+
+@cli.command("synthesize")
+@click.argument("path", default=".", type=click.Path(exists=True, file_okay=False))
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+def synthesize_cmd(path: str, as_json: bool):
+    """Generate AI-powered session summary.
+
+    Uses the Claude API to analyze the current session and extract:
+    - Key decisions made
+    - Learnings discovered
+    - Unresolved items
+
+    Requires ANTHROPIC_API_KEY and a non-FREE intelligence level.
+
+    Examples:
+        mind synthesize              # Synthesize current session
+        mind synthesize --json       # Output as JSON
+    """
+    import asyncio
+    import os
+
+    project_path = Path(path).resolve()
+    mind_dir = project_path / ".mind"
+
+    if not mind_dir.exists():
+        click.echo(f"Error: {project_path} is not a Mind project.")
+        click.echo("Run 'mind init' first.")
+        raise SystemExit(1)
+
+    # Check API key
+    if not os.environ.get("ANTHROPIC_API_KEY"):
+        click.echo("Error: ANTHROPIC_API_KEY not set.")
+        click.echo("Set your API key to use session synthesis.")
+        raise SystemExit(1)
+
+    # Check intelligence level
+    config = load_config(project_path)
+    prefs = load_global_preferences() or {}
+    intelligence_level = config.get("intelligence_level") or prefs.get("intelligence_level", "FREE")
+
+    if intelligence_level == "FREE":
+        click.echo("Error: Session synthesis requires a non-FREE intelligence level.")
+        click.echo("Run 'mind config --set intelligence_level=BALANCED' to enable.")
+        raise SystemExit(1)
+
+    try:
+        from .v3.bridge import get_v3_bridge
+
+        bridge = get_v3_bridge(project_path)
+
+        if not bridge._api_client or not bridge._api_client.enabled:
+            click.echo("Error: API client not enabled.")
+            click.echo("Check your ANTHROPIC_API_KEY and intelligence level.")
+            raise SystemExit(1)
+
+        click.echo("Synthesizing session...")
+
+        # Run async synthesis
+        summary = asyncio.run(bridge.finalize_session_async())
+
+        if not summary:
+            click.echo("No session data to synthesize.")
+            click.echo("The session may be empty or synthesis failed.")
+            return
+
+        if as_json:
+            output = {
+                "summary": summary.summary,
+                "decisions": summary.decisions,
+                "learnings": summary.learnings,
+                "unresolved": summary.unresolved,
+            }
+            click.echo(json.dumps(output, indent=2))
+        else:
+            click.echo()
+            click.echo("Session Summary")
+            click.echo("=" * 40)
+            click.echo(summary.summary)
+            click.echo()
+
+            if summary.decisions:
+                click.echo("Decisions:")
+                for d in summary.decisions:
+                    click.echo(f"  • {d}")
+
+            if summary.learnings:
+                click.echo()
+                click.echo("Learnings:")
+                for l in summary.learnings:
+                    click.echo(f"  • {l}")
+
+            if summary.unresolved:
+                click.echo()
+                click.echo("Unresolved:")
+                for u in summary.unresolved:
+                    click.echo(f"  • {u}")
+
+            click.echo()
+            click.echo("Session synthesis complete.")
+
+    except ImportError as e:
+        click.echo(f"Error: v3 modules not available: {e}")
+        raise SystemExit(1)
+    except Exception as e:
+        click.echo(f"Synthesis error: {e}")
+        raise SystemExit(1)
+
+
 if __name__ == "__main__":
     cli()

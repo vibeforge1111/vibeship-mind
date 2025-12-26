@@ -1562,12 +1562,27 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
     learning_styles_promoted = 0
     decayed_count = 0
     session_content = None
+    session_summary = None  # v3: AI-powered session summary
     if gap_detected:
         old_session = read_session_file(project_path)
         if old_session:
             # Extract learnings worth keeping and promote to MEMORY.md
             learnings = extract_promotable_learnings(old_session)
             promoted_count = append_to_memory(project_path, learnings)
+
+            # v3: Generate AI-powered session summary if API enabled
+            if V3_AVAILABLE:
+                try:
+                    v3_bridge = get_v3_bridge(project_path)
+                    session_summary = await v3_bridge.finalize_session_async()
+                    if session_summary:
+                        logger.debug(
+                            "v3 session synthesis complete: %d decisions, %d learnings",
+                            len(session_summary.decisions),
+                            len(session_summary.learnings),
+                        )
+                except Exception:
+                    logger.debug("v3 session synthesis failed", exc_info=True)
 
             # Clear SESSION.md for new session
             clear_session_file(project_path)
@@ -1844,6 +1859,12 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
             "promoted_to_memory": promoted_count,
             "entries_processed": entries_processed,
             "refreshed": needs_refresh,
+            "ai_summary": {
+                "summary": session_summary.summary if session_summary else None,
+                "decisions": session_summary.decisions if session_summary else [],
+                "learnings": session_summary.learnings if session_summary else [],
+                "unresolved": session_summary.unresolved if session_summary else [],
+            } if session_summary else None,
         },
         "health": {
             "memory_count": entries_processed,
@@ -2450,6 +2471,26 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
     project_path = get_current_project()
     if not project_path:
         return [TextContent(type="text", text="Error: No Mind project found")]
+
+    # v3: Try API-enhanced categorization for ambiguous messages
+    # This escalates to Haiku when local confidence is low
+    if V3_AVAILABLE and (explicit_type is None or explicit_type == "experience"):
+        try:
+            v3_bridge = get_v3_bridge(project_path)
+            v3_category, v3_confidence = await v3_bridge.categorize_text(message)
+            # Map v3 categories to mind types
+            v3_to_mind = {
+                "decision": "decision",
+                "learning": "learning",
+                "problem": "problem",
+                "progress": "progress",
+                "exploration": "experience",
+            }
+            if v3_category in v3_to_mind and v3_confidence >= 0.7:
+                entry_type = v3_to_mind[v3_category]
+                was_auto = True
+        except Exception:
+            logger.debug("v3 categorize_text failed, using local categorization", exc_info=True)
 
     # Check logging level filtering
     logging_level = get_logging_level(project_path)

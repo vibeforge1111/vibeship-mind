@@ -263,3 +263,74 @@ class TestV3BridgeAPI:
         """Finalize without API returns None."""
         result = await bridge.finalize_session_async()
         assert result is None
+
+    @pytest.mark.asyncio
+    async def test_categorize_text_decision(self, bridge):
+        """Categorize text with decision keywords."""
+        category, confidence = await bridge.categorize_text("I decided to use Redis for caching")
+        assert category == "decision"
+        assert confidence >= 0.7
+
+    @pytest.mark.asyncio
+    async def test_categorize_text_learning(self, bridge):
+        """Categorize text with learning keywords."""
+        category, confidence = await bridge.categorize_text("TIL that Python has walrus operator")
+        assert category == "learning"
+        assert confidence >= 0.7
+
+    @pytest.mark.asyncio
+    async def test_categorize_text_problem(self, bridge):
+        """Categorize text with problem keywords."""
+        category, confidence = await bridge.categorize_text("There's a bug in the login flow")
+        assert category == "problem"
+        assert confidence >= 0.7
+
+    @pytest.mark.asyncio
+    async def test_categorize_text_progress(self, bridge):
+        """Categorize text with progress keywords."""
+        category, confidence = await bridge.categorize_text("Fixed the authentication issue")
+        assert category == "progress"
+        assert confidence >= 0.7
+
+    @pytest.mark.asyncio
+    async def test_categorize_text_ambiguous(self, bridge):
+        """Ambiguous text gets exploration category."""
+        category, confidence = await bridge.categorize_text("Looking at the code")
+        assert category == "exploration"
+        assert confidence < 0.6  # Low confidence for ambiguous
+
+
+class TestV3BridgeWatcher:
+    """Test TranscriptWatcher integration in V3Bridge."""
+
+    @pytest.fixture
+    def bridge(self):
+        """Create bridge with temp directory."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            yield V3Bridge(project_path=Path(tmpdir))
+
+    def test_watcher_initialized(self, bridge):
+        """Bridge initializes transcript watcher."""
+        assert hasattr(bridge, "_transcript_watcher")
+        assert bridge._transcript_watcher is not None
+
+    def test_process_transcript_turn(self, bridge):
+        """Can process transcript turns."""
+        turn = {
+            "role": "assistant",
+            "content": "I decided to use Redis for caching because it's faster.",
+        }
+        events = bridge.process_transcript_turn(turn)
+        assert isinstance(events, int)
+
+    def test_get_watcher_stats(self, bridge):
+        """Can get watcher stats."""
+        stats = bridge.get_watcher_stats()
+        assert "turns_processed" in stats
+        assert "events_extracted" in stats
+        assert "decisions_stored" in stats
+
+    def test_stats_includes_watcher(self, bridge):
+        """Bridge stats include watcher stats."""
+        stats = bridge.get_stats()
+        assert "watcher" in stats

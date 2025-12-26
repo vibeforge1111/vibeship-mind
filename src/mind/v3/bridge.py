@@ -22,6 +22,8 @@ from .migration import MigrationManager, MigrationStats
 from .api.client import ClaudeClient, ClaudeConfig
 from .capture.store import SessionEventStore
 from .synthesis.session_end import SessionEndSynthesizer, SessionSummary
+from .processing.categorize import EventCategorizer
+from .capture.watcher import TranscriptWatcher, WatcherConfig
 
 
 @dataclass
@@ -84,9 +86,11 @@ class V3Bridge:
         # Initialize autonomy tracker
         self._autonomy: AutonomyTracker | None = None
 
-        # Initialize API client and event store
+        # Initialize API client, event store, and categorizer
         self._api_client: ClaudeClient | None = None
         self._event_store: SessionEventStore | None = None
+        self._categorizer: EventCategorizer | None = None
+        self._transcript_watcher: TranscriptWatcher | None = None
 
         if self.config.enabled:
             self._init_storage()
@@ -150,14 +154,25 @@ class V3Bridge:
             self._session_hook = None
 
     def _init_api(self) -> None:
-        """Initialize API client and event store."""
+        """Initialize API client, event store, categorizer, and watcher."""
         try:
             self._api_client = ClaudeClient(ClaudeConfig.from_env())
             self._event_store = SessionEventStore(self.project_path)
+            self._categorizer = EventCategorizer()
+            # Initialize transcript watcher with graph store for persistence
+            self._transcript_watcher = TranscriptWatcher(
+                graph_store=self._graph_store,
+                config=WatcherConfig(),
+            )
         except Exception:
             logger.debug("v3 API init failed, API features disabled", exc_info=True)
             self._api_client = None
             self._event_store = None
+            self._categorizer = EventCategorizer()  # Still useful for local categorization
+            self._transcript_watcher = TranscriptWatcher(
+                graph_store=self._graph_store,
+                config=WatcherConfig(),
+            )
 
     def _seed_from_memory(self) -> int:
         """
@@ -297,6 +312,41 @@ class V3Bridge:
             logger.debug("v3 record_session_event failed", exc_info=True)
             return False
 
+    def process_transcript_turn(self, turn: dict) -> int:
+        """
+        Process a transcript turn for extraction.
+
+        Automatically extracts decisions and entities from the turn
+        and stores them in the graph.
+
+        Args:
+            turn: Conversation turn with 'role' and 'content'
+
+        Returns:
+            Number of events extracted
+        """
+        if not self.config.enabled or not self._transcript_watcher:
+            return 0
+
+        try:
+            events = self._transcript_watcher.process_turn(turn)
+            return len(events)
+        except Exception:
+            logger.debug("v3 process_transcript_turn failed", exc_info=True)
+            return 0
+
+    def get_watcher_stats(self) -> dict:
+        """
+        Get transcript watcher statistics.
+
+        Returns:
+            Dictionary with watcher stats
+        """
+        if not self._transcript_watcher:
+            return {}
+
+        return self._transcript_watcher.get_stats()
+
     def finalize_session(self) -> SessionEndResult | None:
         """
         Finalize current session.
@@ -342,6 +392,34 @@ class V3Bridge:
         except Exception:
             logger.debug("v3 finalize_session_async failed", exc_info=True)
             return None
+
+    async def categorize_text(self, text: str) -> tuple[str, float]:
+        """
+        Categorize text message with optional API escalation.
+
+        Uses local heuristics first, escalates to API when confidence is low
+        and API is enabled.
+
+        Args:
+            text: Text message to categorize
+
+        Returns:
+            Tuple of (category, confidence)
+            Categories: decision, learning, problem, progress, exploration
+        """
+        if not self._categorizer:
+            return "exploration", 0.5
+
+        # Use local categorization first
+        category, confidence = self._categorizer._local_categorize_text(text)
+
+        # Escalate to API if low confidence and API available
+        if confidence < 0.6 and self._api_client and self._api_client.enabled:
+            api_category = await self._categorizer._api_categorize_text(text, self._api_client)
+            if api_category:
+                return api_category, 0.9
+
+        return category, confidence
 
     def add_memory(self, content: str, memory_type: str) -> bool:
         """
@@ -397,6 +475,9 @@ class V3Bridge:
 
         if self._autonomy:
             stats["autonomy"] = self._autonomy.get_summary()
+
+        if self._transcript_watcher:
+            stats["watcher"] = self._transcript_watcher.get_stats()
 
         return stats
 

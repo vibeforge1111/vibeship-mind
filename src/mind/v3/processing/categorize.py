@@ -217,3 +217,67 @@ Reply with just the category name."""
             logger.debug("API categorization failed", exc_info=True)
 
         return None
+
+    def _local_categorize_text(self, text: str) -> tuple[str, float]:
+        """
+        Categorize raw text using local heuristics.
+
+        Args:
+            text: Text to categorize
+
+        Returns:
+            Tuple of (category, confidence)
+        """
+        if not text:
+            return "exploration", 0.5
+
+        # Check progress before problem - "fixed bug" is progress, not problem
+        if self._decision_re.search(text):
+            return "decision", 0.8
+        if self._learning_re.search(text):
+            return "learning", 0.8
+        if self._progress_re.search(text):
+            return "progress", 0.7
+        if self._problem_re.search(text):
+            return "problem", 0.7
+
+        return "exploration", 0.5
+
+    async def _api_categorize_text(
+        self,
+        text: str,
+        client: "ClaudeClient",
+    ) -> str | None:
+        """
+        Categorize raw text using API.
+
+        Args:
+            text: Text to categorize
+            client: API client
+
+        Returns:
+            Category string or None
+        """
+        if not text:
+            return None
+
+        prompt = f"""Categorize this text into exactly one category:
+- decision: A choice between alternatives
+- learning: New knowledge or discovery
+- problem: An issue or bug
+- progress: Work completed
+- exploration: Code reading or understanding
+
+Text: {text[:500]}
+
+Reply with just the category name."""
+
+        try:
+            response = await client.call_haiku(prompt)
+            category = response.strip().lower()
+            if category in self.CATEGORIES:
+                return category
+        except Exception:
+            logger.debug("API text categorization failed", exc_info=True)
+
+        return None

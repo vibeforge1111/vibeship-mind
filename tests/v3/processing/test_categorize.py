@@ -119,3 +119,75 @@ class TestEventCategorizer:
         )
         assert categorized.confidence == 0.85
         assert categorized.category == "decision"
+
+
+class TestEventCategorizerText:
+    """Test EventCategorizer text methods."""
+
+    def test_local_categorize_text_decision(self):
+        """Detects decision keywords in raw text."""
+        categorizer = EventCategorizer()
+        category, confidence = categorizer._local_categorize_text("I decided to use Redis for caching")
+        assert category == "decision"
+        assert confidence >= 0.7
+
+    def test_local_categorize_text_learning(self):
+        """Detects learning keywords in raw text."""
+        categorizer = EventCategorizer()
+        category, confidence = categorizer._local_categorize_text("TIL that Python has walrus operator")
+        assert category == "learning"
+        assert confidence >= 0.7
+
+    def test_local_categorize_text_problem(self):
+        """Detects problem keywords in raw text."""
+        categorizer = EventCategorizer()
+        category, confidence = categorizer._local_categorize_text("There's a bug in the login flow")
+        assert category == "problem"
+        assert confidence >= 0.7
+
+    def test_local_categorize_text_progress(self):
+        """Detects progress keywords in raw text."""
+        categorizer = EventCategorizer()
+        category, confidence = categorizer._local_categorize_text("Fixed the authentication issue")
+        assert category == "progress"
+        assert confidence >= 0.7
+
+    def test_local_categorize_text_ambiguous(self):
+        """Ambiguous text gets exploration with low confidence."""
+        categorizer = EventCategorizer()
+        category, confidence = categorizer._local_categorize_text("Looking at the code")
+        assert category == "exploration"
+        assert confidence < 0.6
+
+    def test_local_categorize_text_empty(self):
+        """Empty text gets exploration with low confidence."""
+        categorizer = EventCategorizer()
+        category, confidence = categorizer._local_categorize_text("")
+        assert category == "exploration"
+        assert confidence == 0.5
+
+    @pytest.mark.asyncio
+    async def test_api_categorize_text_without_client(self):
+        """API categorization returns None without text."""
+        categorizer = EventCategorizer()
+        mock_client = Mock()
+        result = await categorizer._api_categorize_text("", mock_client)
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_api_categorize_text_success(self):
+        """API categorization returns category on success."""
+        categorizer = EventCategorizer()
+        mock_client = AsyncMock()
+        mock_client.call_haiku = AsyncMock(return_value="decision")
+        result = await categorizer._api_categorize_text("some ambiguous text", mock_client)
+        assert result == "decision"
+
+    @pytest.mark.asyncio
+    async def test_api_categorize_text_invalid_category(self):
+        """API categorization returns None for invalid category."""
+        categorizer = EventCategorizer()
+        mock_client = AsyncMock()
+        mock_client.call_haiku = AsyncMock(return_value="unknown_category")
+        result = await categorizer._api_categorize_text("some text", mock_client)
+        assert result is None

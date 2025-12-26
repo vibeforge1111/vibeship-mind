@@ -376,13 +376,7 @@ class MigrationManager:
                         action_key = normalize_key(action)
 
                         if action and action_key not in existing_decisions:
-                            reasoning = ""
-                            for kw in ["because", "since", "due to", "-"]:
-                                if kw in entry.content.lower():
-                                    parts = entry.content.split(kw, 1)
-                                    if len(parts) > 1:
-                                        reasoning = parts[1].strip()
-                                        break
+                            reasoning = self._extract_reasoning(entry.content)
 
                             self.store.add_decision({
                                 "action": action,
@@ -503,14 +497,7 @@ class MigrationManager:
                         action_key = normalize_key(action)
 
                         if action and action_key not in existing_decisions:
-                            # Try to extract reasoning
-                            reasoning = ""
-                            for kw in ["because", "since", "due to", "-"]:
-                                if kw in entry.content.lower():
-                                    parts = entry.content.split(kw, 1)
-                                    if len(parts) > 1:
-                                        reasoning = parts[1].strip()
-                                        break
+                            reasoning = self._extract_reasoning(entry.content)
 
                             self.store.add_decision({
                                 "action": action,
@@ -599,6 +586,34 @@ class MigrationManager:
         result = re.sub(r"\*([^*]+)\*", r"\1", result)  # *italic*
 
         return result.strip()
+
+    def _extract_reasoning(self, text: str) -> str:
+        """
+        Extract reasoning from decision text.
+
+        Looks for keywords like 'because', 'since', ' - ' (with spaces).
+        Returns empty string if no reasoning found.
+        """
+        text_lower = text.lower()
+
+        # Keywords that indicate reasoning follows
+        # Note: " - " requires spaces to avoid matching "File-based"
+        reasoning_keywords = [
+            ("because ", "because"),
+            ("since ", "since"),
+            ("due to ", "due to"),
+            (" - ", " - "),  # Space-dash-space for explanations
+        ]
+
+        for keyword_lower, keyword_actual in reasoning_keywords:
+            idx = text_lower.find(keyword_lower)
+            if idx != -1:
+                # Find the actual keyword position in original text
+                reasoning = text[idx + len(keyword_actual):].strip()
+                if reasoning:
+                    return reasoning
+
+        return ""
 
     def _write_migration_marker(self, stats: MigrationStats) -> None:
         """Write marker file indicating migration is complete."""

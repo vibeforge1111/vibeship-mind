@@ -27,7 +27,12 @@ from .health import auto_repair
 @click.group()
 @click.version_option(version=__version__, prog_name="mind")
 def cli():
-    """Mind - File-based memory for AI coding assistants."""
+    """Mind - File-based memory for AI coding assistants.
+
+    Quick start: mind init && mind status
+
+    Common commands: init, status, search, doctor
+    """
     pass
 
 
@@ -35,7 +40,7 @@ def cli():
 @click.argument("path", default=".", type=click.Path(exists=True, file_okay=False))
 @click.option("--quick", "-q", is_flag=True, help="Skip interactive setup, use defaults or existing preferences")
 def init(path: str, quick: bool):
-    """Initialize Mind for a project.
+    """Initialize Mind for a project (creates .mind/ folder).
 
     PATH is the project directory to initialize. Defaults to current directory.
 
@@ -425,14 +430,115 @@ def remove_project(path: str):
 
 @cli.command("mcp")
 def mcp_server():
-    """Run the MCP server for AI assistant integration."""
+    """Start MCP server (used by Claude Code, not typically run directly)."""
     from .mcp import run_server
     run_server()
 
 
+def _check_project_health(project_path: Path, issues: list, warnings: list) -> None:
+    """Check health of a single project and append issues/warnings."""
+    from datetime import datetime, timedelta
+
+    project_name = project_path.name
+    mind_dir = project_path / ".mind"
+
+    # Check .mind directory
+    if not mind_dir.exists():
+        click.echo(f"[!] No .mind/ in: {project_name}")
+        issues.append(f"No .mind/ directory in {project_name}")
+        return
+
+    # Check MEMORY.md
+    memory_file = mind_dir / "MEMORY.md"
+    if not memory_file.exists():
+        click.echo(f"[!] No MEMORY.md in: {project_name}")
+        issues.append(f"No MEMORY.md in {project_name}")
+        return
+
+    # Check MEMORY.md is readable
+    try:
+        content = memory_file.read_text(encoding="utf-8")
+        file_size_kb = memory_file.stat().st_size / 1024
+        if file_size_kb > 100:
+            click.echo(f"[.] {project_name}: MEMORY.md large ({file_size_kb:.0f}KB)")
+            warnings.append(f"{project_name}: MEMORY.md is {file_size_kb:.0f}KB - consider archiving")
+        else:
+            click.echo(f"[+] {project_name}: MEMORY.md accessible ({file_size_kb:.0f}KB)")
+    except Exception as e:
+        click.echo(f"[!] {project_name}: Cannot read MEMORY.md")
+        issues.append(f"Cannot read MEMORY.md in {project_name}: {e}")
+        return
+
+    # Check state.json
+    state_file = mind_dir / "state.json"
+    if state_file.exists():
+        try:
+            state = json.loads(state_file.read_text())
+            if state.get("last_activity"):
+                last = datetime.fromtimestamp(state["last_activity"] / 1000)
+                age = datetime.now() - last
+                if age > timedelta(days=7):
+                    click.echo(f"[.] {project_name}: Last activity {age.days}d ago")
+                    warnings.append(f"{project_name}: Last activity {age.days} days ago")
+        except Exception:
+            pass  # state.json parsing failed, continue
+
+    # Check CLAUDE.md has MIND:CONTEXT
+    claude_md = project_path / "CLAUDE.md"
+    if claude_md.exists():
+        claude_content = claude_md.read_text(encoding="utf-8")
+        if "MIND:CONTEXT" in claude_content:
+            click.echo(f"[+] {project_name}: MIND:CONTEXT present")
+        else:
+            click.echo(f"[.] {project_name}: No MIND:CONTEXT in CLAUDE.md")
+            warnings.append(f"{project_name}: Run 'mind init' to add MIND:CONTEXT")
+    else:
+        click.echo(f"[.] {project_name}: No CLAUDE.md")
+        warnings.append(f"{project_name}: No CLAUDE.md file")
+
+    # v3 health checks
+    v3_dir = mind_dir / "v3"
+    graph_dir = v3_dir / "graph"
+    if graph_dir.exists():
+        try:
+            from .v3.graph.store import GraphStore
+            store = GraphStore(graph_dir)
+            counts = store.get_counts()
+            memory_count = store.memory_count()
+
+            click.echo(f"[+] {project_name}: v3 Graph initialized")
+            click.echo(f"    Memories: {memory_count}, Decisions: {counts.get('decisions', 0)}, "
+                      f"Entities: {counts.get('entities', 0)}, Patterns: {counts.get('patterns', 0)}")
+
+            # Check for empty tables (potential issue)
+            if memory_count > 0 and counts.get('decisions', 0) == 0:
+                click.echo(f"[.] {project_name}: v3 has memories but no extracted decisions")
+                warnings.append(f"{project_name}: v3 decisions table empty - run 'mind migrate --force'")
+
+            # Check migration status
+            migration_marker = v3_dir / ".v3_migrated"
+            if migration_marker.exists():
+                click.echo(f"[+] {project_name}: v3 migration complete")
+            elif memory_file.exists():
+                click.echo(f"[.] {project_name}: v3 migration pending")
+                warnings.append(f"{project_name}: Run 'mind migrate' to sync MEMORY.md to v3")
+
+        except Exception as e:
+            click.echo(f"[!] {project_name}: v3 Graph error: {e}")
+            issues.append(f"v3 Graph error in {project_name}: {e}")
+    else:
+        # v3 not initialized - just a note, not a warning
+        click.echo(f"[.] {project_name}: v3 not initialized (optional)")
+
+
 @cli.command("doctor")
-def doctor():
-    """Run health checks on Mind installation."""
+@click.argument("path", default=".", type=click.Path(exists=True, file_okay=False), required=False)
+def doctor(path: str):
+    """Run health checks on Mind installation.
+
+    If PATH is provided, checks that specific project.
+    Otherwise checks the current directory and all registered projects.
+    """
     from datetime import datetime, timedelta
 
     issues = []
@@ -451,14 +557,30 @@ def doctor():
         click.echo(f"[!] Config directory missing ({mind_home})")
         issues.append("Mind home directory not found")
 
+    # Check current directory first (if it's a Mind project)
+    current_path = Path(path).resolve()
+    current_mind_dir = current_path / ".mind"
+    checked_paths = set()
+
+    if current_mind_dir.exists():
+        click.echo()
+        click.echo(f"Current project: {current_path.name}")
+        _check_project_health(current_path, issues, warnings)
+        checked_paths.add(str(current_path))
+
     # Check registered projects
     registry = ProjectsRegistry.load()
     projects = registry.list_all()
+    click.echo()
     click.echo(f"[+] Projects registered: {len(projects)}")
 
-    # Check each project
+    # Check each registered project (skip if already checked)
     for project in projects:
         project_path = Path(project.path)
+
+        # Skip if already checked (e.g., current directory)
+        if str(project_path) in checked_paths:
+            continue
 
         # Check project exists
         if not project_path.exists():
@@ -466,95 +588,7 @@ def doctor():
             issues.append(f"Project directory not found: {project.path}")
             continue
 
-        # Check .mind directory
-        mind_dir = project_path / ".mind"
-        if not mind_dir.exists():
-            click.echo(f"[!] No .mind/ in: {project.name}")
-            issues.append(f"No .mind/ directory in {project.name}")
-            continue
-
-        # Check MEMORY.md
-        memory_file = mind_dir / "MEMORY.md"
-        if not memory_file.exists():
-            click.echo(f"[!] No MEMORY.md in: {project.name}")
-            issues.append(f"No MEMORY.md in {project.name}")
-            continue
-
-        # Check MEMORY.md is readable
-        try:
-            content = memory_file.read_text(encoding="utf-8")
-            file_size_kb = memory_file.stat().st_size / 1024
-            if file_size_kb > 100:
-                click.echo(f"[.] {project.name}: MEMORY.md large ({file_size_kb:.0f}KB)")
-                warnings.append(f"{project.name}: MEMORY.md is {file_size_kb:.0f}KB - consider archiving")
-            else:
-                click.echo(f"[+] {project.name}: MEMORY.md accessible ({file_size_kb:.0f}KB)")
-        except Exception as e:
-            click.echo(f"[!] {project.name}: Cannot read MEMORY.md")
-            issues.append(f"Cannot read MEMORY.md in {project.name}: {e}")
-            continue
-
-        # Check state.json
-        state_file = mind_dir / "state.json"
-        if state_file.exists():
-            try:
-                import json
-                state = json.loads(state_file.read_text())
-                if state.get("last_activity"):
-                    last = datetime.fromtimestamp(state["last_activity"] / 1000)
-                    age = datetime.now() - last
-                    if age > timedelta(days=7):
-                        click.echo(f"[.] {project.name}: Last activity {age.days}d ago")
-                        warnings.append(f"{project.name}: Last activity {age.days} days ago")
-            except Exception:
-                pass  # state.json parsing failed, continue
-
-        # Check CLAUDE.md has MIND:CONTEXT
-        claude_md = project_path / "CLAUDE.md"
-        if claude_md.exists():
-            claude_content = claude_md.read_text(encoding="utf-8")
-            if "MIND:CONTEXT" in claude_content:
-                click.echo(f"[+] {project.name}: MIND:CONTEXT present")
-            else:
-                click.echo(f"[.] {project.name}: No MIND:CONTEXT in CLAUDE.md")
-                warnings.append(f"{project.name}: Run 'mind init' to add MIND:CONTEXT")
-        else:
-            click.echo(f"[.] {project.name}: No CLAUDE.md")
-            warnings.append(f"{project.name}: No CLAUDE.md file")
-
-        # v3 health checks
-        v3_dir = mind_dir / "v3"
-        graph_dir = v3_dir / "graph"
-        if graph_dir.exists():
-            try:
-                from .v3.graph.store import GraphStore
-                store = GraphStore(graph_dir)
-                counts = store.get_counts()
-                memory_count = store.memory_count()
-
-                click.echo(f"[+] {project.name}: v3 Graph initialized")
-                click.echo(f"    Memories: {memory_count}, Decisions: {counts.get('decisions', 0)}, "
-                          f"Entities: {counts.get('entities', 0)}, Patterns: {counts.get('patterns', 0)}")
-
-                # Check for empty tables (potential issue)
-                if memory_count > 0 and counts.get('decisions', 0) == 0:
-                    click.echo(f"[.] {project.name}: v3 has memories but no extracted decisions")
-                    warnings.append(f"{project.name}: v3 decisions table empty - run 'mind migrate --force'")
-
-                # Check migration status
-                migration_marker = v3_dir / ".v3_migrated"
-                if migration_marker.exists():
-                    click.echo(f"[+] {project.name}: v3 migration complete")
-                elif memory_file.exists():
-                    click.echo(f"[.] {project.name}: v3 migration pending")
-                    warnings.append(f"{project.name}: Run 'mind migrate' to sync MEMORY.md to v3")
-
-            except Exception as e:
-                click.echo(f"[!] {project.name}: v3 Graph error: {e}")
-                issues.append(f"v3 Graph error in {project.name}: {e}")
-        else:
-            # v3 not initialized - just a note, not a warning
-            click.echo(f"[.] {project.name}: v3 not initialized (optional)")
+        _check_project_health(project_path, issues, warnings)
 
     # Check global edges
     from .mcp.server import load_global_edges
@@ -940,6 +974,115 @@ def sync_v3(path: str):
 
     except ImportError as e:
         click.echo(f"Error: v3 modules not available: {e}")
+        raise SystemExit(1)
+
+
+@cli.command("search")
+@click.argument("query")
+@click.argument("path", default=".", type=click.Path(exists=True, file_okay=False))
+@click.option("--limit", "-n", default=10, help="Maximum results to show")
+@click.option("--type", "search_type", type=click.Choice(["all", "memories", "decisions", "entities"]), default="all", help="Type of content to search")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON")
+def search_v3(query: str, path: str, limit: int, search_type: str, as_json: bool):
+    """Search memories using v3 semantic search.
+
+    Uses real embeddings (sentence-transformers) to find semantically
+    similar content, not just keyword matches.
+
+    Examples:
+        mind search "authentication flow"
+        mind search "database migration" --type decisions
+        mind search "React hooks" -n 5
+    """
+    project_path = Path(path).resolve()
+    mind_dir = project_path / ".mind"
+
+    if not mind_dir.exists():
+        click.echo(f"Error: {project_path} is not a Mind project.")
+        click.echo("Run 'mind init' first.")
+        raise SystemExit(1)
+
+    graph_path = mind_dir / "v3" / "graph"
+    if not graph_path.exists():
+        click.echo("v3 graph not initialized.")
+        click.echo("Run 'mind migrate .' to enable semantic search.")
+        raise SystemExit(1)
+
+    try:
+        from .v3.graph.store import GraphStore
+
+        store = GraphStore(graph_path)
+        results = []
+
+        # Search based on type
+        if search_type in ("all", "memories"):
+            memories = store.search_memories(query, limit=limit)
+            for m in memories:
+                results.append({
+                    "type": "memory",
+                    "content": m.get("content", ""),
+                    "memory_type": m.get("memory_type", ""),
+                    "score": m.get("_distance", 0),
+                })
+
+        if search_type in ("all", "decisions"):
+            decisions = store.search_decisions(query, limit=limit)
+            for d in decisions:
+                results.append({
+                    "type": "decision",
+                    "content": d.get("action", ""),
+                    "reasoning": d.get("reasoning", ""),
+                    "score": d.get("_distance", 0),
+                })
+
+        if search_type in ("all", "entities"):
+            entities = store.search_entities(query, limit=limit)
+            for e in entities:
+                results.append({
+                    "type": "entity",
+                    "content": e.get("name", ""),
+                    "entity_type": e.get("entity_type", ""),
+                    "score": e.get("_distance", 0),
+                })
+
+        # Sort by score (lower distance = better match)
+        results.sort(key=lambda x: x.get("score", float("inf")))
+        results = results[:limit]
+
+        if as_json:
+            click.echo(json.dumps(results, indent=2))
+        else:
+            if not results:
+                click.echo(f"No results for: {query}")
+                return
+
+            click.echo(f"Search: \"{query}\"")
+            click.echo("-" * 40)
+
+            for i, r in enumerate(results, 1):
+                type_badge = f"[{r['type']}]"
+                content = r["content"][:80] + "..." if len(r["content"]) > 80 else r["content"]
+
+                if r["type"] == "memory":
+                    subtype = f" ({r['memory_type']})" if r["memory_type"] else ""
+                    click.echo(f"{i}. {type_badge}{subtype} {content}")
+                elif r["type"] == "decision":
+                    click.echo(f"{i}. {type_badge} {content}")
+                    if r.get("reasoning"):
+                        reason = r["reasoning"][:60] + "..." if len(r["reasoning"]) > 60 else r["reasoning"]
+                        click.echo(f"   Reason: {reason}")
+                elif r["type"] == "entity":
+                    etype = f" ({r['entity_type']})" if r["entity_type"] else ""
+                    click.echo(f"{i}. {type_badge}{etype} {content}")
+
+            click.echo()
+            click.echo(f"Found {len(results)} results")
+
+    except ImportError as e:
+        click.echo(f"Error: v3 modules not available: {e}")
+        raise SystemExit(1)
+    except Exception as e:
+        click.echo(f"Search error: {e}")
         raise SystemExit(1)
 
 

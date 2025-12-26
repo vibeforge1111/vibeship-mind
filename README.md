@@ -1,6 +1,6 @@
 # Mind
 
-<!-- doc-version: 3.0.0 | last-updated: 2025-12-26 -->
+<!-- doc-version: 3.1.0 | last-updated: 2025-12-26 -->
 
 > Mind gives Claude a mind - not just memory across sessions, but focus within them. It remembers what worked, what didn't, and what it's supposed to be building.
 
@@ -121,62 +121,60 @@ MCP config for source install:
 
 ---
 
-## What's New in 3.0.0 (v3)
+## What's New in 3.1.0
 
-Mind v3 adds a **semantic context graph** that runs alongside your existing MEMORY.md:
+**Stability and usability improvements:**
 
-- **Real Semantic Search** - Uses sentence-transformers (all-MiniLM-L6-v2) for meaning-based retrieval
-- **Entity Extraction** - Automatically detects files, functions, and concepts from conversations
-- **Decision Tracking** - Structured storage with reasoning, alternatives, and confidence scores
-- **Query Expansion** - Searches find related content even with different wording
-- **Cross-Encoder Reranking** - Results ranked by actual relevance, not just keyword match
-- **Pattern Detection** - Learns your preferences, habits, and blind spots over time
-- **874 Tests** - Comprehensive coverage for production stability
+- **`mind search` command** - Search memories from CLI with semantic search
+  ```bash
+  mind search "authentication flow"
+  mind search "database" --type decisions
+  ```
+- **Improved `mind doctor`** - Now checks current project's v3 status, not just registered projects
+- **Incremental sync** - `mind sync` is faster than full migration for regular updates
+- **Better reasoning extraction** - Decision reasoning no longer duplicates action text
+- **Debug logging** - Silent failures now log to debug for troubleshooting
+
+### Previous: 3.0.0 (v3)
+
+Mind v3 added a **semantic context graph** alongside MEMORY.md:
+
+- **Real Semantic Search** - sentence-transformers for meaning-based retrieval
+- **Entity Extraction** - Detects files, functions, and concepts
+- **Decision Tracking** - Structured storage with reasoning and confidence
+- **Query Expansion** - Finds related content even with different wording
+- **Cross-Encoder Reranking** - Results ranked by relevance
+- **Pattern Detection** - Learns preferences and habits
+- **874 Tests** - Comprehensive coverage
 
 ### Upgrading from v2
 
-**Step 1: Upgrade**
 ```bash
 pip install vibeship-mind --upgrade
 ```
 
-**Step 2: Done.** That's it - migration is automatic.
-
-When you use Mind after upgrading, it automatically:
+Migration is automatic. When you use Mind after upgrading:
 - Detects your existing MEMORY.md
-- Migrates all content to v3 structured tables
+- Migrates to v3 structured tables
 - Preserves everything - no data loss
 
-Both systems stay in sync - every `mind_log()` writes to both v2 and v3.
+Both systems stay in sync - `mind_log()` writes to both v2 and v3.
 
 ```
 .mind/
-├── MEMORY.md          ← v2 (still works, human-readable)
+├── MEMORY.md          ← v2 (human-readable)
 ├── SESSION.md         ← v2 (session tracking)
 └── v3/
     └── graph/         ← v3 (LanceDB vector database)
-        ├── memories.lance
-        ├── decisions.lance
-        ├── entities.lance
-        └── ...
 ```
 
-### Optional: View Your Migrated Data
+### View Your Data
 
 ```bash
-# See migration stats
-mind migrate .
-
-# Generate human-readable views
-mind generate-views .
-```
-
-This creates `DECISIONS.md`, `PATTERNS.md`, and `POLICIES.md` in your `.mind/` folder.
-
-### If Migration Didn't Run (edge cases)
-
-```bash
-mind migrate . --force
+mind status              # Quick overview
+mind search "topic"      # Semantic search
+mind generate-views .    # Create DECISIONS.md, PATTERNS.md
+mind migrate . --force   # Re-process everything
 ```
 
 ---
@@ -280,17 +278,20 @@ That's it! This creates `.mind/MEMORY.md` and `.mind/SESSION.md`.
 ## Quick Commands
 
 ```bash
-# Check if everything is working
-python -m mind doctor
-
-# See what Mind extracted from your notes
-python -m mind parse
-
 # Check project status
-python -m mind status
+mind status
 
-# List all registered projects
-python -m mind list
+# Semantic search your memories
+mind search "authentication"
+
+# Health check
+mind doctor
+
+# See extracted entities
+mind parse
+
+# List all projects
+mind list
 ```
 
 ---

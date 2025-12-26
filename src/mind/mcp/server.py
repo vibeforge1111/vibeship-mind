@@ -2,11 +2,14 @@
 
 import hashlib
 import json
+import logging
 import os
 import re
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
+
+logger = logging.getLogger(__name__)
 
 from mcp.server import Server
 from mcp.server.stdio import stdio_server
@@ -1786,7 +1789,7 @@ async def handle_recall(args: dict[str, Any]) -> list[TextContent]:
             if v3_context_injected:
                 v3_stats["context_injected"] = True
         except Exception:
-            pass  # v3 is optional, don't break recall on errors
+            logger.debug("v3 context injection failed during recall", exc_info=True)
 
     # Build self_improve summary for output
     self_improve_summary = None
@@ -1925,7 +1928,7 @@ async def handle_search(args: dict[str, Any]) -> list[TextContent]:
                             "source": "v3",
                         })
         except Exception:
-            pass  # v3 is optional
+            logger.debug("v3 search failed during mind_search", exc_info=True)
 
     # Merge and dedupe (prefer indexed over raw over v3)
     seen_titles = set(r["title"] for r in indexed_results)
@@ -2053,7 +2056,7 @@ async def handle_edges(args: dict[str, Any]) -> list[TextContent]:
                                 "source": "v3",
                             })
             except Exception:
-                pass  # v3 is optional
+                logger.debug("v3 edge search failed during mind_edges", exc_info=True)
 
     warnings = match_edges(intent, code, stack, global_edges, project_edges)
 
@@ -2213,7 +2216,7 @@ async def handle_blocker(args: dict[str, Any]) -> list[TextContent]:
                         "source": "v3",
                     })
         except Exception:
-            pass  # v3 is optional
+            logger.debug("v3 search failed during mind_blocker", exc_info=True)
 
     # Merge results (prefer indexed over raw over v3)
     seen_titles = set(r["title"] for r in indexed_results)
@@ -2571,7 +2574,7 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
                 v3_bridge = get_v3_bridge(project_path)
                 v3_bridge.add_memory(formatted, entry_type)
             except Exception:
-                pass  # v3 is optional
+                logger.debug("v3 add_memory failed during mind_log", exc_info=True)
 
     if success:
         # Keep session alive - user is actively working
@@ -2583,7 +2586,7 @@ async def handle_log(args: dict[str, Any]) -> list[TextContent]:
                 v3_bridge = get_v3_bridge(project_path)
                 v3_bridge.record_session_event(f"[{entry_type}] {message}")
             except Exception:
-                pass  # v3 is optional
+                logger.debug("v3 record_session_event failed during mind_log", exc_info=True)
 
         output = {
             "success": True,

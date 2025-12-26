@@ -16,8 +16,7 @@ Modules:
 """
 
 from .config import V3Settings, get_settings, reset_settings
-
-__version__ = "3.0.3"
+from .. import __version__  # Single source of truth from parent package
 
 __all__ = [
     "V3Settings",

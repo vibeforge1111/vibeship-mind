@@ -1062,19 +1062,57 @@ class GraphStore:
     # Stats
     # =========================================================================
 
+    # Tables that are actively populated by migration and extractors
+    ACTIVE_TABLES = {"memories", "decisions", "entities", "patterns"}
+
+    # Tables reserved for future progressive autonomy features
+    FUTURE_TABLES = {"policies", "exceptions", "precedents", "outcomes", "autonomy"}
+
     def get_counts(self) -> dict[str, int]:
         """Get count of nodes by type."""
         counts = {}
 
-        all_tables = [
-            "decisions", "entities", "patterns", "memories",
-            "policies", "exceptions", "precedents", "outcomes", "autonomy"
-        ]
+        all_tables = list(self.ACTIVE_TABLES | self.FUTURE_TABLES)
         for table_name in all_tables:
             table = self.db.open_table(table_name)
             counts[table_name] = table.count_rows()
 
         return counts
+
+    def get_table_status(self) -> dict[str, dict[str, Any]]:
+        """
+        Get status of all tables including whether they're active or future.
+
+        Returns:
+            Dict with table name -> {count, status, description}
+        """
+        status = {}
+
+        table_descriptions = {
+            "memories": "Core memory storage for context retrieval",
+            "decisions": "Extracted decisions with reasoning",
+            "entities": "Files, functions, and concepts mentioned",
+            "patterns": "User preferences and habits",
+            "policies": "Future: Inferred rules from decisions",
+            "exceptions": "Future: Exceptions to policies",
+            "precedents": "Future: Historical context for decisions",
+            "outcomes": "Future: Decision success tracking",
+            "autonomy": "Future: Progressive autonomy levels",
+        }
+
+        for table_name in self.ACTIVE_TABLES | self.FUTURE_TABLES:
+            table = self.db.open_table(table_name)
+            count = table.count_rows()
+            is_active = table_name in self.ACTIVE_TABLES
+
+            status[table_name] = {
+                "count": count,
+                "status": "active" if is_active else "future",
+                "description": table_descriptions.get(table_name, ""),
+                "populated": count > 0,
+            }
+
+        return status
 
     def get_all_decisions(self) -> list[dict[str, Any]]:
         """Get all decisions (for view generation)."""

@@ -506,8 +506,8 @@ def doctor():
                     if age > timedelta(days=7):
                         click.echo(f"[.] {project.name}: Last activity {age.days}d ago")
                         warnings.append(f"{project.name}: Last activity {age.days} days ago")
-            except:
-                pass
+            except Exception:
+                pass  # state.json parsing failed, continue
 
         # Check CLAUDE.md has MIND:CONTEXT
         claude_md = project_path / "CLAUDE.md"
@@ -521,6 +521,40 @@ def doctor():
         else:
             click.echo(f"[.] {project.name}: No CLAUDE.md")
             warnings.append(f"{project.name}: No CLAUDE.md file")
+
+        # v3 health checks
+        v3_dir = mind_dir / "v3"
+        graph_dir = v3_dir / "graph"
+        if graph_dir.exists():
+            try:
+                from .v3.graph.store import GraphStore
+                store = GraphStore(graph_dir)
+                counts = store.get_counts()
+                memory_count = store.memory_count()
+
+                click.echo(f"[+] {project.name}: v3 Graph initialized")
+                click.echo(f"    Memories: {memory_count}, Decisions: {counts.get('decisions', 0)}, "
+                          f"Entities: {counts.get('entities', 0)}, Patterns: {counts.get('patterns', 0)}")
+
+                # Check for empty tables (potential issue)
+                if memory_count > 0 and counts.get('decisions', 0) == 0:
+                    click.echo(f"[.] {project.name}: v3 has memories but no extracted decisions")
+                    warnings.append(f"{project.name}: v3 decisions table empty - run 'mind migrate --force'")
+
+                # Check migration status
+                migration_marker = v3_dir / ".v3_migrated"
+                if migration_marker.exists():
+                    click.echo(f"[+] {project.name}: v3 migration complete")
+                elif memory_file.exists():
+                    click.echo(f"[.] {project.name}: v3 migration pending")
+                    warnings.append(f"{project.name}: Run 'mind migrate' to sync MEMORY.md to v3")
+
+            except Exception as e:
+                click.echo(f"[!] {project.name}: v3 Graph error: {e}")
+                issues.append(f"v3 Graph error in {project.name}: {e}")
+        else:
+            # v3 not initialized - just a note, not a warning
+            click.echo(f"[.] {project.name}: v3 not initialized (optional)")
 
     # Check global edges
     from .mcp.server import load_global_edges
@@ -748,8 +782,8 @@ def status(path: str):
             if state.get("last_activity"):
                 last = datetime.fromtimestamp(state["last_activity"] / 1000)
                 click.echo(f"Last activity: {last.isoformat()}")
-        except:
-            pass
+        except Exception:
+            pass  # state.json parsing failed, continue
 
     # v3 Graph Status
     graph_path = mind_dir / "v3" / "graph"
@@ -855,6 +889,54 @@ def migrate_v3(path: str, force: bool):
 
         click.echo()
         click.echo("Run 'mind generate-views' to create human-readable markdown files.")
+
+    except ImportError as e:
+        click.echo(f"Error: v3 modules not available: {e}")
+        raise SystemExit(1)
+
+
+@cli.command("sync")
+@click.argument("path", default=".", type=click.Path(exists=True, file_okay=False))
+def sync_v3(path: str):
+    """Incrementally sync MEMORY.md to v3 (faster than migrate).
+
+    Unlike 'mind migrate', this only processes new entries that
+    haven't been synced yet. Use this for regular syncs.
+
+    Use 'mind migrate --force' to completely re-process everything.
+    """
+    project_path = Path(path).resolve()
+    mind_dir = project_path / ".mind"
+
+    if not mind_dir.exists():
+        click.echo(f"Error: {project_path} is not a Mind project.")
+        click.echo("Run 'mind init' first.")
+        raise SystemExit(1)
+
+    try:
+        from .v3.graph.store import GraphStore
+        from .v3.migration import MigrationManager
+
+        graph_path = mind_dir / "v3" / "graph"
+        store = GraphStore(graph_path)
+        manager = MigrationManager(project_path, store)
+
+        click.echo("Syncing MEMORY.md to v3...")
+        stats = manager.sync_incremental()
+
+        click.echo()
+        click.echo("Sync complete:")
+        click.echo(f"  Entries scanned: {stats.memories_processed}")
+        click.echo(f"  New decisions: {stats.decisions_added}")
+        click.echo(f"  New entities: {stats.entities_added}")
+        click.echo(f"  New patterns: {stats.patterns_added}")
+
+        if stats.total_structured == 0:
+            click.echo()
+            click.echo("No new content to sync (already up to date).")
+        elif stats.errors:
+            click.echo()
+            click.echo(f"  Warnings: {len(stats.errors)}")
 
     except ImportError as e:
         click.echo(f"Error: v3 modules not available: {e}")

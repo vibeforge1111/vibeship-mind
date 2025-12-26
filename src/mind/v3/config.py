@@ -141,7 +141,11 @@ class V3Settings:
         """
         Load settings for a project.
 
-        Looks for .mind/v3.toml in project directory.
+        Config priority (highest to lowest):
+        1. Environment variables
+        2. .mind/v3.toml (detailed v3 config)
+        3. .mind/config.json v3 section (unified config)
+        4. Defaults
 
         Args:
             project_path: Project root directory
@@ -149,8 +153,20 @@ class V3Settings:
         Returns:
             V3Settings instance
         """
-        config_file = project_path / ".mind" / "v3.toml"
-        settings = cls.from_file(config_file)
+        # Try v3.toml first (detailed config)
+        toml_file = project_path / ".mind" / "v3.toml"
+        if toml_file.exists():
+            settings = cls.from_file(toml_file)
+        else:
+            # Fall back to main config.json
+            settings = cls()
+            try:
+                from ..config import get_v3_config
+                v3_config = get_v3_config(project_path)
+                settings.enabled = v3_config.get("enabled", settings.enabled)
+                settings.debug = v3_config.get("debug", settings.debug)
+            except ImportError:
+                pass  # Main config not available, use defaults
 
         # Apply environment variable overrides
         settings._apply_env_overrides()

@@ -6,10 +6,13 @@ while maintaining backward compatibility with legacy code.
 """
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 from .graph.store import GraphStore
 from .hooks import PromptSubmitHook, PromptSubmitConfig, HookResult
@@ -90,26 +93,33 @@ class V3Bridge:
             store_path = self.project_path / ".mind" / "v3" / "graph"
             self._graph_store = GraphStore(store_path)
         except Exception:
-            # Fall back to no persistence
+            logger.debug("v3 storage init failed, falling back to no persistence", exc_info=True)
             self._graph_store = None
 
     def _run_auto_migration(self) -> None:
         """
-        Automatically migrate v2 data to v3 structured tables.
+        Automatically migrate/sync v2 data to v3 structured tables.
 
         This ensures users upgrading from v2 don't lose any experiences.
-        Runs once on first v3 init, then incrementally for new content.
+        - First run: Full migration
+        - Subsequent runs: Incremental sync (faster)
         """
         if not self.config.auto_migrate or not self._graph_store:
             return
 
         try:
             manager = MigrationManager(self.project_path, self._graph_store)
-            if manager.needs_migration():
-                self._migration_stats = manager.migrate()
+            marker_file = self.project_path / ".mind" / "v3" / MigrationManager.MIGRATION_MARKER
+
+            if not marker_file.exists():
+                # First run - do full migration
+                if manager.needs_migration():
+                    self._migration_stats = manager.migrate()
+            elif manager._has_new_content():
+                # Subsequent runs - use faster incremental sync
+                self._migration_stats = manager.sync_incremental()
         except Exception:
-            # Migration is optional - don't break init if it fails
-            pass
+            logger.debug("v3 auto-migration failed, continuing without migration", exc_info=True)
 
     def _init_hooks(self) -> None:
         """Initialize v3 hooks."""
@@ -127,7 +137,7 @@ class V3Bridge:
             # Seed from MEMORY.md (only adds new memories)
             self._seeded_count = self._seed_from_memory()
         except Exception:
-            # Silently fail - v3 is optional
+            logger.debug("v3 hooks init failed, v3 features disabled", exc_info=True)
             self._prompt_hook = None
             self._session_hook = None
 
@@ -200,6 +210,7 @@ class V3Bridge:
             # Return total count (existing + newly added)
             return self._graph_store.memory_count() if self._graph_store else added
         except Exception:
+            logger.debug("v3 seeding from MEMORY.md failed", exc_info=True)
             return self._graph_store.memory_count() if self._graph_store else 0
 
     def get_context_for_prompt(self, user_prompt: str) -> V3ContextResult:
@@ -265,6 +276,7 @@ class V3Bridge:
             self._session_hook.add_event(event)
             return True
         except Exception:
+            logger.debug("v3 record_session_event failed", exc_info=True)
             return False
 
     def finalize_session(self) -> SessionEndResult | None:
@@ -280,6 +292,7 @@ class V3Bridge:
         try:
             return self._session_hook.finalize()
         except Exception:
+            logger.debug("v3 finalize_session failed", exc_info=True)
             return None
 
     def add_memory(self, content: str, memory_type: str) -> bool:
@@ -300,6 +313,7 @@ class V3Bridge:
             self._prompt_hook.add_to_memory(content, memory_type)
             return True
         except Exception:
+            logger.debug("v3 add_memory failed", exc_info=True)
             return False
 
     def get_stats(self) -> dict[str, Any]:
@@ -395,5 +409,5 @@ def v3_context_for_recall(
         return legacy_context
 
     except Exception:
-        # On any error, return legacy context unchanged
+        logger.debug("v3_context_for_recall failed, returning legacy context", exc_info=True)
         return legacy_context

@@ -6,11 +6,14 @@ ensuring no experiences are lost when upgrading.
 """
 from __future__ import annotations
 
+import logging
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
+
+logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from ..graph.store import GraphStore
@@ -286,11 +289,27 @@ class MigrationManager:
 
     def _has_new_content(self) -> bool:
         """Check if MEMORY.md has new content since last migration."""
-        # Compare memory count vs structured table counts
+        memory_file = self.mind_dir / "MEMORY.md"
+        marker_file = self.mind_dir / "v3" / self.MIGRATION_MARKER
+
+        if not memory_file.exists() or not marker_file.exists():
+            return True
+
+        # Compare file modification times
+        try:
+            memory_mtime = memory_file.stat().st_mtime
+            marker_mtime = marker_file.stat().st_mtime
+
+            # If MEMORY.md is newer than migration marker, we have new content
+            if memory_mtime > marker_mtime:
+                return True
+        except OSError:
+            return True
+
+        # Also check if structured tables are mostly empty
         memory_count = self.store.memory_count()
         counts = self.store.get_counts()
 
-        # If we have memories but no structured data, need to process
         if memory_count > 0:
             structured_count = counts.get("decisions", 0) + counts.get("entities", 0) + counts.get("patterns", 0)
             # If structured tables are mostly empty, we should re-process
@@ -298,6 +317,120 @@ class MigrationManager:
                 return True
 
         return False
+
+    def sync_incremental(self) -> MigrationStats:
+        """
+        Incrementally sync new content from MEMORY.md to v3.
+
+        Unlike full migration, this:
+        - Only processes entries not already in v3
+        - Uses content-based deduplication
+        - Updates the sync marker timestamp
+
+        Returns:
+            MigrationStats with results
+        """
+        stats = MigrationStats()
+
+        memory_file = self.mind_dir / "MEMORY.md"
+        if not memory_file.exists():
+            return stats
+
+        # Import extractors
+        from ..intelligence.local import (
+            extract_decisions_local,
+            extract_entities_local,
+            extract_patterns_local,
+        )
+
+        try:
+            content = memory_file.read_text(encoding="utf-8")
+            entries = self.parser.parse(content)
+
+            # Track what we've already added
+            def normalize_key(text: str) -> str:
+                """Normalize text for deduplication comparison."""
+                text = text.lower().strip()
+                for prefix in ["decided to ", "decided on ", "key: decided to ", "key: "]:
+                    if text.startswith(prefix):
+                        text = text[len(prefix):]
+                return text[:80]
+
+            existing_decisions = {normalize_key(d["action"]) for d in self.store.get_all_decisions()}
+            existing_patterns = {normalize_key(p["description"]) for p in self.store.get_all_patterns()}
+
+            for entry in entries:
+                stats.memories_processed += 1
+
+                try:
+                    # Skip if memory already exists (incremental)
+                    if self.store.memory_exists(entry.content):
+                        continue
+
+                    # Add new memory
+                    self.store.add_memory(entry.content, entry.memory_type)
+
+                    # Extract and store decisions
+                    if entry.is_decision or entry.memory_type == "decision":
+                        action = self._clean_decision_text(entry.content)
+                        action_key = normalize_key(action)
+
+                        if action and action_key not in existing_decisions:
+                            reasoning = ""
+                            for kw in ["because", "since", "due to", "-"]:
+                                if kw in entry.content.lower():
+                                    parts = entry.content.split(kw, 1)
+                                    if len(parts) > 1:
+                                        reasoning = parts[1].strip()
+                                        break
+
+                            self.store.add_decision({
+                                "action": action,
+                                "reasoning": reasoning,
+                                "alternatives": [],
+                                "confidence": 0.7 if entry.memory_type == "decision" else 0.5,
+                                "timestamp": entry.timestamp or datetime.now(timezone.utc).isoformat(),
+                            })
+                            existing_decisions.add(action_key)
+                            stats.decisions_added += 1
+
+                    # Extract entities
+                    entity_result = extract_entities_local(entry.content)
+                    for entity in entity_result.get("content", {}).get("entities", []):
+                        self.store.add_entity({
+                            "name": entity.get("name", ""),
+                            "type": entity.get("type", "unknown"),
+                            "description": f"From: {entry.section}",
+                            "properties": {"source": "incremental_sync", "section": entry.section},
+                        })
+                        stats.entities_added += 1
+
+                    # Extract patterns from preferences
+                    if entry.memory_type in ("preference", "learning") or entry.section == "preferences":
+                        pattern_result = extract_patterns_local(entry.content)
+                        for pattern in pattern_result.get("content", {}).get("patterns", []):
+                            desc = pattern.get("description", "")
+                            desc_key = normalize_key(desc)
+                            if desc and desc_key not in existing_patterns:
+                                self.store.add_pattern({
+                                    "description": desc,
+                                    "pattern_type": pattern.get("pattern_type", "preference"),
+                                    "confidence": pattern.get("confidence", 0.5),
+                                    "evidence_count": 1,
+                                })
+                                existing_patterns.add(desc_key)
+                                stats.patterns_added += 1
+
+                except Exception as e:
+                    stats.errors.append(f"Error syncing '{entry.content[:50]}...': {str(e)}")
+
+            # Update sync marker timestamp
+            self._write_migration_marker(stats)
+
+        except Exception as e:
+            stats.errors.append(f"Incremental sync failed: {str(e)}")
+
+        return stats
 
     def migrate(self, force: bool = False) -> MigrationStats:
         """
@@ -328,7 +461,7 @@ class MigrationManager:
                     if table.count_rows() > 0:
                         table.delete("id IS NOT NULL")
                 except Exception:
-                    pass  # Table might not exist yet
+                    logger.debug("Table %s doesn't exist yet, skipping clear", table_name)
 
         # Import extractors
         from ..intelligence.local import (

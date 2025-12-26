@@ -6,9 +6,12 @@ Uses v3 retrieval and memory systems for intelligent context selection.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
+
+logger = logging.getLogger(__name__)
 
 from ..memory.decay import DecayManager, DecayConfig
 from ..memory.working_memory import WorkingMemory, MemoryItem, MemoryType
@@ -167,7 +170,7 @@ class PromptSubmitHook:
                             "description": ent.get("description") or content[:100],
                         })
             except Exception:
-                pass  # Don't fail if extraction fails
+                logger.debug("Entity extraction failed for memory content", exc_info=True)
 
             # Extract structured decisions when memory_type is decision
             if memory_type == "decision":
@@ -181,7 +184,7 @@ class PromptSubmitHook:
                             "confidence": decision_extraction.confidence,
                         })
                 except Exception:
-                    pass  # Don't fail if extraction fails
+                    logger.debug("Decision extraction failed for memory content", exc_info=True)
         else:
             # Fall back to in-memory
             self._memories.append({

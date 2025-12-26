@@ -6,8 +6,11 @@ decisions, and entities to the context graph.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
+
+logger = logging.getLogger(__name__)
 
 from .events import Event, EventType, DecisionEvent
 from .extractor import TranscriptExtractor
@@ -68,7 +71,7 @@ class TranscriptWatcher:
                 from ..intelligence.extractors.entity import LocalEntityExtractor
                 self._entity_extractor = LocalEntityExtractor()
             except Exception:
-                pass
+                logger.debug("LocalEntityExtractor init failed, entity extraction disabled", exc_info=True)
 
     def process_turn(self, turn: dict[str, Any]) -> list[Event]:
         """
@@ -159,7 +162,7 @@ class TranscriptWatcher:
                 self._stats.entities_stored += 1
 
         except Exception:
-            pass  # Don't fail on extraction errors
+            logger.debug("Entity extraction failed for content", exc_info=True)
 
     def get_stats(self) -> dict[str, Any]:
         """Get watcher statistics."""

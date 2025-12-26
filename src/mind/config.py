@@ -6,7 +6,7 @@ from typing import Any
 
 
 DEFAULT_CONFIG = {
-    "version": 1,
+    "version": 2,
     "mascot": True,  # Show Mindful mascot in MCP responses
     "self_improve": {
         "enabled": True,           # Phases 1-5: Core self-improvement
@@ -14,6 +14,11 @@ DEFAULT_CONFIG = {
         "reinforcement": True,     # Phase 7: Track when patterns help
         "contradiction": True,     # Phase 8: Detect conflicting patterns
         "learning_style": True,    # Phase 9: Model HOW user learns
+    },
+    "v3": {
+        "enabled": True,           # Enable v3 context graph
+        "debug": False,            # Enable debug logging
+        "auto_migrate": True,      # Auto-migrate v2 to v3 on init
     },
     "experimental": {
         # Add experimental features here
@@ -109,3 +114,30 @@ def create_default_config(project_path: Path) -> None:
     config_file = get_config_file(project_path)
     if not config_file.exists():
         save_config(project_path, DEFAULT_CONFIG)
+
+
+def is_v3_enabled(project_path: Path) -> bool:
+    """Check if v3 context graph is enabled for this project."""
+    config = load_config(project_path)
+    v3_config = config.get("v3", DEFAULT_CONFIG["v3"])
+    return v3_config.get("enabled", True)
+
+
+def is_v3_debug_enabled(project_path: Path) -> bool:
+    """Check if v3 debug mode is enabled for this project."""
+    config = load_config(project_path)
+    v3_config = config.get("v3", DEFAULT_CONFIG["v3"])
+    return v3_config.get("debug", False)
+
+
+def is_v3_auto_migrate_enabled(project_path: Path) -> bool:
+    """Check if v3 auto-migration is enabled for this project."""
+    config = load_config(project_path)
+    v3_config = config.get("v3", DEFAULT_CONFIG["v3"])
+    return v3_config.get("auto_migrate", True)
+
+
+def get_v3_config(project_path: Path) -> dict[str, Any]:
+    """Get v3 configuration section for a project."""
+    config = load_config(project_path)
+    return config.get("v3", DEFAULT_CONFIG["v3"].copy())

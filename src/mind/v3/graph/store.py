@@ -132,9 +132,75 @@ class GraphStore:
             ])
             self.db.create_table("memories", schema=schema)
 
+        # Policies table
+        if "policies" not in existing:
+            schema = pa.schema([
+                pa.field("id", pa.string()),
+                pa.field("rule", pa.string()),
+                pa.field("scope", pa.string()),
+                pa.field("source", pa.string()),
+                pa.field("created_at", pa.string()),
+                pa.field("active", pa.bool_()),
+                pa.field("vector", pa.list_(pa.float32(), EMBED_DIM)),
+            ])
+            self.db.create_table("policies", schema=schema)
+
+        # Exceptions table
+        if "exceptions" not in existing:
+            schema = pa.schema([
+                pa.field("id", pa.string()),
+                pa.field("policy_id", pa.string()),
+                pa.field("condition", pa.string()),
+                pa.field("reason", pa.string()),
+                pa.field("created_at", pa.string()),
+                pa.field("vector", pa.list_(pa.float32(), EMBED_DIM)),
+            ])
+            self.db.create_table("exceptions", schema=schema)
+
+        # Precedents table
+        if "precedents" not in existing:
+            schema = pa.schema([
+                pa.field("id", pa.string()),
+                pa.field("decision_id", pa.string()),
+                pa.field("context", pa.string()),
+                pa.field("outcome", pa.string()),
+                pa.field("weight", pa.float32()),
+                pa.field("created_at", pa.string()),
+                pa.field("vector", pa.list_(pa.float32(), EMBED_DIM)),
+            ])
+            self.db.create_table("precedents", schema=schema)
+
+        # Outcomes table
+        if "outcomes" not in existing:
+            schema = pa.schema([
+                pa.field("id", pa.string()),
+                pa.field("decision_id", pa.string()),
+                pa.field("success", pa.bool_()),
+                pa.field("feedback", pa.string()),
+                pa.field("impact", pa.string()),
+                pa.field("created_at", pa.string()),
+                pa.field("vector", pa.list_(pa.float32(), EMBED_DIM)),
+            ])
+            self.db.create_table("outcomes", schema=schema)
+
+        # Autonomy table
+        if "autonomy" not in existing:
+            schema = pa.schema([
+                pa.field("id", pa.string()),
+                pa.field("action_type", pa.string()),
+                pa.field("level", pa.string()),
+                pa.field("confidence", pa.float32()),
+                pa.field("sample_count", pa.int32()),
+                pa.field("last_updated", pa.string()),
+            ])
+            self.db.create_table("autonomy", schema=schema)
+
     def is_initialized(self) -> bool:
         """Check if store is properly initialized."""
-        required = {"decisions", "entities", "patterns", "memories"}
+        required = {
+            "decisions", "entities", "patterns", "memories",
+            "policies", "exceptions", "precedents", "outcomes", "autonomy"
+        }
         tables_response = self.db.list_tables()
         if hasattr(tables_response, 'tables'):
             existing = set(tables_response.tables)
@@ -486,6 +552,513 @@ class GraphStore:
         return table.count_rows()
 
     # =========================================================================
+    # Policy operations
+    # =========================================================================
+
+    def add_policy(self, policy: dict[str, Any]) -> str:
+        """
+        Add a policy to the graph.
+
+        Args:
+            policy: Policy data with rule, scope, source, etc.
+
+        Returns:
+            Generated policy ID
+        """
+        doc_id = generate_id("pol")
+
+        rule = policy.get("rule", "")
+        scope = policy.get("scope", "project")
+        source = policy.get("source", "inferred")
+
+        record = {
+            "id": doc_id,
+            "rule": rule,
+            "scope": scope,
+            "source": source,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "active": policy.get("active", True),
+            "vector": get_embedding(rule),
+        }
+
+        table = self.db.open_table("policies")
+        table.add([record])
+
+        return doc_id
+
+    def get_policy(self, doc_id: str) -> dict[str, Any] | None:
+        """Get a policy by ID."""
+        table = self.db.open_table("policies")
+        results = table.search().where(f"id = '{doc_id}'", prefilter=True).limit(1).to_list()
+
+        if results:
+            row = results[0]
+            return {
+                "id": row["id"],
+                "rule": row["rule"],
+                "scope": row["scope"],
+                "source": row["source"],
+                "created_at": row["created_at"],
+                "active": row["active"],
+            }
+        return None
+
+    def search_policies(self, query: str, limit: int = 10, active_only: bool = True) -> list[dict[str, Any]]:
+        """
+        Search policies by text similarity.
+
+        Args:
+            query: Search query
+            limit: Maximum results
+            active_only: If True, only return active policies
+
+        Returns:
+            List of matching policies
+        """
+        table = self.db.open_table("policies")
+        query_vector = get_embedding(query)
+
+        search = table.search(query_vector).limit(limit)
+
+        if active_only:
+            search = search.where("active = true", prefilter=True)
+
+        results = search.to_list()
+
+        return [
+            {
+                "id": r["id"],
+                "rule": r["rule"],
+                "scope": r["scope"],
+                "source": r["source"],
+                "created_at": r["created_at"],
+                "active": r["active"],
+            }
+            for r in results
+        ]
+
+    def deactivate_policy(self, doc_id: str) -> bool:
+        """Deactivate a policy. Returns True if found and deactivated."""
+        current = self.get_policy(doc_id)
+        if not current:
+            return False
+
+        table = self.db.open_table("policies")
+        table.delete(f"id = '{doc_id}'")
+
+        record = {
+            "id": doc_id,
+            "rule": current["rule"],
+            "scope": current["scope"],
+            "source": current["source"],
+            "created_at": current["created_at"],
+            "active": False,
+            "vector": get_embedding(current["rule"]),
+        }
+        table.add([record])
+        return True
+
+    # =========================================================================
+    # Exception operations
+    # =========================================================================
+
+    def add_exception(self, exception: dict[str, Any]) -> str:
+        """
+        Add an exception to the graph.
+
+        Args:
+            exception: Exception data with policy_id, condition, reason
+
+        Returns:
+            Generated exception ID
+        """
+        doc_id = generate_id("exc")
+
+        policy_id = exception.get("policy_id", "")
+        condition = exception.get("condition", "")
+        reason = exception.get("reason", "")
+
+        # Embed condition + reason for semantic search
+        embed_text = f"{condition} {reason}"
+
+        record = {
+            "id": doc_id,
+            "policy_id": policy_id,
+            "condition": condition,
+            "reason": reason,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "vector": get_embedding(embed_text),
+        }
+
+        table = self.db.open_table("exceptions")
+        table.add([record])
+
+        return doc_id
+
+    def get_exception(self, doc_id: str) -> dict[str, Any] | None:
+        """Get an exception by ID."""
+        table = self.db.open_table("exceptions")
+        results = table.search().where(f"id = '{doc_id}'", prefilter=True).limit(1).to_list()
+
+        if results:
+            row = results[0]
+            return {
+                "id": row["id"],
+                "policy_id": row["policy_id"],
+                "condition": row["condition"],
+                "reason": row["reason"],
+                "created_at": row["created_at"],
+            }
+        return None
+
+    def search_exceptions(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
+        """Search exceptions by text similarity."""
+        table = self.db.open_table("exceptions")
+        query_vector = get_embedding(query)
+
+        results = table.search(query_vector).limit(limit).to_list()
+
+        return [
+            {
+                "id": r["id"],
+                "policy_id": r["policy_id"],
+                "condition": r["condition"],
+                "reason": r["reason"],
+                "created_at": r["created_at"],
+            }
+            for r in results
+        ]
+
+    def get_exceptions_for_policy(self, policy_id: str) -> list[dict[str, Any]]:
+        """Get all exceptions for a specific policy."""
+        table = self.db.open_table("exceptions")
+        results = table.search().where(
+            f"policy_id = '{policy_id}'", prefilter=True
+        ).limit(100).to_list()
+
+        return [
+            {
+                "id": r["id"],
+                "policy_id": r["policy_id"],
+                "condition": r["condition"],
+                "reason": r["reason"],
+                "created_at": r["created_at"],
+            }
+            for r in results
+        ]
+
+    # =========================================================================
+    # Precedent operations
+    # =========================================================================
+
+    def add_precedent(self, precedent: dict[str, Any]) -> str:
+        """
+        Add a precedent to the graph.
+
+        Args:
+            precedent: Precedent data with decision_id, context, outcome
+
+        Returns:
+            Generated precedent ID
+        """
+        doc_id = generate_id("prc")
+
+        decision_id = precedent.get("decision_id", "")
+        context = precedent.get("context", "")
+        outcome = precedent.get("outcome", "")
+        weight = precedent.get("weight", 1.0)
+
+        # Embed context + outcome for semantic search
+        embed_text = f"{context} {outcome}"
+
+        record = {
+            "id": doc_id,
+            "decision_id": decision_id,
+            "context": context,
+            "outcome": outcome,
+            "weight": float(weight),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "vector": get_embedding(embed_text),
+        }
+
+        table = self.db.open_table("precedents")
+        table.add([record])
+
+        return doc_id
+
+    def get_precedent(self, doc_id: str) -> dict[str, Any] | None:
+        """Get a precedent by ID."""
+        table = self.db.open_table("precedents")
+        results = table.search().where(f"id = '{doc_id}'", prefilter=True).limit(1).to_list()
+
+        if results:
+            row = results[0]
+            return {
+                "id": row["id"],
+                "decision_id": row["decision_id"],
+                "context": row["context"],
+                "outcome": row["outcome"],
+                "weight": row["weight"],
+                "created_at": row["created_at"],
+            }
+        return None
+
+    def search_precedents(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
+        """Search precedents by text similarity."""
+        table = self.db.open_table("precedents")
+        query_vector = get_embedding(query)
+
+        results = table.search(query_vector).limit(limit).to_list()
+
+        return [
+            {
+                "id": r["id"],
+                "decision_id": r["decision_id"],
+                "context": r["context"],
+                "outcome": r["outcome"],
+                "weight": r["weight"],
+                "created_at": r["created_at"],
+            }
+            for r in results
+        ]
+
+    def get_precedents_for_decision(self, decision_id: str) -> list[dict[str, Any]]:
+        """Get all precedents for a specific decision."""
+        table = self.db.open_table("precedents")
+        results = table.search().where(
+            f"decision_id = '{decision_id}'", prefilter=True
+        ).limit(100).to_list()
+
+        return [
+            {
+                "id": r["id"],
+                "decision_id": r["decision_id"],
+                "context": r["context"],
+                "outcome": r["outcome"],
+                "weight": r["weight"],
+                "created_at": r["created_at"],
+            }
+            for r in results
+        ]
+
+    # =========================================================================
+    # Outcome operations
+    # =========================================================================
+
+    def add_outcome(self, outcome: dict[str, Any]) -> str:
+        """
+        Add an outcome to the graph.
+
+        Args:
+            outcome: Outcome data with decision_id, success, feedback, impact
+
+        Returns:
+            Generated outcome ID
+        """
+        doc_id = generate_id("out")
+
+        decision_id = outcome.get("decision_id", "")
+        success = outcome.get("success", True)
+        feedback = outcome.get("feedback", "")
+        impact = outcome.get("impact", "neutral")
+
+        record = {
+            "id": doc_id,
+            "decision_id": decision_id,
+            "success": success,
+            "feedback": feedback,
+            "impact": impact,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "vector": get_embedding(feedback) if feedback else get_embedding(f"{impact} outcome"),
+        }
+
+        table = self.db.open_table("outcomes")
+        table.add([record])
+
+        return doc_id
+
+    def get_outcome(self, doc_id: str) -> dict[str, Any] | None:
+        """Get an outcome by ID."""
+        table = self.db.open_table("outcomes")
+        results = table.search().where(f"id = '{doc_id}'", prefilter=True).limit(1).to_list()
+
+        if results:
+            row = results[0]
+            return {
+                "id": row["id"],
+                "decision_id": row["decision_id"],
+                "success": row["success"],
+                "feedback": row["feedback"],
+                "impact": row["impact"],
+                "created_at": row["created_at"],
+            }
+        return None
+
+    def search_outcomes(self, query: str, limit: int = 10) -> list[dict[str, Any]]:
+        """Search outcomes by text similarity."""
+        table = self.db.open_table("outcomes")
+        query_vector = get_embedding(query)
+
+        results = table.search(query_vector).limit(limit).to_list()
+
+        return [
+            {
+                "id": r["id"],
+                "decision_id": r["decision_id"],
+                "success": r["success"],
+                "feedback": r["feedback"],
+                "impact": r["impact"],
+                "created_at": r["created_at"],
+            }
+            for r in results
+        ]
+
+    def get_outcome_for_decision(self, decision_id: str) -> dict[str, Any] | None:
+        """Get outcome for a specific decision."""
+        table = self.db.open_table("outcomes")
+        results = table.search().where(
+            f"decision_id = '{decision_id}'", prefilter=True
+        ).limit(1).to_list()
+
+        if results:
+            row = results[0]
+            return {
+                "id": row["id"],
+                "decision_id": row["decision_id"],
+                "success": row["success"],
+                "feedback": row["feedback"],
+                "impact": row["impact"],
+                "created_at": row["created_at"],
+            }
+        return None
+
+    # =========================================================================
+    # Autonomy operations
+    # =========================================================================
+
+    def add_autonomy(self, autonomy: dict[str, Any]) -> str:
+        """
+        Add or update autonomy level for an action type.
+
+        Args:
+            autonomy: Autonomy data with action_type, level, confidence, sample_count
+
+        Returns:
+            Generated autonomy ID
+        """
+        action_type = autonomy.get("action_type", "")
+
+        # Check if autonomy for this action type already exists
+        existing = self.get_autonomy_for_action(action_type)
+        if existing:
+            # Update existing
+            return self.update_autonomy(
+                existing["id"],
+                level=autonomy.get("level"),
+                confidence=autonomy.get("confidence"),
+                sample_count=autonomy.get("sample_count"),
+            )
+
+        doc_id = generate_id("aut")
+
+        record = {
+            "id": doc_id,
+            "action_type": action_type,
+            "level": autonomy.get("level", "ask"),
+            "confidence": float(autonomy.get("confidence", 0.0)),
+            "sample_count": int(autonomy.get("sample_count", 0)),
+            "last_updated": datetime.now(timezone.utc).isoformat(),
+        }
+
+        table = self.db.open_table("autonomy")
+        table.add([record])
+
+        return doc_id
+
+    def get_autonomy(self, doc_id: str) -> dict[str, Any] | None:
+        """Get autonomy by ID."""
+        table = self.db.open_table("autonomy")
+        results = table.search().where(f"id = '{doc_id}'", prefilter=True).limit(1).to_list()
+
+        if results:
+            row = results[0]
+            return {
+                "id": row["id"],
+                "action_type": row["action_type"],
+                "level": row["level"],
+                "confidence": row["confidence"],
+                "sample_count": row["sample_count"],
+                "last_updated": row["last_updated"],
+            }
+        return None
+
+    def get_autonomy_for_action(self, action_type: str) -> dict[str, Any] | None:
+        """Get autonomy level for a specific action type."""
+        table = self.db.open_table("autonomy")
+        results = table.search().where(
+            f"action_type = '{action_type}'", prefilter=True
+        ).limit(1).to_list()
+
+        if results:
+            row = results[0]
+            return {
+                "id": row["id"],
+                "action_type": row["action_type"],
+                "level": row["level"],
+                "confidence": row["confidence"],
+                "sample_count": row["sample_count"],
+                "last_updated": row["last_updated"],
+            }
+        return None
+
+    def update_autonomy(
+        self,
+        doc_id: str,
+        level: str | None = None,
+        confidence: float | None = None,
+        sample_count: int | None = None,
+    ) -> str:
+        """
+        Update autonomy level.
+
+        Returns the ID if successful.
+        """
+        current = self.get_autonomy(doc_id)
+        if not current:
+            return ""
+
+        table = self.db.open_table("autonomy")
+        table.delete(f"id = '{doc_id}'")
+
+        record = {
+            "id": doc_id,
+            "action_type": current["action_type"],
+            "level": level if level is not None else current["level"],
+            "confidence": float(confidence) if confidence is not None else current["confidence"],
+            "sample_count": int(sample_count) if sample_count is not None else current["sample_count"],
+            "last_updated": datetime.now(timezone.utc).isoformat(),
+        }
+        table.add([record])
+        return doc_id
+
+    def get_all_autonomy(self) -> list[dict[str, Any]]:
+        """Get all autonomy levels."""
+        table = self.db.open_table("autonomy")
+        results = table.search().limit(100).to_list()
+
+        return [
+            {
+                "id": r["id"],
+                "action_type": r["action_type"],
+                "level": r["level"],
+                "confidence": r["confidence"],
+                "sample_count": r["sample_count"],
+                "last_updated": r["last_updated"],
+            }
+            for r in results
+        ]
+
+    # =========================================================================
     # Stats
     # =========================================================================
 
@@ -493,8 +1066,45 @@ class GraphStore:
         """Get count of nodes by type."""
         counts = {}
 
-        for table_name in ["decisions", "entities", "patterns", "memories"]:
+        all_tables = [
+            "decisions", "entities", "patterns", "memories",
+            "policies", "exceptions", "precedents", "outcomes", "autonomy"
+        ]
+        for table_name in all_tables:
             table = self.db.open_table(table_name)
             counts[table_name] = table.count_rows()
 
         return counts
+
+    def get_all_decisions(self) -> list[dict[str, Any]]:
+        """Get all decisions (for view generation)."""
+        table = self.db.open_table("decisions")
+        results = table.search().limit(1000).to_list()
+
+        return [
+            {
+                "id": r["id"],
+                "action": r["action"],
+                "reasoning": r["reasoning"],
+                "alternatives": json.loads(r["alternatives"]) if r["alternatives"] else [],
+                "confidence": r["confidence"],
+                "timestamp": r["timestamp"],
+            }
+            for r in results
+        ]
+
+    def get_all_patterns(self) -> list[dict[str, Any]]:
+        """Get all patterns (for view generation)."""
+        table = self.db.open_table("patterns")
+        results = table.search().limit(1000).to_list()
+
+        return [
+            {
+                "id": r["id"],
+                "description": r["description"],
+                "pattern_type": r["pattern_type"],
+                "confidence": r["confidence"],
+                "evidence_count": r["evidence_count"],
+            }
+            for r in results
+        ]

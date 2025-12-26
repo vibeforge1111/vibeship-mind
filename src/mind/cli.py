@@ -752,5 +752,41 @@ def status(path: str):
             pass
 
 
+@cli.command("generate-views")
+@click.argument("path", default=".", type=click.Path(exists=True, file_okay=False))
+def generate_views(path: str):
+    """Generate human-readable markdown views from the graph.
+
+    Creates DECISIONS.md, PATTERNS.md, and POLICIES.md in the .mind directory.
+    """
+    project_path = Path(path).resolve()
+    mind_dir = project_path / ".mind"
+
+    if not mind_dir.exists():
+        click.echo(f"Error: {project_path} is not a Mind project.")
+        click.echo("Run 'mind init' first.")
+        raise SystemExit(1)
+
+    try:
+        from .v3.graph.store import GraphStore
+        from .v3.views import ViewGenerator
+
+        store = GraphStore(project_path)
+        if not store.is_initialized():
+            click.echo("Graph store not initialized. No views to generate.")
+            raise SystemExit(1)
+
+        generator = ViewGenerator(store, mind_dir)
+        paths = generator.generate_all()
+
+        click.echo("Generated views:")
+        for p in paths:
+            click.echo(f"  {p.name}")
+
+    except ImportError as e:
+        click.echo(f"Error: v3 modules not available: {e}")
+        raise SystemExit(1)
+
+
 if __name__ == "__main__":
     cli()

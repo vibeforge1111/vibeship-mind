@@ -10,6 +10,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
 
+from ..memory.decay import DecayManager, DecayConfig
+from ..memory.working_memory import WorkingMemory, MemoryItem, MemoryType
+
 if TYPE_CHECKING:
     from ..graph.store import GraphStore
 
@@ -62,6 +65,12 @@ class PromptSubmitHook:
         self._graph_store = graph_store
         self._memories: list[dict[str, Any]] = []  # Fallback if no store
         self._retrieval_count: int = 0
+
+        # Decay manager for time-based activation decay
+        self._decay_manager = DecayManager(DecayConfig(half_life_hours=48))
+
+        # Working memory for session tracking
+        self._working_memory = WorkingMemory()
 
     def process(self, query: str) -> HookResult:
         """
@@ -126,6 +135,19 @@ class PromptSubmitHook:
                 "content": content,
                 "type": memory_type,
             })
+
+        # Add to working memory for session tracking
+        mem_type = MemoryType.DECISION if memory_type == "decision" else MemoryType.LEARNING
+        if memory_type == "problem":
+            mem_type = MemoryType.EVENT
+        item = MemoryItem(
+            id=f"wm_{len(self._working_memory._items)}",
+            content=content,
+            memory_type=mem_type,
+            activation=1.0,
+            importance=0.5,
+        )
+        self._working_memory.add(item)
 
     def get_retrieval_stats(self) -> dict:
         """

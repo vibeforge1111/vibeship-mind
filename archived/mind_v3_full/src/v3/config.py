@@ -6,6 +6,9 @@ Provides a single entry point for all v3 configuration with:
 - File-based config support (.mind/v3.toml)
 - Environment variable overrides
 - Runtime config updates
+
+Note: Memory (decay, consolidation, working_memory) and autonomy configs
+were archived in v4 simplification. See archived/v3_complex/ for reference.
 """
 from __future__ import annotations
 
@@ -14,19 +17,21 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-# Import all component configs
-from .memory.decay import DecayConfig
-from .memory.consolidation import ConsolidationConfig
-from .memory.working_memory import WorkingMemoryConfig
+# Import active component configs (archived modules removed)
 from .retrieval.embeddings import EmbeddingConfig
 from .retrieval.search import SearchConfig
 from .retrieval.query_expander import ExpanderConfig
 from .capture.watcher import WatcherConfig
 from .hooks.prompt_submit import PromptSubmitConfig
 from .hooks.session_end import SessionEndConfig
-from .autonomy.levels import AutonomyConfig
-from .autonomy.confidence import ConfidenceConfig
 from .api.client import ClaudeConfig
+
+# Archived configs (v4 simplification):
+# from .memory.decay import DecayConfig
+# from .memory.consolidation import ConsolidationConfig
+# from .memory.working_memory import WorkingMemoryConfig
+# from .autonomy.levels import AutonomyConfig
+# from .autonomy.confidence import ConfidenceConfig
 
 
 @dataclass
@@ -42,11 +47,6 @@ class V3Settings:
     enabled: bool = True
     debug: bool = False
 
-    # Memory settings
-    decay: DecayConfig = field(default_factory=lambda: DecayConfig(half_life_hours=48))
-    consolidation: ConsolidationConfig = field(default_factory=ConsolidationConfig)
-    working_memory: WorkingMemoryConfig = field(default_factory=WorkingMemoryConfig)
-
     # Retrieval settings
     embeddings: EmbeddingConfig = field(default_factory=EmbeddingConfig)
     search: SearchConfig = field(default_factory=SearchConfig)
@@ -58,10 +58,6 @@ class V3Settings:
     # Hook settings
     prompt_submit: PromptSubmitConfig = field(default_factory=PromptSubmitConfig)
     session_end: SessionEndConfig = field(default_factory=SessionEndConfig)
-
-    # Autonomy settings
-    autonomy: AutonomyConfig = field(default_factory=AutonomyConfig)
-    confidence: ConfidenceConfig = field(default_factory=ConfidenceConfig)
 
     # API settings
     api: ClaudeConfig = field(default_factory=ClaudeConfig)
@@ -83,14 +79,6 @@ class V3Settings:
         settings.enabled = data.get("enabled", settings.enabled)
         settings.debug = data.get("debug", settings.debug)
 
-        # Memory settings
-        if "decay" in data:
-            settings.decay = DecayConfig(**data["decay"])
-        if "consolidation" in data:
-            settings.consolidation = ConsolidationConfig(**data["consolidation"])
-        if "working_memory" in data:
-            settings.working_memory = WorkingMemoryConfig(**data["working_memory"])
-
         # Retrieval settings
         if "embeddings" in data:
             settings.embeddings = EmbeddingConfig(**data["embeddings"])
@@ -108,12 +96,6 @@ class V3Settings:
             settings.prompt_submit = PromptSubmitConfig(**data["prompt_submit"])
         if "session_end" in data:
             settings.session_end = SessionEndConfig(**data["session_end"])
-
-        # Autonomy settings
-        if "autonomy" in data:
-            settings.autonomy = AutonomyConfig(**data["autonomy"])
-        if "confidence" in data:
-            settings.confidence = ConfidenceConfig(**data["confidence"])
 
         # API settings
         if "api" in data:
@@ -208,14 +190,6 @@ class V3Settings:
         return {
             "enabled": self.enabled,
             "debug": self.debug,
-            "decay": {
-                "half_life_hours": self.decay.half_life_hours,
-                "min_activation": self.decay.min_activation,
-            },
-            "consolidation": {
-                "min_occurrences": self.consolidation.min_occurrences,
-                "similarity_threshold": self.consolidation.similarity_threshold,
-            },
             "embeddings": {
                 "model_name": self.embeddings.model_name,
                 "use_gpu": self.embeddings.use_gpu,

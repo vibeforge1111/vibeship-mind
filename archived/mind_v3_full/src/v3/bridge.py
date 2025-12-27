@@ -17,8 +17,10 @@ logger = logging.getLogger(__name__)
 from .graph.store import GraphStore
 from .hooks import PromptSubmitHook, PromptSubmitConfig, HookResult
 from .hooks import SessionEndHook, SessionEndConfig, SessionEndResult
-from .autonomy.tracker import AutonomyTracker
 from .migration import MigrationManager, MigrationStats
+
+# Autonomy tracker archived in v4 simplification
+# from .autonomy.tracker import AutonomyTracker
 from .api.client import ClaudeClient, ClaudeConfig
 from .capture.store import SessionEventStore
 from .synthesis.session_end import SessionEndSynthesizer, SessionSummary
@@ -83,8 +85,8 @@ class V3Bridge:
         # Migration stats (populated on auto-migrate)
         self._migration_stats: MigrationStats | None = None
 
-        # Initialize autonomy tracker
-        self._autonomy: AutonomyTracker | None = None
+        # Autonomy tracker archived for v4 simplification
+        self._autonomy = None
 
         # Initialize API client, event store, and categorizer
         self._api_client: ClaudeClient | None = None
@@ -96,7 +98,7 @@ class V3Bridge:
             self._init_storage()
             self._run_auto_migration()  # Migrate v2 data to v3 structured tables
             self._init_hooks()
-            self._autonomy = AutonomyTracker()
+            # Autonomy tracker archived for v4 simplification
             self._init_api()
 
     def _init_storage(self) -> None:
@@ -473,8 +475,9 @@ class V3Bridge:
         if self._session_hook:
             stats["session_events"] = self._session_hook.event_count
 
-        if self._autonomy:
-            stats["autonomy"] = self._autonomy.get_summary()
+        # Autonomy tracker archived for v4 simplification
+        # if self._autonomy:
+        #     stats["autonomy"] = self._autonomy.get_summary()
 
         if self._transcript_watcher:
             stats["watcher"] = self._transcript_watcher.get_stats()

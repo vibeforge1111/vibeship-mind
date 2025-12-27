@@ -1,32 +1,58 @@
 [project]
-name = "vibeship-mind"
-version = "3.2.0"
-description = "Context graph memory system for AI coding assistants"
+name = "mind"
+version = "5.0.0"
+description = "Decision intelligence system for AI agents - hierarchical memory with outcome-weighted retrieval"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
-    "click>=8.1.0",
-    "watchfiles>=0.21.0",
-    "mcp>=1.0.0",
-    "sentence-transformers>=2.2.0",
-    # v3 additions
-    "lancedb>=0.4.0",
-    "watchdog>=4.0.0",
+    # Core
     "pydantic>=2.5.0",
+    "pydantic-settings>=2.1.0",
+
+    # API
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+
+    # Database
+    "asyncpg>=0.29.0",
+    "sqlalchemy[asyncio]>=2.0.25",
+    "pgvector>=0.2.4",
+
+    # Messaging
+    "nats-py>=2.6.0",
+
+    # Observability
+    "structlog>=24.1.0",
+    "opentelemetry-api>=1.22.0",
+    "opentelemetry-sdk>=1.22.0",
+    "opentelemetry-instrumentation-fastapi>=0.43b0",
+    "prometheus-client>=0.19.0",
+
+    # Utilities
+    "httpx>=0.26.0",
+    "orjson>=3.9.0",
+    "python-ulid>=2.2.0",
 ]
 
 [project.optional-dependencies]
-embeddings = [
-    "numpy>=1.24.0",
-]
-api = [
-    "anthropic>=0.18.0",
+ml = [
+    # Embeddings & NLP
     "openai>=1.12.0",
+    "sentence-transformers>=2.2.0",
+    "numpy>=1.26.0",
+]
+vector = [
+    # Qdrant client (optional, pgvector is default)
+    "qdrant-client>=1.7.0",
 ]
 dev = [
-    "pytest>=7.4.0",
-    "pytest-asyncio>=0.21.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
     "pytest-cov>=4.1.0",
+    "httpx>=0.26.0",
+    "testcontainers[postgres,nats]>=3.7.0",
+    "ruff>=0.1.14",
+    "mypy>=1.8.0",
 ]
 
 [project.scripts]
@@ -43,3 +69,20 @@ packages = ["src/mind"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "C4", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true

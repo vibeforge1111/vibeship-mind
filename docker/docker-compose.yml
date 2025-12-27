@@ -1,0 +1,64 @@
+version: "3.8"
+
+services:
+  # PostgreSQL with pgvector
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: mind-postgres
+    environment:
+      POSTGRES_USER: mind
+      POSTGRES_PASSWORD: mind
+      POSTGRES_DB: mind
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mind -d mind"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # NATS with JetStream
+  nats:
+    image: nats:2.10-alpine
+    container_name: mind-nats
+    command: ["-js", "-m", "8222"]
+    ports:
+      - "4222:4222"  # Client connections
+      - "8222:8222"  # Monitoring
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Mind API
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: mind-api
+    environment:
+      MIND_ENVIRONMENT: development
+      MIND_DEBUG: "true"
+      MIND_POSTGRES_HOST: postgres
+      MIND_POSTGRES_PORT: 5432
+      MIND_POSTGRES_USER: mind
+      MIND_POSTGRES_PASSWORD: mind
+      MIND_POSTGRES_DB: mind
+      MIND_NATS_URL: nats://nats:4222
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    volumes:
+      - ../src:/app/src:ro  # Mount source for hot reload
+    command: ["uvicorn", "mind.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+
+volumes:
+  postgres_data:

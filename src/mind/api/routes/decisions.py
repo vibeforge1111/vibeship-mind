@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+import structlog
 
 from mind.api.schemas.decision import (
     TrackRequest,
@@ -15,7 +16,9 @@ from mind.api.schemas.decision import (
 from mind.core.decision.models import DecisionTrace, Outcome, SalienceUpdate
 from mind.infrastructure.postgres.database import get_database
 from mind.infrastructure.postgres.repositories import DecisionRepository, MemoryRepository
+from mind.services.events import get_event_service
 
+logger = structlog.get_logger()
 router = APIRouter()
 
 
@@ -48,10 +51,20 @@ async def track_decision(request: TrackRequest) -> TrackResponse:
         if not result.is_ok:
             raise HTTPException(status_code=400, detail=result.error.to_dict())
 
-        return TrackResponse(
-            trace_id=result.value.trace_id,
-            created_at=result.value.created_at,
+        created_trace = result.value
+        response = TrackResponse(
+            trace_id=created_trace.trace_id,
+            created_at=created_trace.created_at,
         )
+
+    # Publish event (fire-and-forget)
+    try:
+        event_service = get_event_service()
+        await event_service.publish_decision_tracked(created_trace)
+    except Exception as e:
+        logger.warning("event_publish_failed", error=str(e), trace_id=str(created_trace.trace_id))
+
+    return response
 
 
 @router.post("/outcome", response_model=OutcomeResponse)
@@ -84,6 +97,7 @@ async def observe_outcome(request: OutcomeRequest) -> OutcomeResponse:
             raise HTTPException(status_code=404, detail=trace_result.error.to_dict())
 
         trace = trace_result.value
+        user_id = trace.user_id
 
         # Calculate attribution (simple: proportional to retrieval score)
         total_score = sum(trace.memory_scores.values()) or 1.0
@@ -118,7 +132,7 @@ async def observe_outcome(request: OutcomeRequest) -> OutcomeResponse:
                 adjustment=update,
             )
 
-        return OutcomeResponse(
+        response = OutcomeResponse(
             trace_id=request.trace_id,
             outcome_quality=outcome.quality,
             memories_updated=len(salience_updates),
@@ -126,3 +140,31 @@ async def observe_outcome(request: OutcomeRequest) -> OutcomeResponse:
                 str(u.memory_id): u.delta for u in salience_updates
             },
         )
+
+    # Publish events (fire-and-forget)
+    try:
+        event_service = get_event_service()
+
+        # Publish outcome observed event
+        await event_service.publish_outcome_observed(
+            user_id=user_id,
+            trace_id=request.trace_id,
+            outcome=outcome,
+            attributions=attributions,
+        )
+
+        # Publish salience adjustment events for each memory
+        for update in salience_updates:
+            await event_service.publish_salience_adjusted(
+                user_id=user_id,
+                memory_id=update.memory_id,
+                trace_id=update.trace_id,
+                previous_adjustment=0.0,  # We don't track this here
+                new_adjustment=update.delta,
+                delta=update.delta,
+                reason=update.reason,
+            )
+    except Exception as e:
+        logger.warning("event_publish_failed", error=str(e), trace_id=str(request.trace_id))
+
+    return response

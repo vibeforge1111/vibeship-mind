@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
+import structlog
 
 from mind.core.memory.models import TemporalLevel
 from mind.api.schemas.memory import (
@@ -19,8 +20,10 @@ from mind.infrastructure.embeddings.openai import get_embedder
 from mind.core.memory.models import Memory
 from mind.core.memory.retrieval import RetrievalRequest
 from mind.services.retrieval import RetrievalService
+from mind.services.events import get_event_service
 from mind.observability.metrics import metrics
 
+logger = structlog.get_logger()
 router = APIRouter()
 
 
@@ -50,7 +53,16 @@ async def create_memory(request: MemoryCreate) -> MemoryResponse:
         if not result.is_ok:
             raise HTTPException(status_code=400, detail=result.error.to_dict())
 
-        return MemoryResponse.from_domain(result.value)
+        created_memory = result.value
+
+    # Publish event (fire-and-forget, don't block on failure)
+    try:
+        event_service = get_event_service()
+        await event_service.publish_memory_created(created_memory)
+    except Exception as e:
+        logger.warning("event_publish_failed", error=str(e), memory_id=str(created_memory.memory_id))
+
+    return MemoryResponse.from_domain(created_memory)
 
 
 @router.get("/{memory_id}", response_model=MemoryResponse)
@@ -122,7 +134,8 @@ async def retrieve_memories(request: RetrieveRequest) -> RetrieveResponse:
             result_count=len(retrieval.memories),
         )
 
-        return RetrieveResponse(
+        # Build response and event data while session is still active
+        response = RetrieveResponse(
             retrieval_id=retrieval.retrieval_id,
             memories=[
                 MemoryResponse.from_domain(sm.memory)
@@ -134,3 +147,29 @@ async def retrieve_memories(request: RetrieveRequest) -> RetrieveResponse:
             },
             latency_ms=retrieval.latency_ms,
         )
+
+        # Capture event data for publishing after session closes
+        event_data = {
+            "retrieval_id": retrieval.retrieval_id,
+            "query": request.query,
+            "latency_ms": retrieval.latency_ms,
+            "memories": [
+                (sm.memory.memory_id, sm.rank, sm.final_score, "fusion")
+                for sm in retrieval.memories
+            ],
+        }
+
+    # Publish retrieval event (fire-and-forget, outside session)
+    try:
+        event_service = get_event_service()
+        await event_service.publish_memory_retrieval(
+            user_id=request.user_id,
+            retrieval_id=event_data["retrieval_id"],
+            query=event_data["query"],
+            memories=event_data["memories"],
+            latency_ms=event_data["latency_ms"],
+        )
+    except Exception as e:
+        logger.warning("event_publish_failed", error=str(e), event_type="memory.retrieval")
+
+    return response

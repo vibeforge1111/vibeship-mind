@@ -1,0 +1,1546 @@
+openapi: 3.1.0
+info:
+  title: Mind v5 API
+  description: |
+    Decision intelligence API for AI agents. Mind v5 provides hierarchical temporal memory,
+    outcome-weighted retrieval, causal reasoning, and collective intelligence through
+    federated pattern learning.
+
+    ## Core Concepts
+
+    - **Memories**: Hierarchical temporal memories with outcome-weighted salience
+    - **Decisions**: Tracked decision traces with context snapshots
+    - **Outcomes**: Feedback signals that adjust memory salience for future retrieval
+    - **Context**: Fused retrieval from vector, graph, and keyword sources
+
+    ## Authentication
+
+    All endpoints require Bearer JWT authentication. Tokens are scoped to a single user
+    and include the user_id claim.
+
+    ## Rate Limits
+
+    - Standard: 1000 requests/minute
+    - Burst: 10000 requests/minute (short bursts)
+    - Memory retrieval: 100 requests/second per user
+
+    ## Versioning
+
+    This API follows semantic versioning. Breaking changes require a major version bump.
+    The current version is v1. Use the `Accept-Version` header for version negotiation.
+  version: 1.0.0
+  contact:
+    name: Mind v5 Team
+    email: mind-api@example.com
+    url: https://docs.mind-v5.dev
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.mind-v5.dev/v1
+    description: Production server
+  - url: https://staging-api.mind-v5.dev/v1
+    description: Staging server
+  - url: http://localhost:8080/v1
+    description: Local development
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Memories
+    description: Memory storage and retrieval with outcome-weighted salience
+  - name: Decisions
+    description: Decision tracking with context snapshots
+  - name: Outcomes
+    description: Outcome observation and salience updates
+  - name: Context
+    description: User context and summary retrieval
+
+paths:
+  /memories/retrieve:
+    post:
+      operationId: retrieveMemories
+      summary: Retrieve context with outcome weighting
+      description: |
+        Retrieves relevant memories for a given query using multi-source fusion:
+        - Vector similarity (Qdrant)
+        - Graph traversal (FalkorDB, 2-hop)
+        - Keyword/BM25 (PostgreSQL full-text)
+        - Temporal recency (decay function)
+        - Outcome-weighted salience (learned from feedback)
+
+        Results are fused using Reciprocal Rank Fusion (RRF) and optionally
+        reranked with a cross-encoder for maximum relevance.
+
+        **SLO**: 200ms p99 latency
+      tags:
+        - Memories
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetrievalRequest'
+            examples:
+              basic:
+                summary: Basic retrieval
+                value:
+                  query: "What are the user's communication preferences?"
+                  limit: 10
+              with_levels:
+                summary: Filtered by temporal levels
+                value:
+                  query: "What projects is the user working on?"
+                  limit: 20
+                  temporal_levels:
+                    - identity
+                    - seasonal
+                  include_causal: true
+              with_session:
+                summary: Session-scoped retrieval
+                value:
+                  query: "What did we discuss earlier?"
+                  limit: 5
+                  session_id: "550e8400-e29b-41d4-a716-446655440000"
+                  temporal_levels:
+                    - immediate
+                    - situational
+      responses:
+        '200':
+          description: Successfully retrieved memories
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetrievalResponse'
+              examples:
+                success:
+                  summary: Successful retrieval
+                  value:
+                    trace_id: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+                    memories:
+                      - memory_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                        content: "User prefers concise, bullet-point responses"
+                        temporal_level: identity
+                        salience: 0.92
+                        outcome_score: 0.15
+                        recency_score: 0.3
+                        fusion_rank: 1
+                      - memory_id: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+                        content: "Currently working on Mind v5 architecture"
+                        temporal_level: seasonal
+                        salience: 0.85
+                        outcome_score: 0.08
+                        recency_score: 0.7
+                        fusion_rank: 2
+                    causal_edges: []
+                    retrieval_latency_ms: 47.3
+                    fusion_method: "rrf"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /memories:
+    post:
+      operationId: createMemory
+      summary: Store a new memory
+      description: |
+        Creates a new memory in the hierarchical temporal memory system.
+
+        Memories are automatically:
+        - Embedded using text-embedding-3-small (1536 dimensions)
+        - Indexed in Qdrant for vector search
+        - Linked to entities via FalkorDB graph
+        - Assigned initial salience based on content type
+
+        **Temporal Levels**:
+        - `immediate`: Current session, working memory (hours)
+        - `situational`: Active tasks, recent events (weeks)
+        - `seasonal`: Projects, recurring patterns (months)
+        - `identity`: Core values, stable preferences (years)
+
+        Memories can be promoted to higher levels when patterns stabilize.
+      tags:
+        - Memories
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMemoryRequest'
+            examples:
+              preference:
+                summary: User preference
+                value:
+                  content: "User prefers dark mode and minimal UI animations"
+                  content_type: preference
+                  temporal_level: identity
+                  metadata:
+                    source: "settings_observation"
+                    confidence: 0.95
+              task:
+                summary: Active task
+                value:
+                  content: "Working on implementing the causal inference engine"
+                  content_type: task
+                  temporal_level: situational
+                  valid_until: "2025-01-15T00:00:00Z"
+                  metadata:
+                    project: "mind-v5"
+                    priority: "high"
+      responses:
+        '201':
+          description: Memory created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Memory'
+              examples:
+                created:
+                  summary: Created memory
+                  value:
+                    memory_id: "c3d4e5f6-a7b8-9012-cdef-123456789012"
+                    content: "User prefers dark mode and minimal UI animations"
+                    content_type: preference
+                    temporal_level: identity
+                    valid_from: "2025-12-27T19:30:00Z"
+                    valid_until: null
+                    base_salience: 1.0
+                    outcome_adjustment: 0.0
+                    effective_salience: 1.0
+                    retrieval_count: 0
+                    decision_count: 0
+                    created_at: "2025-12-27T19:30:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /memories/{memory_id}:
+    get:
+      operationId: getMemory
+      summary: Get a specific memory
+      description: |
+        Retrieves a single memory by its ID. Includes full metadata,
+        salience scores, and usage statistics.
+      tags:
+        - Memories
+      parameters:
+        - name: memory_id
+          in: path
+          required: true
+          description: Unique identifier of the memory
+          schema:
+            type: string
+            format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        - name: include_usage_stats
+          in: query
+          required: false
+          description: Include detailed usage statistics
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Memory found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Memory'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    patch:
+      operationId: updateMemory
+      summary: Update a memory
+      description: |
+        Updates a memory's metadata or content. Temporal level changes
+        trigger re-evaluation of the memory's position in the hierarchy.
+
+        Note: Direct salience modifications are not allowed through this
+        endpoint. Salience is adjusted through the outcome observation system.
+      tags:
+        - Memories
+      parameters:
+        - name: memory_id
+          in: path
+          required: true
+          description: Unique identifier of the memory
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMemoryRequest'
+      responses:
+        '200':
+          description: Memory updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Memory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+    delete:
+      operationId: expireMemory
+      summary: Expire a memory
+      description: |
+        Marks a memory as expired by setting its `valid_until` timestamp.
+        Expired memories are not returned in retrieval but are preserved
+        for audit and potential reactivation.
+
+        **Note**: Memories are never permanently deleted due to event sourcing
+        requirements. Use this endpoint to logically remove memories.
+      tags:
+        - Memories
+      parameters:
+        - name: memory_id
+          in: path
+          required: true
+          description: Unique identifier of the memory
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Memory expired successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /decisions/track:
+    post:
+      operationId: trackDecision
+      summary: Track a decision with memories used
+      description: |
+        Records a decision trace including:
+        - Context snapshot (memories that were retrieved and used)
+        - Decision made (type, content, confidence)
+        - Alternatives considered
+
+        Returns a trace_id that should be used when observing outcomes.
+        This enables the system to attribute outcomes to specific memories
+        and adjust their salience accordingly.
+
+        **Flow**:
+        1. Retrieve context via `/memories/retrieve`
+        2. Make decision using retrieved memories
+        3. Track decision via this endpoint
+        4. Later, observe outcome via `/outcomes/observe`
+      tags:
+        - Decisions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DecisionTrackRequest'
+            examples:
+              recommendation:
+                summary: Recommendation decision
+                value:
+                  session_id: "550e8400-e29b-41d4-a716-446655440000"
+                  decision_type: "recommendation"
+                  decision_content: "Suggested using Temporal.io for workflow orchestration"
+                  confidence: 0.87
+                  context_memory_ids:
+                    - "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    - "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+                  memory_weights:
+                    a1b2c3d4-e5f6-7890-abcd-ef1234567890: 0.8
+                    b2c3d4e5-f6a7-8901-bcde-f12345678901: 0.6
+                  alternatives_considered:
+                    - "Celery with Redis"
+                    - "Apache Airflow"
+                  metadata:
+                    domain: "architecture"
+                    complexity: "high"
+      responses:
+        '201':
+          description: Decision tracked successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionTrace'
+              examples:
+                tracked:
+                  summary: Tracked decision
+                  value:
+                    trace_id: "d4e5f6a7-b8c9-0123-def0-456789abcdef"
+                    session_id: "550e8400-e29b-41d4-a716-446655440000"
+                    decision_type: "recommendation"
+                    decision_content: "Suggested using Temporal.io for workflow orchestration"
+                    confidence: 0.87
+                    context_memory_ids:
+                      - "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                      - "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+                    outcome_observed: false
+                    created_at: "2025-12-27T19:45:00Z"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /decisions/{trace_id}:
+    get:
+      operationId: getDecisionTrace
+      summary: Get a decision trace
+      description: |
+        Retrieves a decision trace by its ID. Includes the full context
+        snapshot, decision details, and outcome if observed.
+      tags:
+        - Decisions
+      parameters:
+        - name: trace_id
+          in: path
+          required: true
+          description: Unique identifier of the decision trace
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Decision trace found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DecisionTrace'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /outcomes/observe:
+    post:
+      operationId: observeOutcome
+      summary: Record outcome for a decision trace
+      description: |
+        Records the outcome of a previously tracked decision. This is the
+        key feedback signal that enables the system to learn which memories
+        lead to good decisions.
+
+        **Outcome Quality Scale**: -1.0 (very negative) to 1.0 (very positive)
+        - 1.0: User explicitly confirmed success
+        - 0.5: Implicit positive signal (accepted, used)
+        - 0.0: Neutral or unknown
+        - -0.5: Implicit negative signal (rejected, ignored)
+        - -1.0: User explicitly indicated failure
+
+        **Attribution**: The system computes which memories contributed to the
+        outcome and adjusts their salience accordingly:
+        - Positive outcomes increase salience of used memories
+        - Negative outcomes decrease salience
+        - Attribution is weighted by memory_weights from the decision
+
+        **SLO**: 20ms p99 latency (async processing)
+      tags:
+        - Outcomes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OutcomeRequest'
+            examples:
+              positive:
+                summary: Positive outcome
+                value:
+                  trace_id: "d4e5f6a7-b8c9-0123-def0-456789abcdef"
+                  outcome_quality: 0.8
+                  outcome_signal: "user_feedback"
+                  feedback_text: "This recommendation worked great!"
+              implicit_positive:
+                summary: Implicit positive (action taken)
+                value:
+                  trace_id: "d4e5f6a7-b8c9-0123-def0-456789abcdef"
+                  outcome_quality: 0.5
+                  outcome_signal: "action_taken"
+              negative:
+                summary: Negative outcome
+                value:
+                  trace_id: "d4e5f6a7-b8c9-0123-def0-456789abcdef"
+                  outcome_quality: -0.6
+                  outcome_signal: "user_correction"
+                  feedback_text: "Actually I need something different"
+      responses:
+        '200':
+          description: Outcome recorded successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OutcomeResponse'
+              examples:
+                recorded:
+                  summary: Outcome recorded with salience updates
+                  value:
+                    trace_id: "d4e5f6a7-b8c9-0123-def0-456789abcdef"
+                    outcome_quality: 0.8
+                    outcome_timestamp: "2025-12-27T20:00:00Z"
+                    salience_updates:
+                      - memory_id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                        previous_adjustment: 0.05
+                        new_adjustment: 0.13
+                        delta: 0.08
+                      - memory_id: "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+                        previous_adjustment: 0.02
+                        new_adjustment: 0.08
+                        delta: 0.06
+                    attribution_computed: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Decision trace not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "TRACE_NOT_FOUND"
+                message: "Decision trace d4e5f6a7-b8c9-0123-def0-456789abcdef not found"
+                request_id: "req_abc123"
+        '409':
+          description: Outcome already observed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                code: "OUTCOME_ALREADY_OBSERVED"
+                message: "Outcome for trace d4e5f6a7-b8c9-0123-def0-456789abcdef was already recorded"
+                request_id: "req_abc123"
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /context:
+    get:
+      operationId: getContextSummary
+      summary: Get current user context summary
+      description: |
+        Returns a summary of the user's current context across all temporal
+        levels. Useful for understanding the user's state at a glance.
+
+        Includes:
+        - Active memories by temporal level
+        - Recent decision success rate (DSR)
+        - Top entities and relationships
+        - Pending decisions awaiting outcome
+      tags:
+        - Context
+      parameters:
+        - name: session_id
+          in: query
+          required: false
+          description: Filter to specific session context
+          schema:
+            type: string
+            format: uuid
+        - name: include_metrics
+          in: query
+          required: false
+          description: Include performance metrics
+          schema:
+            type: boolean
+            default: true
+        - name: include_pending_decisions
+          in: query
+          required: false
+          description: Include decisions awaiting outcomes
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Context summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContextSummary'
+              examples:
+                full:
+                  summary: Full context summary
+                  value:
+                    user_id: "123e4567-e89b-12d3-a456-426614174000"
+                    snapshot_timestamp: "2025-12-27T20:15:00Z"
+                    memory_counts:
+                      immediate: 12
+                      situational: 45
+                      seasonal: 23
+                      identity: 8
+                    total_memories: 88
+                    active_session_id: "550e8400-e29b-41d4-a716-446655440000"
+                    metrics:
+                      decision_success_rate: 0.78
+                      total_decisions: 156
+                      positive_outcomes: 122
+                      negative_outcomes: 34
+                      avg_retrieval_latency_ms: 42.5
+                    top_entities:
+                      - name: "Mind v5"
+                        type: "project"
+                        mention_count: 47
+                      - name: "Temporal.io"
+                        type: "technology"
+                        mention_count: 23
+                    pending_decisions_count: 3
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token with the following claims:
+        - `sub`: User ID (UUID)
+        - `iat`: Issued at timestamp
+        - `exp`: Expiration timestamp
+        - `scope`: Allowed operations (read, write, admin)
+
+  schemas:
+    # === Memory Schemas ===
+
+    Memory:
+      type: object
+      description: A single memory unit in the hierarchical temporal memory system
+      required:
+        - memory_id
+        - content
+        - content_type
+        - temporal_level
+        - valid_from
+        - base_salience
+        - effective_salience
+        - created_at
+      properties:
+        memory_id:
+          type: string
+          format: uuid
+          description: Unique identifier for the memory
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        content:
+          type: string
+          description: The memory content (natural language)
+          maxLength: 10000
+          example: "User prefers concise, bullet-point responses"
+        content_type:
+          type: string
+          description: Type of memory content
+          enum:
+            - fact
+            - preference
+            - event
+            - task
+            - goal
+            - relationship
+            - skill
+            - constraint
+          example: preference
+        temporal_level:
+          $ref: '#/components/schemas/TemporalLevel'
+        valid_from:
+          type: string
+          format: date-time
+          description: When this memory became valid
+          example: "2025-12-27T19:30:00Z"
+        valid_until:
+          type: string
+          format: date-time
+          nullable: true
+          description: When this memory expires (null = still valid)
+          example: null
+        base_salience:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Initial salience score
+          example: 1.0
+        outcome_adjustment:
+          type: number
+          format: float
+          minimum: -1.0
+          maximum: 1.0
+          description: Adjustment from outcome learning
+          example: 0.15
+        effective_salience:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Combined salience (base + adjustment, clamped)
+          example: 0.92
+        retrieval_count:
+          type: integer
+          minimum: 0
+          description: Number of times retrieved
+          example: 47
+        decision_count:
+          type: integer
+          minimum: 0
+          description: Number of decisions that used this memory
+          example: 12
+        positive_outcomes:
+          type: integer
+          minimum: 0
+          description: Decisions with positive outcomes
+          example: 10
+        negative_outcomes:
+          type: integer
+          minimum: 0
+          description: Decisions with negative outcomes
+          example: 2
+        last_retrieved:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last retrieval timestamp
+          example: "2025-12-27T19:45:00Z"
+        promoted_from_level:
+          $ref: '#/components/schemas/TemporalLevel'
+        promotion_timestamp:
+          type: string
+          format: date-time
+          nullable: true
+          description: When promoted to current level
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional metadata
+          example:
+            source: "conversation"
+            confidence: 0.95
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+          example: "2025-12-27T19:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+          example: "2025-12-27T19:45:00Z"
+
+    TemporalLevel:
+      type: string
+      description: |
+        Hierarchical temporal level:
+        - `immediate`: Current session, working memory (hours)
+        - `situational`: Active tasks, recent events (weeks)
+        - `seasonal`: Projects, recurring patterns (months)
+        - `identity`: Core values, stable preferences (years)
+      enum:
+        - immediate
+        - situational
+        - seasonal
+        - identity
+      example: identity
+
+    CreateMemoryRequest:
+      type: object
+      required:
+        - content
+        - content_type
+        - temporal_level
+      properties:
+        content:
+          type: string
+          description: The memory content
+          maxLength: 10000
+          example: "User prefers dark mode and minimal UI animations"
+        content_type:
+          type: string
+          enum:
+            - fact
+            - preference
+            - event
+            - task
+            - goal
+            - relationship
+            - skill
+            - constraint
+          example: preference
+        temporal_level:
+          $ref: '#/components/schemas/TemporalLevel'
+        valid_until:
+          type: string
+          format: date-time
+          nullable: true
+          description: Optional expiration timestamp
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Optional metadata
+
+    UpdateMemoryRequest:
+      type: object
+      properties:
+        content:
+          type: string
+          maxLength: 10000
+          description: Updated content
+        content_type:
+          type: string
+          enum:
+            - fact
+            - preference
+            - event
+            - task
+            - goal
+            - relationship
+            - skill
+            - constraint
+        temporal_level:
+          $ref: '#/components/schemas/TemporalLevel'
+        valid_until:
+          type: string
+          format: date-time
+          nullable: true
+        metadata:
+          type: object
+          additionalProperties: true
+
+    # === Retrieval Schemas ===
+
+    RetrievalRequest:
+      type: object
+      description: Request for context retrieval
+      required:
+        - query
+      properties:
+        query:
+          type: string
+          description: Natural language query for retrieval
+          maxLength: 2000
+          example: "What are the user's communication preferences?"
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 10
+          description: Maximum number of memories to return
+          example: 10
+        temporal_levels:
+          type: array
+          items:
+            $ref: '#/components/schemas/TemporalLevel'
+          description: Filter to specific temporal levels
+          example:
+            - identity
+            - seasonal
+        session_id:
+          type: string
+          format: uuid
+          description: Scope to specific session
+        include_causal:
+          type: boolean
+          default: false
+          description: Include causal edges in response
+        min_salience:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          default: 0.0
+          description: Minimum effective salience threshold
+        rerank:
+          type: boolean
+          default: true
+          description: Apply cross-encoder reranking
+
+    RetrievalResponse:
+      type: object
+      description: Response containing retrieved memories
+      required:
+        - trace_id
+        - memories
+        - retrieval_latency_ms
+        - fusion_method
+      properties:
+        trace_id:
+          type: string
+          format: uuid
+          description: Trace ID for this retrieval (use in decision tracking)
+          example: "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+        memories:
+          type: array
+          items:
+            $ref: '#/components/schemas/RetrievedMemory'
+          description: Retrieved memories ordered by relevance
+        causal_edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/CausalEdge'
+          description: Related causal edges (if requested)
+        retrieval_latency_ms:
+          type: number
+          format: float
+          description: Total retrieval latency in milliseconds
+          example: 47.3
+        fusion_method:
+          type: string
+          enum:
+            - rrf
+            - weighted
+            - simple
+          description: Fusion method used
+          example: rrf
+
+    RetrievedMemory:
+      type: object
+      description: A memory item with retrieval scores
+      required:
+        - memory_id
+        - content
+        - temporal_level
+        - salience
+        - fusion_rank
+      properties:
+        memory_id:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        content:
+          type: string
+          example: "User prefers concise, bullet-point responses"
+        temporal_level:
+          $ref: '#/components/schemas/TemporalLevel'
+        salience:
+          type: number
+          format: float
+          description: Effective salience score
+          example: 0.92
+        outcome_score:
+          type: number
+          format: float
+          description: Contribution from outcome learning
+          example: 0.15
+        recency_score:
+          type: number
+          format: float
+          description: Temporal recency score
+          example: 0.3
+        vector_similarity:
+          type: number
+          format: float
+          description: Vector similarity score
+          example: 0.87
+        fusion_rank:
+          type: integer
+          description: Final rank after RRF fusion
+          example: 1
+
+    CausalEdge:
+      type: object
+      description: A causal relationship between entities
+      required:
+        - source_entity
+        - target_entity
+        - relationship
+        - causal_direction
+        - causal_strength
+      properties:
+        source_entity:
+          type: string
+          description: Source entity name
+          example: "deadline_pressure"
+        target_entity:
+          type: string
+          description: Target entity name
+          example: "prefer_concise"
+        relationship:
+          type: string
+          description: Relationship type
+          example: "causes"
+        causal_direction:
+          type: string
+          enum:
+            - causes
+            - correlates
+            - prevents
+          description: Type of causal relationship
+          example: causes
+        causal_strength:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Strength of causal relationship
+          example: 0.73
+        conditions:
+          type: array
+          items:
+            type: string
+          description: Conditions under which relationship holds
+          example:
+            - "under_deadline"
+            - "low_energy"
+        counterfactual:
+          type: string
+          description: What-if explanation
+          example: "Without deadline pressure, user accepts longer explanations"
+        confidence:
+          type: number
+          format: float
+          description: Confidence in this edge
+          example: 0.87
+
+    # === Decision Schemas ===
+
+    DecisionTrackRequest:
+      type: object
+      description: Request to track a decision
+      required:
+        - decision_type
+        - decision_content
+        - confidence
+        - context_memory_ids
+      properties:
+        session_id:
+          type: string
+          format: uuid
+          description: Session in which decision was made
+        decision_type:
+          type: string
+          description: Category of decision
+          maxLength: 100
+          example: recommendation
+        decision_content:
+          type: string
+          description: The decision that was made
+          maxLength: 10000
+          example: "Suggested using Temporal.io for workflow orchestration"
+        confidence:
+          type: number
+          format: float
+          minimum: 0.0
+          maximum: 1.0
+          description: Confidence in the decision
+          example: 0.87
+        context_memory_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          description: Memory IDs that were used for this decision
+          example:
+            - "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+            - "b2c3d4e5-f6a7-8901-bcde-f12345678901"
+        memory_weights:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+          description: How much each memory contributed (memory_id -> weight)
+          example:
+            a1b2c3d4-e5f6-7890-abcd-ef1234567890: 0.8
+            b2c3d4e5-f6a7-8901-bcde-f12345678901: 0.6
+        alternatives_considered:
+          type: array
+          items:
+            type: string
+          description: Other options that were considered
+          example:
+            - "Celery with Redis"
+            - "Apache Airflow"
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Additional decision context
+
+    DecisionTrace:
+      type: object
+      description: A tracked decision with context snapshot
+      required:
+        - trace_id
+        - decision_type
+        - decision_content
+        - confidence
+        - context_memory_ids
+        - outcome_observed
+        - created_at
+      properties:
+        trace_id:
+          type: string
+          format: uuid
+          description: Unique trace identifier
+          example: "d4e5f6a7-b8c9-0123-def0-456789abcdef"
+        session_id:
+          type: string
+          format: uuid
+          nullable: true
+        decision_type:
+          type: string
+          example: recommendation
+        decision_content:
+          type: string
+          example: "Suggested using Temporal.io for workflow orchestration"
+        confidence:
+          type: number
+          format: float
+          example: 0.87
+        context_memory_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        context_snapshot:
+          type: object
+          description: Full snapshot of context at decision time
+          additionalProperties: true
+        memory_weights:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+        alternatives_considered:
+          type: array
+          items:
+            type: string
+        outcome_observed:
+          type: boolean
+          description: Whether outcome has been recorded
+          example: false
+        outcome_quality:
+          type: number
+          format: float
+          nullable: true
+          description: Outcome quality if observed
+        outcome_timestamp:
+          type: string
+          format: date-time
+          nullable: true
+        outcome_signal:
+          type: string
+          nullable: true
+          description: How outcome was detected
+        memory_attribution:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+          nullable: true
+          description: Computed attribution scores
+        metadata:
+          type: object
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-12-27T19:45:00Z"
+
+    # === Outcome Schemas ===
+
+    OutcomeRequest:
+      type: object
+      description: Request to record a decision outcome
+      required:
+        - trace_id
+        - outcome_quality
+        - outcome_signal
+      properties:
+        trace_id:
+          type: string
+          format: uuid
+          description: The decision trace to record outcome for
+          example: "d4e5f6a7-b8c9-0123-def0-456789abcdef"
+        outcome_quality:
+          type: number
+          format: float
+          minimum: -1.0
+          maximum: 1.0
+          description: |
+            Outcome quality score:
+            - 1.0: Very positive
+            - 0.5: Positive
+            - 0.0: Neutral
+            - -0.5: Negative
+            - -1.0: Very negative
+          example: 0.8
+        outcome_signal:
+          type: string
+          description: How the outcome was detected
+          enum:
+            - user_feedback
+            - action_taken
+            - action_rejected
+            - user_correction
+            - implicit_positive
+            - implicit_negative
+            - timeout
+          example: user_feedback
+        feedback_text:
+          type: string
+          maxLength: 2000
+          description: Optional user feedback text
+          example: "This recommendation worked great!"
+
+    OutcomeResponse:
+      type: object
+      description: Response after recording outcome
+      required:
+        - trace_id
+        - outcome_quality
+        - outcome_timestamp
+        - salience_updates
+        - attribution_computed
+      properties:
+        trace_id:
+          type: string
+          format: uuid
+          example: "d4e5f6a7-b8c9-0123-def0-456789abcdef"
+        outcome_quality:
+          type: number
+          format: float
+          example: 0.8
+        outcome_timestamp:
+          type: string
+          format: date-time
+          example: "2025-12-27T20:00:00Z"
+        salience_updates:
+          type: array
+          items:
+            $ref: '#/components/schemas/SalienceUpdate'
+          description: How memory saliences were adjusted
+        attribution_computed:
+          type: boolean
+          description: Whether attribution was successfully computed
+          example: true
+
+    SalienceUpdate:
+      type: object
+      description: A salience adjustment for a memory
+      required:
+        - memory_id
+        - previous_adjustment
+        - new_adjustment
+        - delta
+      properties:
+        memory_id:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+        previous_adjustment:
+          type: number
+          format: float
+          description: Previous outcome_adjustment value
+          example: 0.05
+        new_adjustment:
+          type: number
+          format: float
+          description: New outcome_adjustment value
+          example: 0.13
+        delta:
+          type: number
+          format: float
+          description: Change in adjustment
+          example: 0.08
+
+    # === Context Schemas ===
+
+    ContextSummary:
+      type: object
+      description: Summary of user's current context
+      required:
+        - user_id
+        - snapshot_timestamp
+        - memory_counts
+        - total_memories
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          example: "123e4567-e89b-12d3-a456-426614174000"
+        snapshot_timestamp:
+          type: string
+          format: date-time
+          example: "2025-12-27T20:15:00Z"
+        memory_counts:
+          type: object
+          description: Memory count by temporal level
+          properties:
+            immediate:
+              type: integer
+              example: 12
+            situational:
+              type: integer
+              example: 45
+            seasonal:
+              type: integer
+              example: 23
+            identity:
+              type: integer
+              example: 8
+          required:
+            - immediate
+            - situational
+            - seasonal
+            - identity
+        total_memories:
+          type: integer
+          description: Total active memories
+          example: 88
+        active_session_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Current active session
+        metrics:
+          $ref: '#/components/schemas/UserMetrics'
+        top_entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/EntitySummary'
+          description: Most mentioned entities
+        pending_decisions_count:
+          type: integer
+          description: Decisions awaiting outcomes
+          example: 3
+        pending_decisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/DecisionTrace'
+          description: Full pending decision details (if requested)
+
+    UserMetrics:
+      type: object
+      description: User performance metrics
+      properties:
+        decision_success_rate:
+          type: number
+          format: float
+          description: DSR - decisions with positive outcomes / total
+          example: 0.78
+        total_decisions:
+          type: integer
+          example: 156
+        positive_outcomes:
+          type: integer
+          example: 122
+        negative_outcomes:
+          type: integer
+          example: 34
+        avg_retrieval_latency_ms:
+          type: number
+          format: float
+          example: 42.5
+        memory_effectiveness:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+          description: Effectiveness by memory type
+
+    EntitySummary:
+      type: object
+      description: Summary of a mentioned entity
+      properties:
+        name:
+          type: string
+          example: "Mind v5"
+        type:
+          type: string
+          example: "project"
+        mention_count:
+          type: integer
+          example: 47
+
+    # === Error Schemas ===
+
+    Error:
+      type: object
+      description: Standard error response
+      required:
+        - code
+        - message
+        - request_id
+      properties:
+        code:
+          type: string
+          description: Machine-readable error code
+          example: "MEMORY_NOT_FOUND"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Memory a1b2c3d4-e5f6-7890-abcd-ef1234567890 not found"
+        request_id:
+          type: string
+          description: Request ID for debugging
+          example: "req_abc123"
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error context
+
+    ValidationError:
+      type: object
+      description: Validation error with field details
+      required:
+        - code
+        - message
+        - request_id
+        - errors
+      properties:
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "Request validation failed"
+        request_id:
+          type: string
+          example: "req_abc123"
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: "query"
+              message:
+                type: string
+                example: "Query must not be empty"
+              code:
+                type: string
+                example: "required"
+
+  responses:
+    BadRequest:
+      description: Bad request - malformed input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "BAD_REQUEST"
+            message: "Request body is not valid JSON"
+            request_id: "req_abc123"
+
+    Unauthorized:
+      description: Authentication required or invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "UNAUTHORIZED"
+            message: "Invalid or expired authentication token"
+            request_id: "req_abc123"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "NOT_FOUND"
+            message: "The requested resource was not found"
+            request_id: "req_abc123"
+
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationError'
+          example:
+            code: "VALIDATION_ERROR"
+            message: "Request validation failed"
+            request_id: "req_abc123"
+            errors:
+              - field: "query"
+                message: "Query must not be empty"
+                code: "required"
+
+    RateLimited:
+      description: Too many requests
+      headers:
+        X-RateLimit-Limit:
+          schema:
+            type: integer
+          description: Request limit per minute
+        X-RateLimit-Remaining:
+          schema:
+            type: integer
+          description: Remaining requests in current window
+        X-RateLimit-Reset:
+          schema:
+            type: integer
+          description: Unix timestamp when limit resets
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "RATE_LIMITED"
+            message: "Too many requests. Please retry after 30 seconds."
+            request_id: "req_abc123"
+            details:
+              retry_after: 30
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: "INTERNAL_ERROR"
+            message: "An unexpected error occurred. Please try again."
+            request_id: "req_abc123"

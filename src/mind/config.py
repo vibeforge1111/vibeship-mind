@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     embedding_dimensions: int = 1536
     openai_api_key: SecretStr | None = None
 
+    # Temporal
+    temporal_host: str = "localhost"
+    temporal_port: int = 7233
+    temporal_namespace: str = "default"
+
     # Observability
     otel_exporter_otlp_endpoint: str | None = None
     log_level: str = "INFO"

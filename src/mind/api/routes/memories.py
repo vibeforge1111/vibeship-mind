@@ -15,8 +15,11 @@ from mind.api.schemas.memory import (
 )
 from mind.infrastructure.postgres.database import get_database
 from mind.infrastructure.postgres.repositories import MemoryRepository
+from mind.infrastructure.embeddings.openai import get_embedder
 from mind.core.memory.models import Memory
 from mind.core.memory.retrieval import RetrievalRequest
+from mind.services.retrieval import RetrievalService
+from mind.observability.metrics import metrics
 
 router = APIRouter()
 
@@ -69,8 +72,14 @@ async def retrieve_memories(request: RetrieveRequest) -> RetrieveResponse:
     """Retrieve relevant memories for a query.
 
     This is the main retrieval endpoint. It uses multi-source
-    fusion (vector, keyword, salience) to find the most relevant
-    memories for the given query.
+    fusion (vector, keyword, salience, recency) with RRF to find
+    the most relevant memories for the given query.
+
+    Sources combined:
+    - Vector similarity (semantic search via embeddings)
+    - Keyword/BM25 (full-text search)
+    - Salience ranking (outcome-weighted importance)
+    - Recency decay (time-based freshness)
 
     Returns a trace_id that can be used to track the decision
     made with this context and observe outcomes.
@@ -85,13 +94,34 @@ async def retrieve_memories(request: RetrieveRequest) -> RetrieveResponse:
 
     db = get_database()
     async with db.session() as session:
-        repo = MemoryRepository(session)
-        result = await repo.retrieve(retrieval_request)
+        # Use retrieval service with RRF fusion
+        embedder = get_embedder()
+        service = RetrievalService(session=session, embedder=embedder)
+        result = await service.retrieve(retrieval_request)
 
         if not result.is_ok:
             raise HTTPException(status_code=500, detail=result.error.to_dict())
 
         retrieval = result.value
+
+        # Record metrics
+        sources_used = set()
+        for sm in retrieval.memories:
+            if sm.vector_score:
+                sources_used.add("vector")
+            if sm.keyword_score:
+                sources_used.add("keyword")
+            if sm.salience_score:
+                sources_used.add("salience")
+            if sm.recency_score:
+                sources_used.add("recency")
+
+        metrics.observe_retrieval(
+            latency_seconds=retrieval.latency_ms / 1000,
+            sources_used=list(sources_used),
+            result_count=len(retrieval.memories),
+        )
+
         return RetrieveResponse(
             retrieval_id=retrieval.retrieval_id,
             memories=[

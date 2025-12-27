@@ -10,6 +10,9 @@ from mind.config import get_settings
 from mind.api.routes import health, memories, decisions
 from mind.infrastructure.postgres.database import init_database, close_database
 from mind.infrastructure.nats.client import get_nats_client, close_nats_client
+from mind.infrastructure.embeddings.openai import close_embedder
+from mind.observability.logging import configure_logging
+from mind.observability.metrics import MetricsMiddleware, metrics_endpoint
 
 logger = structlog.get_logger()
 
@@ -17,6 +20,9 @@ logger = structlog.get_logger()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
+    # Configure logging first
+    configure_logging()
+
     logger.info("app_starting")
 
     # Initialize connections
@@ -38,6 +44,7 @@ async def lifespan(app: FastAPI):
 
     # Cleanup
     logger.info("app_stopping")
+    await close_embedder()
     await close_database()
     await close_nats_client()
     logger.info("app_stopped")
@@ -56,7 +63,9 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
-    # CORS
+    # Middleware (order matters - first added = last executed)
+    app.add_middleware(MetricsMiddleware)
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"] if settings.environment == "development" else [],
@@ -69,6 +78,9 @@ def create_app() -> FastAPI:
     app.include_router(health.router, tags=["health"])
     app.include_router(memories.router, prefix="/v1/memories", tags=["memories"])
     app.include_router(decisions.router, prefix="/v1/decisions", tags=["decisions"])
+
+    # Metrics endpoint
+    app.add_api_route("/metrics", metrics_endpoint, include_in_schema=False)
 
     return app
 

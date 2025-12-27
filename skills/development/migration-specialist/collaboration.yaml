@@ -1,0 +1,211 @@
+# Migration Specialist Collaboration Model
+# How this skill works with other AI memory specialists
+
+prerequisites:
+  skills: []
+  knowledge:
+    - "SQL DDL (CREATE, ALTER, DROP)"
+    - "Database transaction concepts"
+    - "Basic deployment understanding"
+    - "Version control (git)"
+
+complementary_skills:
+  - skill: postgres-wizard
+    relationship: "Database optimization"
+    brings: "Query optimization, index strategy, locking behavior"
+
+  - skill: data-engineer
+    relationship: "Data migration"
+    brings: "ETL pipelines, data transformation, backfill strategies"
+
+  - skill: infra-architect
+    relationship: "Deployment infrastructure"
+    brings: "Blue-green setup, rollback automation, feature flags"
+
+  - skill: api-designer
+    relationship: "API versioning"
+    brings: "API backward compatibility, versioning strategy"
+
+  - skill: test-architect
+    relationship: "Migration testing"
+    brings: "Test strategies, production data testing"
+
+  - skill: observability-sre
+    relationship: "Migration monitoring"
+    brings: "Metrics, alerting during migration"
+
+delegation:
+  - trigger: "query performance during migration"
+    delegate_to: postgres-wizard
+    pattern: parallel
+    context: "Queries running during/after migration"
+    receive: "Query optimization and index recommendations"
+
+  - trigger: "large data backfill needed"
+    delegate_to: data-engineer
+    pattern: sequential
+    context: "Volume and transformation requirements"
+    receive: "Backfill pipeline design"
+
+  - trigger: "blue-green infrastructure"
+    delegate_to: infra-architect
+    pattern: parallel
+    context: "Deployment requirements"
+    receive: "Infrastructure setup for blue-green"
+
+  - trigger: "api breaking change"
+    delegate_to: api-designer
+    pattern: sequential
+    context: "API changes during migration"
+    receive: "Versioning strategy"
+
+  - trigger: "migration test strategy"
+    delegate_to: test-architect
+    pattern: parallel
+    context: "Migration risk assessment"
+    receive: "Test plan for migration"
+
+  - trigger: "migration monitoring"
+    delegate_to: observability-sre
+    pattern: parallel
+    context: "Key metrics during migration"
+    receive: "Monitoring dashboards and alerts"
+
+collaboration_patterns:
+  sequential:
+    - "I plan migration, then postgres-wizard reviews for locks"
+    - "I define schema change, then data-engineer builds backfill"
+    - "I design rollback, then infra-architect automates it"
+
+  parallel:
+    - "I run migration while observability-sre monitors"
+    - "I write migration while test-architect writes tests"
+
+  review:
+    - "Review postgres-wizard's index suggestions for migration impact"
+    - "Review data-engineer's backfill plan for compatibility"
+    - "Review infra-architect's blue-green setup for migration needs"
+
+cross_domain_insights:
+  - domain: reliability-engineering
+    insight: "Blast radius control: small changes = small failures"
+    applies_when: "Choosing migration batch sizes"
+
+  - domain: distributed-systems
+    insight: "Eventual consistency: not all rows need to update instantly"
+    applies_when: "Designing async backfills"
+
+  - domain: risk-management
+    insight: "Rollback is insurance: costs time but prevents catastrophe"
+    applies_when: "Deciding whether to write rollback migration"
+
+  - domain: project-management
+    insight: "Migrations are projects: plan, execute, verify"
+    applies_when: "Coordinating multi-phase migrations"
+
+  - domain: communication
+    insight: "Over-communicate during migrations: surprises are bad"
+    applies_when: "Notifying team about migration timeline"
+
+ecosystem:
+  primary_tools:
+    - "Alembic - SQLAlchemy migrations"
+    - "Django Migrations - Django ORM migrations"
+    - "Flyway - Version control for database"
+    - "pg_repack - Online table reorganization"
+    - "gh-ost - Online schema changes for MySQL"
+
+  alternatives:
+    - name: Prisma Migrate
+      use_when: "Using Prisma ORM in Node.js project"
+      avoid_when: "Need complex migration logic"
+
+    - name: Liquibase
+      use_when: "Need XML-based, database-agnostic migrations"
+      avoid_when: "Prefer code-based migrations"
+
+    - name: sqitch
+      use_when: "Want dependency-based (not linear) migrations"
+      avoid_when: "Team expects linear migration history"
+
+    - name: Atlas
+      use_when: "Want declarative schema management"
+      avoid_when: "Need imperative migration control"
+
+  deprecated:
+    - "Direct production DDL without migration files"
+    - "Non-reversible migrations"
+    - "Migrations tested only on empty databases"
+    - "Deploying schema and code together without compatibility"
+    - "Locking migrations during peak traffic"
+
+# Mind v5 Specific Context
+mind_v5_specific:
+  primary_responsibility: Zero-downtime schema evolution for Mind v5
+  pod: platform
+  critical_artifacts:
+    - src/infrastructure/postgres/migrations/*.py
+    - deploy/migrations/*.sql
+  migration_strategy:
+    phases:
+      - name: expand
+        description: "Add new columns/tables (backward compatible)"
+      - name: migrate
+        description: "Backfill data, update code"
+      - name: contract
+        description: "Remove old columns/tables"
+    principles:
+      - "Never lock tables > 100ms"
+      - "All migrations must be reversible"
+      - "Feature flags gate new code"
+  mind_v5_tables:
+    high_write:
+      - events (append-only, partitioned by month)
+      - decision_traces
+    high_read:
+      - memories (vector indexed)
+      - entities (graph relationships)
+    sensitive:
+      - user_configs
+      - encryption_keys
+  migration_types:
+    event_schema:
+      risk: high
+      strategy: "Upcaster pattern - transform on read"
+      reviewer: event-architect
+    memory_schema:
+      risk: medium
+      strategy: "Expand-migrate-contract with backfill"
+      reviewer: ml-memory
+    causal_graph:
+      risk: low
+      strategy: "Schema evolution in FalkorDB"
+      reviewer: graph-engineer
+  metrics_owned:
+    - mind_migration_duration_seconds
+    - mind_migration_rows_processed
+    - mind_migration_errors_total
+  delegation:
+    - trigger: "event schema evolution"
+      delegate_to: event-architect
+      pattern: review
+      context: "Event schema changes for backward compatibility"
+      receive: "Upcaster design and version migration strategy"
+
+    - trigger: "memory table changes"
+      delegate_to: ml-memory
+      pattern: sequential
+      context: "Memory schema evolution requirements"
+      receive: "Backfill strategy for salience/level changes"
+
+    - trigger: "high-risk table migration"
+      delegate_to: postgres-wizard
+      pattern: sequential
+      context: "Table locking concerns and index impact"
+      receive: "Lock-free migration techniques and pg_repack usage"
+
+    - trigger: "migration monitoring"
+      delegate_to: observability-sre
+      pattern: parallel
+      context: "Metrics to track during migration"
+      receive: "Migration dashboard and alert configuration"

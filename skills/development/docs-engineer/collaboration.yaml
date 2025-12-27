@@ -1,0 +1,216 @@
+# Documentation Engineer Collaboration Model
+# How this skill works with other AI memory specialists
+
+prerequisites:
+  skills: []
+  knowledge:
+    - "Markdown syntax"
+    - "Basic understanding of the product being documented"
+    - "Empathy for new users"
+    - "Technical writing basics"
+
+complementary_skills:
+  - skill: api-designer
+    relationship: "API documentation"
+    brings: "OpenAPI specs, endpoint definitions, API design decisions"
+
+  - skill: sdk-builder
+    relationship: "SDK documentation"
+    brings: "SDK usage patterns, type definitions, client examples"
+
+  - skill: code-reviewer
+    relationship: "Code documentation"
+    brings: "Code quality feedback, comment standards"
+
+  - skill: test-architect
+    relationship: "Example testing"
+    brings: "Testing documentation examples, doctest setup"
+
+  - skill: migration-specialist
+    relationship: "Migration guides"
+    brings: "Migration steps, breaking change details"
+
+  - skill: python-craftsman
+    relationship: "Python documentation"
+    brings: "Python-specific patterns, docstring conventions"
+
+delegation:
+  - trigger: "api design questions"
+    delegate_to: api-designer
+    pattern: parallel
+    context: "API documentation needs"
+    receive: "API design decisions and OpenAPI spec"
+
+  - trigger: "sdk documentation"
+    delegate_to: sdk-builder
+    pattern: parallel
+    context: "SDK usage documentation needs"
+    receive: "SDK patterns and type information"
+
+  - trigger: "documentation code review"
+    delegate_to: code-reviewer
+    pattern: parallel
+    context: "Example code quality"
+    receive: "Code quality feedback"
+
+  - trigger: "verify examples work"
+    delegate_to: test-architect
+    pattern: sequential
+    context: "Code examples in documentation"
+    receive: "Test results and fixes"
+
+  - trigger: "migration documentation"
+    delegate_to: migration-specialist
+    pattern: sequential
+    context: "Version upgrade docs needed"
+    receive: "Migration steps and details"
+
+collaboration_patterns:
+  sequential:
+    - "api-designer finalizes API, then I document it"
+    - "sdk-builder creates SDK, then I write usage guide"
+    - "migration-specialist plans migration, then I write guide"
+
+  parallel:
+    - "I write docs while test-architect verifies examples"
+    - "I document API while sdk-builder implements client"
+
+  review:
+    - "Review code-reviewer's feedback on example code"
+    - "Review sdk-builder's types for documentation accuracy"
+    - "Review api-designer's OpenAPI for completeness"
+
+cross_domain_insights:
+  - domain: ux-design
+    insight: "Progressive disclosure: simple first, details on demand"
+    applies_when: "Structuring documentation hierarchy"
+
+  - domain: cognitive-science
+    insight: "Working memory limit: 7±2 items at once"
+    applies_when: "Organizing steps and lists"
+
+  - domain: marketing
+    insight: "Benefits before features, outcomes before process"
+    applies_when: "Writing introductions and overviews"
+
+  - domain: education
+    insight: "Show, explain, practice: effective learning sequence"
+    applies_when: "Structuring tutorials"
+
+  - domain: seo
+    insight: "Users search for problems, not solutions"
+    applies_when: "Writing page titles and headings"
+
+ecosystem:
+  primary_tools:
+    - "MkDocs/Docusaurus - Documentation sites"
+    - "OpenAPI/Swagger - API documentation"
+    - "Mintlify - Modern docs platform"
+    - "Vale - Prose linting"
+    - "markdown-link-check - Link validation"
+
+  alternatives:
+    - name: GitBook
+      use_when: "Need collaborative editing, enterprise features"
+      avoid_when: "Want full control, open source required"
+
+    - name: Sphinx
+      use_when: "Python project, need autodoc from docstrings"
+      avoid_when: "Non-Python or want simpler setup"
+
+    - name: Notion
+      use_when: "Internal docs, team knowledge base"
+      avoid_when: "Public documentation, version control needed"
+
+    - name: Read the Docs
+      use_when: "Open source, need hosted docs with versioning"
+      avoid_when: "Custom design needed, private repo"
+
+    - name: Storybook
+      use_when: "Component documentation, UI library"
+      avoid_when: "Non-UI documentation"
+
+  deprecated:
+    - "Wiki-style docs without structure"
+    - "Untested code examples"
+    - "Auto-generated docs without curation"
+    - "Docs in separate repo from code"
+    - "PDF-only documentation"
+
+# Mind v5 Specific Context
+mind_v5_specific:
+  primary_responsibility: Documentation for Mind v5 system and SDK
+  pod: interface
+  critical_artifacts:
+    - docs/**/*.md
+    - docs/api/*.md
+    - docs/sdk/*.md
+    - docs/architecture/*.md
+  documentation_structure:
+    getting_started:
+      - Quick Start (5 min to first memory)
+      - Installation (pip, docker)
+      - Configuration (API keys, endpoints)
+    concepts:
+      - Memory Hierarchy (4 temporal levels)
+      - Outcome-Weighted Retrieval
+      - Causal Knowledge Graph
+      - Decision Traces
+    guides:
+      - Integrating with Your Agent
+      - Tracking Decision Outcomes
+      - Building on Patterns
+    api_reference:
+      - REST API
+      - Python SDK
+      - gRPC Services
+    architecture:
+      - System Overview
+      - Event Sourcing
+      - Data Privacy
+  key_examples:
+    memory_retrieval: |
+      ```python
+      async with MindClient(api_key=...) as mind:
+          result = await mind.retrieve("user preferences for UI")
+          for memory in result.memories:
+              print(f"{memory.content} (salience: {memory.salience})")
+      ```
+    outcome_tracking: |
+      ```python
+      # Track which memories influenced a decision
+      trace = await mind.track_decision(
+          memories_used=[m.id for m in result.memories],
+          choice="dark_mode"
+      )
+
+      # Later, when you know the outcome
+      await mind.observe_outcome(trace.id, success=True)
+      ```
+  metrics_owned:
+    - mind_docs_page_views
+    - mind_docs_feedback_rating
+  delegation:
+    - trigger: "API documentation"
+      delegate_to: api-designer
+      pattern: parallel
+      context: "Endpoints to document"
+      receive: "OpenAPI spec and design decisions"
+
+    - trigger: "SDK examples"
+      delegate_to: sdk-builder
+      pattern: parallel
+      context: "SDK methods to document"
+      receive: "Working code examples"
+
+    - trigger: "example verification"
+      delegate_to: test-architect
+      pattern: sequential
+      context: "Code examples in docs"
+      receive: "Verified examples with test coverage"
+
+    - trigger: "architecture diagrams"
+      delegate_to: event-architect
+      pattern: parallel
+      context: "System architecture to visualize"
+      receive: "Event flow and component diagrams"

@@ -1,0 +1,312 @@
+# Customer Success Skill
+# Turning users into advocates - the engine of sustainable growth
+
+id: customer-success
+name: Customer Success
+category: product
+version: 1.0.0
+last_updated: 2025-12-19
+
+description: |
+  Acquisition is expensive. Retention is profitable. Customer success is the
+  discipline of ensuring customers achieve their desired outcomes with your
+  product - which leads to retention, expansion, and advocacy.
+
+  This skill covers onboarding that activates, health scoring that predicts,
+  retention plays that save, and expansion strategies that grow accounts.
+
+triggers:
+  keywords:
+    - customer success
+    - onboarding
+    - retention
+    - churn
+    - activation
+    - nps
+    - health score
+    - expansion revenue
+    - upsell
+    - customer lifecycle
+    - time to value
+  file_patterns:
+    - "**/onboarding/**"
+    - "**/activation/**"
+    - "**/retention/**"
+  contexts:
+    - Reducing churn
+    - Improving onboarding
+    - Building customer health dashboards
+
+principles:
+  - name: Time to value is everything
+    description: |
+      The faster users get value, the more likely they stick. Measure and
+      optimize time to first value moment. Remove every obstacle between
+      signup and aha moment.
+    examples:
+      good: User sees value in first session, under 5 minutes
+      bad: Value requires days of setup, learning, configuration
+
+  - name: Proactive beats reactive
+    description: |
+      Reach out before problems escalate. Health scores predict churn before
+      it happens. Intervention when metrics dip is worth 10x intervention
+      after cancellation request.
+    examples:
+      good: Alert when usage drops, proactive check-in call
+      bad: Notice churn only when credit card fails
+
+  - name: Segment for relevance
+    description: |
+      Not all customers are the same. High-touch for enterprise, tech-touch
+      for SMB, self-serve for individuals. Match effort to customer value
+      and needs.
+    examples:
+      good: Dedicated CSM for enterprise, automated sequences for self-serve
+      bad: Same email blast to everyone regardless of tier
+
+  - name: Measure leading indicators
+    description: |
+      Revenue is a lagging indicator. By the time it drops, damage is done.
+      Track leading indicators: engagement, feature adoption, support tickets,
+      NPS changes.
+    examples:
+      good: Dashboard with daily engagement, weekly feature adoption, monthly NPS
+      bad: Only looking at MRR and wondering why it dropped
+
+  - name: Make expansion natural
+    description: |
+      Upselling should feel like helping, not selling. When customers outgrow
+      their tier, expansion is a solution. When they hit limits, upgrade is
+      obvious.
+    examples:
+      good: Usage-based nudge when approaching limits with clear value prop
+      bad: Aggressive sales calls pushing features they do not need
+
+patterns:
+  - name: Activation Milestones
+    description: Define specific value moments users must hit to become activated
+    when: Designing onboarding flows or measuring activation success
+    example: |
+      Instead of: "User logged in = activated"
+      Define specific value milestones:
+
+      Slack: Team sent 2,000 messages
+      Dropbox: User added 1 file from 1 device
+      Superhuman: User processed inbox to zero once
+
+      Benefits:
+      - Clear target for onboarding design
+      - Predictive of retention (activated users stay)
+      - Actionable metric to optimize
+
+      Track time-to-activation and activation rate. Both should trend down over time
+
+  - name: Proactive Health Monitoring
+    description: Build health scores that predict churn before users decide to leave
+    when: Designing customer success operations and intervention playbooks
+    example: |
+      Health Score Components:
+      1. Product usage (40%): DAU trend, feature adoption depth
+      2. Support health (20%): Ticket volume, sentiment, unresolved issues
+      3. Relationship (20%): Last CSM touch, executive engagement
+      4. Business fit (20%): Growth trajectory, budget cycles
+
+      Green (80-100): Expansion focus
+      Yellow (60-79): Check-in call within 1 week
+      Orange (40-59): Executive outreach, action plan
+      Red (0-39): All-hands save attempt
+
+      Validate score by checking correlation with actual churn. Iterate formula
+
+  - name: Segmented Engagement
+    description: Design different CS motions for different customer segments
+    when: Scaling customer success beyond one-size-fits-all approach
+    example: |
+      Enterprise ($50K+ ARR):
+      - Dedicated CSM
+      - Quarterly business reviews
+      - Custom onboarding
+      - Executive relationship
+
+      Mid-market ($5K-$50K ARR):
+      - Pooled CSM (1:50 ratio)
+      - Automated onboarding with human touchpoints
+      - Health monitoring with proactive outreach
+
+      Self-serve (<$5K ARR):
+      - Fully automated sequences
+      - In-app guidance
+      - Help center, no human touch
+      - Intervention only on high-fit leads
+
+  - name: Time-to-Value Optimization
+    description: Ruthlessly reduce time from signup to first value moment
+    when: Improving activation rates and reducing early churn
+    example: |
+      Measure current time-to-value: 4 days from signup to activation
+
+      Optimize:
+      1. Remove friction: Reduce signup fields from 12 to 3
+      2. Provide templates: Pre-populated examples vs blank slate
+      3. Async setup: Let users explore while data imports
+      4. Progressive disclosure: Don't teach everything upfront
+
+      Result: Time-to-value reduced to 8 minutes
+      Impact: Activation rate 23% → 47%
+
+      Every minute matters. Measure and optimize aggressively
+
+  - name: Leading Indicator Dashboards
+    description: Track metrics that predict future outcomes, not just outcomes
+    when: Building CS dashboards and alert systems
+    example: |
+      Lagging indicator: Churn rate (too late to act)
+
+      Leading indicators:
+      - Usage trend: DAU/WAU declining over 2 weeks
+      - Feature adoption stagnation: No new features used in 30 days
+      - Support sentiment: Negative CSAT in last 3 tickets
+      - Login frequency drop: From daily to weekly
+
+      Set up automated alerts when leading indicators decline.
+      Intervene early, not at cancellation
+
+  - name: Expansion Triggers
+    description: Identify behavioral signals that indicate expansion readiness
+    when: Designing expansion playbooks and upsell motions
+    example: |
+      Expansion triggers (automated detection):
+      - Approaching plan limits (80% of seats, API calls, storage)
+      - Power user behavior (daily usage, all features adopted)
+      - Team growth (adding users, inviting colleagues)
+      - Cross-sell signals (using integrations, exporting data)
+
+      Playbook:
+      1. Automated in-app nudge showing value of upgrade
+      2. If no action in 7 days, CSM outreach with ROI case
+      3. Offer trial of premium features
+
+      Expansion should feel inevitable, not pushy
+
+anti_patterns:
+  - name: Onboarding as Checklist
+    description: Long list of tasks with no clear path to value
+    why: |
+      15-step setup wizards overwhelm users. They give up before reaching value.
+      Completion rates plummet. Most users never activate
+    instead: |
+      Minimum viable onboarding to first value moment. Get users to "aha" in minutes,
+      not hours. Use progressive disclosure - teach advanced features after activation
+
+  - name: Vanity Health Scores
+    description: Health scores that look good but don't predict churn
+    why: |
+      Score based on logins only ignores actual value delivery. Gives false confidence.
+      Real churn signals missed. "Healthy" customers churn, surprise ensues
+    instead: |
+      Validate health scores against actual churn data. Iterate formula until predictive.
+      Include usage depth, not just frequency. Weight by correlation with retention
+
+  - name: Spray and Pray Outreach
+    description: Mass emails that ignore customer context and lifecycle stage
+    why: |
+      Same monthly newsletter to churning and expanding customers. Irrelevant noise.
+      Users trained to ignore your emails. Unsubscribe rates increase
+    instead: |
+      Segment by lifecycle stage and health score. Different messages for different
+      states. Onboarding tips for new users, expansion offers for power users, win-back
+      for dormant. Make every message relevant
+
+  - name: Saving at Cancellation
+    description: Only trying to retain at the moment of churn decision
+    why: |
+      Too late. Trust already eroded. Discount offers signal you were overcharging.
+      Attracts price-sensitive customers who will churn again
+    instead: |
+      Intervene early when health score declines. Build relationship before crisis.
+      Proactive check-ins when usage drops. Solve problems before they become churn
+
+  - name: Ignoring Power Users
+    description: All focus on at-risk customers, none on advocates
+    why: |
+      Missed expansion revenue from happiest customers. Missed advocacy and referrals.
+      Missed word-of-mouth growth. Squeaky wheel gets oil, happy users get ignored
+    instead: |
+      Build advocacy program for happy customers. Make it easy to refer, review, share.
+      Expansion conversations with power users. Feature beta access. Community programs
+
+  - name: Generic Onboarding
+    description: Same onboarding flow for all users regardless of use case or experience
+    why: |
+      Enterprise IT admin and solo freelancer get same experience. Wastes time,
+      misses context. Generic advice doesn't help anyone
+    instead: |
+      Segment onboarding by role, company size, use case. Ask 1-2 questions upfront,
+      customize flow. Show enterprise features to enterprise users, simplicity to solo.
+      Personalization drives activation
+
+frameworks:
+  - name: Customer Lifecycle Stages
+    when_to_use: Designing customer journey
+    structure:
+      - "Onboarding: First 7-30 days, focus on activation"
+      - "Adoption: Months 1-3, feature expansion"
+      - "Value Realization: Months 3-6, proving ROI"
+      - "Expansion: Months 6+, growth and advocacy"
+      - "Renewal: Annual milestone, re-validation"
+
+  - name: Health Score Components
+    when_to_use: Building predictive health score
+    structure:
+      - "Product usage: DAU/WAU, feature adoption, depth of use"
+      - "Support health: Ticket volume, sentiment, response satisfaction"
+      - "Relationship: Meeting cadence, stakeholder engagement"
+      - "Business fit: Growth trajectory, use case fit"
+      - "Risk signals: Payment issues, competitor mentions, complaints"
+    notes: Weight by correlation with actual churn data
+
+  - name: Intervention Playbook
+    when_to_use: Responding to health score drops
+    structure:
+      - "Green (80-100): Expansion focus, advocacy asks"
+      - "Yellow (60-79): Proactive check-in, address concerns"
+      - "Orange (40-59): Executive outreach, recovery plan"
+      - "Red (0-39): All-hands, executive escalation, save attempt"
+
+  - name: Onboarding Metrics
+    when_to_use: Measuring onboarding effectiveness
+    structure:
+      - "Activation rate: Percent reaching key value moment"
+      - "Time to value: Duration from signup to activation"
+      - "Onboarding completion: Percent finishing key steps"
+      - "Day 1/7/30 retention: Percent returning"
+
+handoffs:
+  receives_from:
+    - skill: product-strategy
+      receives: Activation definitions and value moments
+    - skill: email-systems
+      receives: Automated sequence infrastructure
+
+  hands_to:
+    - skill: growth-strategy
+      provides: Retention insights for acquisition targeting
+    - skill: analytics-architecture
+      provides: Health score and lifecycle event definitions
+
+resources:
+  essential:
+    - title: Customer Success by Nick Mehta
+      type: book
+      why: Foundational text on customer success discipline
+    - title: Gainsight
+      url: https://www.gainsight.com/resources
+      type: resource
+      why: Industry-leading CS resources
+
+  recommended:
+    - title: ChurnZero Blog
+      url: https://churnzero.com/blog
+      type: blog
+      why: Practical CS tactics and benchmarks

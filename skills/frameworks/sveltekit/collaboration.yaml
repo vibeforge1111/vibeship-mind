@@ -1,0 +1,200 @@
+id: sveltekit-collaboration
+skill: sveltekit
+version: 1.0.0
+
+# ============================================================================
+# RECEIVES FROM (Who delegates TO this skill)
+# ============================================================================
+receives_from:
+  - skill: frontend
+    context: "Frontend needs SvelteKit implementation"
+    receives:
+      - "Feature requirements"
+      - "Component designs"
+      - "Interaction patterns"
+    provides: "SvelteKit components and pages"
+
+  - skill: product-strategy
+    context: "Product needs SvelteKit app"
+    receives:
+      - "Product requirements"
+      - "Feature specs"
+      - "User flows"
+    provides: "SvelteKit application"
+
+  - skill: ui-design
+    context: "Design needs SvelteKit execution"
+    receives:
+      - "Design specs"
+      - "Component library"
+      - "Responsive layouts"
+    provides: "Implemented UI"
+
+# ============================================================================
+# DELEGATION TRIGGERS
+# ============================================================================
+delegation_triggers:
+  - trigger: "database|supabase|prisma|drizzle|data"
+    delegate_to: supabase-backend
+    pattern: sequential
+    context: "SvelteKit needs database"
+    handoff_data:
+      - "Data requirements"
+      - "Schema needs"
+      - "RLS policies"
+      - "SvelteKit uses +page.server.ts for database queries"
+    receive: "Database layer"
+
+  - trigger: "style|css|tailwind|design"
+    delegate_to: tailwind-ui
+    pattern: parallel
+    context: "SvelteKit needs styling"
+    handoff_data:
+      - "Component styles"
+      - "Theme requirements"
+      - "Dark mode"
+      - "Use class: directive in Svelte 5 for dynamic classes"
+    receive: "Tailwind styles"
+
+  - trigger: "deploy|vercel|netlify|cloudflare|adapter|hosting"
+    delegate_to: vercel-deployment
+    pattern: sequential
+    context: "SvelteKit needs deployment"
+    handoff_data:
+      - "Adapter config"
+      - "Environment vars"
+      - "Build settings"
+      - "SvelteKit requires an adapter for each platform"
+    receive: "Deployment config"
+
+  - trigger: "type|typescript|types"
+    delegate_to: typescript-strict
+    pattern: parallel
+    context: "SvelteKit needs types"
+    handoff_data:
+      - "Component types"
+      - "Props definitions"
+      - "Store types"
+    receive: "Type definitions"
+
+  - trigger: "auth|authentication|login|session"
+    delegate_to: nextjs-supabase-auth
+    pattern: sequential
+    context: "SvelteKit needs authentication"
+    handoff_data:
+      - "Use hooks.server.ts for session checking"
+      - "Store user in event.locals"
+      - "Auth checks MUST be in +page.server.ts"
+    receive: "Auth implementation"
+
+  - trigger: "payments|stripe|subscriptions"
+    delegate_to: stripe-integration
+    pattern: sequential
+    context: "SvelteKit needs payments"
+    handoff_data:
+      - "Stripe webhooks go in +server.ts"
+      - "Form actions work for checkout initiation"
+      - "Use request.text() for signature verification"
+    receive: "Payment integration"
+
+# ============================================================================
+# FEEDBACK LOOPS
+# ============================================================================
+feedback_loops:
+  receives_feedback_from:
+    - skill: supabase-backend
+      signal: "Database constraints"
+      action: "Adjust data fetching"
+
+    - skill: vercel-deployment
+      signal: "Build issues"
+      action: "Fix adapter config"
+
+    - skill: typescript-strict
+      signal: "Type errors"
+      action: "Fix component types"
+
+  sends_feedback_to:
+    - skill: frontend
+      signal: "SvelteKit patterns"
+      action: "Inform architecture"
+
+    - skill: ui-design
+      signal: "Component constraints"
+      action: "Adjust designs"
+
+    - skill: product-strategy
+      signal: "Implementation reality"
+      action: "Scope features"
+
+# ============================================================================
+# CROSS-DOMAIN INSIGHTS
+# ============================================================================
+cross_domain_insights:
+  - domain: React Developers
+    insight: |
+      Key mental model shifts from React:
+      - No useState/useEffect → Use $state and $effect runes
+      - No Context → Use $page.data from parent layouts
+      - No useRouter → Use goto() and $page from $app/stores
+      - No API routes for forms → Use form actions with use:enhance
+      - No getServerSideProps → Use +page.server.ts load functions
+    applies_when: "Helping React developers learn SvelteKit"
+
+  - domain: Next.js Developers
+    insight: |
+      Key differences from Next.js:
+      - getServerSideProps → +page.server.ts load function
+      - API routes → +server.ts files OR form actions
+      - Middleware → hooks.server.ts handle function
+      - 'use server' → Not needed, +page.server.ts is always server
+      - useRouter → goto() from $app/navigation
+    applies_when: "Helping Next.js developers learn SvelteKit"
+
+  - domain: Reactive Programming
+    insight: |
+      Reactive experts know state:
+      - Signals are primitives
+      - Derivations avoid sync
+      - Effects handle side effects
+      - Reactivity should be explicit
+      Svelte 5 runes follow reactive principles.
+    applies_when: "Managing component state"
+
+# ============================================================================
+# COMMON COMBINATIONS
+# ============================================================================
+common_combinations:
+  - name: SvelteKit Full Stack
+    skills:
+      - sveltekit
+      - supabase-backend
+      - tailwind-ui
+      - typescript-strict
+    workflow: |
+      1. Database setup (supabase-backend)
+      2. Type generation (typescript-strict)
+      3. Component development (sveltekit)
+      4. Styling (tailwind-ui)
+
+  - name: SvelteKit SaaS
+    skills:
+      - sveltekit
+      - supabase-backend
+      - tailwind-ui
+      - stripe-integration
+    workflow: |
+      1. Auth in hooks.server.ts (sveltekit)
+      2. Database with RLS (supabase-backend)
+      3. Payments via Stripe (stripe-integration)
+      4. UI with Tailwind (tailwind-ui)
+
+  - name: SvelteKit Deploy
+    skills:
+      - sveltekit
+      - vercel-deployment
+      - devops
+    workflow: |
+      1. Adapter selection (sveltekit)
+      2. Build config (sveltekit)
+      3. Deploy setup (vercel-deployment)

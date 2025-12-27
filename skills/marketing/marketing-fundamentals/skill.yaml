@@ -1,0 +1,486 @@
+# Marketing Fundamentals Skill
+# Core marketing principles for startups - learned from $50M+ in burned budget
+
+id: marketing-fundamentals
+name: Marketing Fundamentals
+category: marketing
+description: |
+  Core marketing principles for startups. Covers positioning, messaging,
+  channels, and growth. Focus on what works for resource-constrained teams.
+
+  Battle scars included: I've watched startups burn $1M on Instagram ads because
+  "that's where competitors are", seen "growth hacks" destroy brand trust overnight,
+  and advised founders who scaled marketing before finding product-market fit.
+
+  Contrarian take: Most startup marketing advice is backwards. The best marketing
+  doesn't feel like marketing. Distribution comes before product features. And
+  your first 100 customers should never come from paid ads.
+
+triggers:
+  - marketing strategy
+  - positioning
+  - messaging
+  - customer acquisition
+  - growth channels
+  - brand
+  - go-to-market
+
+principles:
+  - name: Positioning First
+    description: |
+      Before tactics, nail positioning. Who is it for? What category?
+      How is it different? What is the proof? Positioning drives everything.
+      Bad positioning cannot be fixed by better tactics.
+
+      Battle scar: Advised a startup that spent $200k on "brand awareness"
+      campaigns without clear positioning. Got millions of impressions.
+      Zero customers. Why? Nobody understood what they did or why it mattered.
+
+      Positioning is the foundation. Everything else is decoration.
+    examples:
+      - Define target customer precisely (not "small businesses")
+      - Choose category strategically (where you can win)
+      - Articulate differentiation clearly (vs what they use TODAY)
+      - Support claims with evidence (numbers > adjectives)
+
+  - name: Do Things That Do Not Scale
+    description: |
+      Early marketing is manual. Handwritten emails. Personal outreach.
+      One-on-one demos. Things that teach you about customers before
+      scaling. Premature scaling wastes money on wrong messages.
+
+      Contrarian take: If your first 100 customers come from paid ads,
+      you learned nothing valuable. You don't know their real language,
+      their actual objections, or what alternatives they considered.
+      You just know they clicked an ad.
+
+      Manual work teaches you what automation hides.
+    examples:
+      - Personal outreach to first 100 customers (literally you, not a VA)
+      - Manual onboarding to learn friction points (watch them use it)
+      - Direct conversations before surveys (ask why, not just what)
+      - Quality over quantity early (10 great customers > 100 mediocre)
+
+  - name: One Channel Deeply
+    description: |
+      Startups win by going deep on one channel, not shallow on many.
+      Master one acquisition channel before diversifying. Most successful
+      startups found one channel that worked and scaled it.
+
+      Myth I keep hearing: "We need to be everywhere our customers are."
+      Reality: Your customers are everywhere. You have limited time/money.
+      Being mediocre on 5 channels gets you nothing. Being great on 1 channel
+      gets you customers.
+
+      HubSpot: Blogged for years before anything else. Became THE inbound marketing
+      authority. That one channel built a $30B company.
+    examples:
+      - Choose channel that matches audience behavior (where they learn, not socialize)
+      - Develop expertise before switching (6+ months minimum)
+      - Measure true CAC and LTV per channel (fully loaded costs)
+      - Scale what works before experimenting (2x spend before adding channels)
+
+  - name: Message Market Fit
+    description: |
+      The words you use matter as much as the product. Test messaging
+      continuously. The right message can 10x conversion. Message market
+      fit is as important as product market fit.
+    examples:
+      - Test headlines and value props
+      - Use customer language not internal language
+      - A/B test continuously
+      - Measure comprehension not just clicks
+
+  - name: Distribution is Product
+    description: |
+      How people find you is part of the product. Build distribution
+      into the product itself. Viral loops, integrations, content,
+      community. Distribution afterthought means distribution failure.
+    examples:
+      - Design sharing into product
+      - Build where customers already are
+      - Create content customers want to share
+      - Make referrals natural not forced
+
+patterns:
+  - name: Jobs-To-Be-Done Positioning
+    description: Position around the job customers hire your product to do
+    when: Defining positioning and messaging for a new product or market
+    example: |
+      Bad positioning: "We're a project management tool"
+      JTBD positioning: "We help remote teams stay aligned without meetings"
+
+      The job: Stay aligned as a remote team
+      Alternative solutions: Daily standups, Slack, email, spreadsheets
+      Why this wins: Async, organized, doesn't require synchronous time
+
+      Position against the job, not just competitor products.
+
+  - name: The Bullseye Framework
+    description: Systematic process for finding your one scalable channel
+    when: Early-stage company needs to identify best acquisition channel
+    example: |
+      Step 1: Brainstorm all possible channels (20+)
+      Step 2: Rank by potential reach + cost + fit
+      Step 3: Test top 5 with cheap experiments
+      Step 4: Double down on the one that shows traction
+      Step 5: Optimize until diminishing returns, then repeat
+
+      Example test: $500 budget, 2 weeks, measure CAC and conversion
+
+  - name: Conversion Funnel Optimization
+    description: Systematically improve each stage of customer journey
+    when: You have traffic but conversion rates are below benchmark
+    example: |
+      Awareness → Interest → Consideration → Purchase → Retention
+
+      Measure drop-off at each stage:
+      - 1000 visitors → 200 signups (20% conversion)
+      - 200 signups → 40 trials (20% activation)
+      - 40 trials → 8 paid (20% conversion)
+
+      Focus on biggest bottleneck first (usually activation).
+      10% improvement at each stage = 61% more revenue.
+
+  - name: Customer Development Interviews
+    description: Validate positioning and messaging before spending on marketing
+    when: Before launching campaigns or scaling spend
+    example: |
+      Interview 10-20 target customers:
+      - What problem were you trying to solve?
+      - What alternatives did you consider?
+      - What made you choose this solution?
+      - How do you describe this to colleagues?
+
+      Extract: Problem framing, comparison set, decision criteria, language.
+      Use their exact words in marketing copy. Tests 10x better.
+
+  - name: North Star Metric Selection
+    description: Choose one metric that represents value delivery
+    when: Setting up measurement framework for growth team
+    example: |
+      Not revenue (lagging). Not signups (vanity). The action that predicts retention.
+
+      Spotify: Time spent listening
+      Airbnb: Nights booked
+      Slack: Messages sent by team
+      Medium: Total time reading
+
+      All growth initiatives should move the North Star.
+
+  - name: Cohort Retention Analysis
+    description: Track user groups over time to measure product-market fit
+    when: Understanding if you have retention issues or growth issues
+    example: |
+      Week 0: 100 signups
+      Week 1: 60 return (60% retained)
+      Week 4: 40 return (40% retained)
+      Week 12: 35 return (35% retained)
+
+      Good: Retention curve flattens (35% stick long-term)
+      Bad: Retention continues declining (leaky bucket)
+
+      Fix retention before scaling acquisition.
+
+  - name: First 100 Users Playbook
+    description: Manual, unscalable tactics to find and learn from early customers
+    when: Pre-PMF, need to find initial users and validate problem
+    example: |
+      The first 100 users should NEVER come from paid ads. Go where they are:
+
+      1. Direct Outreach (Days 1-14):
+         - Find 50 people on LinkedIn with target job title
+         - Send personalized messages (no templates)
+         - Offer free access for feedback
+         - Book 30-minute calls
+
+      2. Community Infiltration (Days 7-30):
+         - Join 3-5 communities where they hang out
+         - Answer questions (don't pitch)
+         - Share relevant insights
+         - DM people with thoughtful help
+
+      3. Content Seeding (Days 14-60):
+         - Write about the problem (not your solution)
+         - Post where target customer reads
+         - Collect email addresses of engaged readers
+         - Personal follow-up to each one
+
+      Target: 10 customers by week 2, 50 by week 6, 100 by week 12.
+      Metric that matters: Retention, not signups.
+
+      Trade-off: Time-intensive, founder-only work. But you learn exactly
+      what they need, how they talk, and why they'd pay. Scale comes after.
+
+  - name: Channel Stacking Strategy
+    description: Sequencing channels to compound growth instead of competing
+    when: One channel working, ready to add second without diluting focus
+    example: |
+      Wrong: Run content + paid + community + partnerships simultaneously
+      Right: Stack channels that reinforce each other
+
+      Sequence example:
+      1. Content/SEO (Months 1-6):
+         - Ranks for problem keywords
+         - Builds email list
+         - Demonstrates expertise
+
+      2. Add Email (Months 4-12):
+         - Leverages content readership
+         - Nurtures leads from SEO
+         - Owned channel, not rented
+
+      3. Add Community (Months 9-18):
+         - Readers become members
+         - Members create content
+         - Compound effect begins
+
+      4. Add Paid (Months 15+):
+         - Use organic learnings
+         - Retarget content readers
+         - Scale what works organically
+
+      Key: Each channel feeds the next. Content → Email → Community → Paid.
+      Don't add new channel until current one has clear playbook.
+
+      Anti-pattern: Running all channels from day one, none working well.
+
+  - name: Positioning Before Marketing
+    description: Do positioning work before spending any marketing dollars
+    when: New product, entering new market, or current marketing not working
+    example: |
+      Most startups skip positioning and go straight to tactics. Then wonder
+      why nothing works. Positioning is foundation. Tactics are the house.
+
+      April Dunford Positioning Framework (do this first):
+
+      1. Competitive Alternatives:
+         What do customers use today? (Not just direct competitors)
+         Example: "Spreadsheets, email, and weekly standups"
+
+      2. Unique Attributes:
+         What can you do that alternatives can't?
+         Example: "Async video updates with automatic summaries"
+
+      3. Value (Theme):
+         What's the outcome they get?
+         Example: "Team alignment without meeting overload"
+
+      4. Best-Fit Customers:
+         Who cares most about this value?
+         Example: "Remote teams with 5-50 people, distributed timezones"
+
+      5. Market Category:
+         What mental bucket does this fit in?
+         Example: "Async team communication" not "Project management"
+
+      Then test messaging with 10 target customers. If they can't explain what
+      you do in their own words, positioning isn't clear yet.
+
+      Only after positioning works: run campaigns, create content, build brand.
+
+  - name: Distribution-First Product Design
+    description: Build distribution into the product itself, not as afterthought
+    when: Designing new features or products, especially in crowded markets
+    example: |
+      Traditional: Build product → figure out marketing → hope it works
+      Distribution-first: Build product that markets itself
+
+      Examples from successful products:
+
+      Loom:
+      - Every video is a shareable link
+      - Thumbnail shows sender's face (curiosity)
+      - Viewers see "Make your own" CTA
+      - Product usage = distribution
+
+      Notion:
+      - Templates are shareable
+      - Pages can be public
+      - Workspace sharing invites teammates
+      - Collaboration = growth loop
+
+      Superhuman:
+      - Invite-only (exclusivity)
+      - User tweets about getting in
+      - Email signature "Sent from Superhuman"
+      - Status symbol = viral loop
+
+      Design questions to ask:
+      1. Does using this product expose it to others?
+      2. Is there a shareable output?
+      3. Do users gain status from using it?
+      4. Does value increase with more users?
+
+      If answers are all no, distribution will be hard and expensive.
+      Redesign for virality before launching.
+
+anti_patterns:
+  - name: Spray and Pray
+    description: Trying every channel superficially instead of mastering one
+    indicators:
+      - Many channels, none working
+      - No clear winner after months
+      - Spreading budget thin
+    instead: Pick one channel, go deep, measure properly
+
+  - name: Brand Before Traction
+    description: Investing in brand campaigns before product-market fit
+    indicators:
+      - Brand spend without conversion tracking
+      - Awareness campaigns pre-PMF
+      - Logo redesigns instead of customer research
+    instead: Focus on direct response until PMF proven
+
+  - name: Build It And They Will Come
+    description: Assuming good product markets itself
+    indicators:
+      - No marketing plan
+      - Waiting for organic growth
+      - Product team doing marketing part-time
+    instead: Marketing is day one, not after launch
+
+  - name: Premature Scaling
+    description: Scaling marketing before message and channel validated
+    indicators:
+      - High spend, low conversion
+      - Scaling what has not been proven
+      - Hiring before playbook
+    instead: Prove unit economics at small scale first
+
+  - name: Copying Competitors
+    description: Using competitor tactics without understanding context
+    indicators:
+      - Same channels as competitors
+      - Similar messaging
+      - Following industry standard approach
+    instead: Find your unique angle and channel
+
+guidance:
+  vibe-coder: |
+    Marketing is how people find your product. But here's what nobody tells you:
+    the best marketing doesn't feel like marketing at all.
+
+    Before spending a dollar on ads:
+    1. Who exactly is this for? Be specific. "Everyone" is nobody.
+    2. What problem does it solve? In THEIR words, not yours.
+    3. Where do these people hang out online? Go there.
+    4. What would make them want to share this? Build that in.
+
+    Your first 10 customers should come from you personally reaching out.
+    Not ads. Not "launching on Product Hunt". Personal messages to people
+    with the problem you solve. If you can't get 10 people interested with
+    personal outreach, paid ads will just burn money faster.
+
+    The biggest mistake? Thinking marketing is what you do after building.
+    Marketing is figuring out who wants this and why. Do that first.
+
+  builder: |
+    Here's the truth about startup marketing: positioning beats tactics every time.
+
+    Do this BEFORE any campaigns:
+    1. Target customer: Who gets 10x more value than anyone else?
+    2. Category: What mental bucket? Choose strategically.
+    3. Differentiation: Why this over what they use today (not just competitors)?
+    4. Proof: What evidence? Testimonials beat claims.
+
+    Pick ONE channel to master. Seriously, one. Most successful startups:
+    - Content/SEO (slow build, compounds over years)
+    - Community (if your audience already gathers somewhere)
+    - Direct outreach (always works early, teaches you their language)
+    - Paid (only if LTV > 3x CAC, test small first)
+
+    Common mistake: trying all channels because "we need to be everywhere".
+    No. Be somewhere first. Master it. Then expand.
+
+  developer: |
+    Technical founders: I've seen brilliant engineers build incredible products
+    that nobody knows about. Don't be that person.
+
+    Controversial opinion: Distribution > Product in most markets.
+    Your competitors aren't necessarily better. They're just better at marketing.
+
+    Build distribution INTO the product itself:
+    - Shareable outputs (Loom's video links, Notion's public pages)
+    - API/integrations where users already work
+    - Content that ranks for their problems (not "our product")
+    - Community around problem space (not just your tool)
+
+    Marketing isn't fuzzy. It's measurable:
+    - CAC (Customer Acquisition Cost): What you pay to get one customer
+    - LTV (Lifetime Value): What one customer is worth
+    - Payback period: How long to recover CAC
+    - Channel efficiency: CAC by source
+
+    If CAC > LTV, your business doesn't work. Fix product or positioning first.
+
+  expert: |
+    You know this already, but here's the checklist for when you're moving fast:
+
+    Positioning (April Dunford framework):
+    - Competitive alternatives (what do they use TODAY, not competitors)
+    - Unique attributes (what can you do they can't)
+    - Value theme (outcome, not feature)
+    - Best-fit customers (who cares most about this value)
+    - Market category (choose strategically for favorable comparisons)
+
+    Channel prioritization:
+    - Where does ICP spend attention? (not where you want them to be)
+    - What's the CAC ceiling given LTV? (math first, tactics second)
+    - What's defensible over time? (SEO compounds, paid doesn't)
+    - Can you own this channel? (be top 3 or don't bother)
+
+    Message testing framework:
+    - Headlines: problem → solution → outcome (test all three)
+    - Social proof: logos vs testimonials vs metrics (segment-dependent)
+    - CTA: action clarity vs friction (remove steps, add urgency)
+
+    Only scale proven playbooks. If it doesn't work at $1k, it won't work at $100k.
+    Document everything because you'll need to hire eventually.
+
+    Battle scar: I've seen teams waste 6 months "testing channels" with no hypothesis,
+    no real budget, no clear success metrics. That's not testing, that's guessing.
+    Test with real money ($500+ per channel), real commitment (2+ weeks), real metrics
+    (CAC, conversion, not just "impressions").
+
+handoffs:
+  - trigger: campaign|go-to-market|distribution|advertising|paid|marketing execution
+    to: marketing
+    priority: 1
+    context_template: "Fundamentals understood. Ready for marketing strategy: {user_goal}"
+
+  - trigger: content plan|editorial calendar|content strategy|what to write
+    to: content-strategy
+    priority: 1
+    context_template: "Fundamentals covered. Need content planning: {user_goal}"
+
+  - trigger: write copy|headline|CTA|tagline|landing page copy|email copy
+    to: copywriting
+    priority: 1
+    context_template: "Marketing basics done. Need copy: {user_goal}"
+
+  - trigger: write blog|article|long-form|tutorial|thought leadership
+    to: blog-writing
+    priority: 1
+    context_template: "Marketing context set. Need blog content: {user_goal}"
+
+  - trigger: SEO|keywords|organic traffic|search optimization
+    to: seo
+    priority: 2
+    context_template: "Marketing basics covered. Need SEO strategy: {user_goal}"
+
+  - trigger: viral|shareable|growth loop|referral|word of mouth
+    to: viral-marketing
+    priority: 2
+    context_template: "Marketing fundamentals done. Need viral mechanics: {user_goal}"
+
+  - trigger: creative|video|motion|visual assets|ad creative|production
+    to: creative-communications
+    priority: 2
+    context_template: "Marketing basics set. Need creative production: {user_goal}"
+
+sources:
+  - Obviously Awesome by April Dunford (positioning)
+  - Traction by Gabriel Weinberg (channels)
+  - Do Things That Dont Scale by Paul Graham
+  - Zero to One chapter on distribution

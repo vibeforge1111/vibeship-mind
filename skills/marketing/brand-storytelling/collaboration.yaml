@@ -1,0 +1,700 @@
+id: brand-storytelling-collaboration
+skill: brand-storytelling
+version: 1.0.0
+
+# ============================================================================
+# PREREQUISITES
+# ============================================================================
+prerequisites:
+  required:
+    - name: Writing/Drafting Tool
+      description: Where stories are drafted and refined
+      options:
+        - tool: Claude/GPT-4
+          best_for: Story drafting, variation generation
+          cost: API/subscription
+        - tool: Notion
+          best_for: Collaborative story development
+          cost: Free/subscription
+        - tool: Google Docs
+          best_for: Collaborative editing
+          cost: Free
+
+    - name: Story Documentation
+      description: Where story bible lives
+      options:
+        - Notion (collaborative, rich media)
+        - Confluence (enterprise)
+        - GitBook (version-controlled)
+
+  recommended:
+    - name: Customer Research Tools
+      options:
+        - Dovetail (research repository)
+        - User Interviews (recruitment + scheduling)
+        - Grain (call recording + analysis)
+        - Typeform (story collection surveys)
+      reason: Real customer stories beat invented ones
+
+    - name: Visual Storyboarding
+      options:
+        - Miro (collaborative boards)
+        - Figma (design-integrated)
+        - Storyboard That (quick storyboards)
+      reason: Visual story planning improves execution
+
+    - name: Content Performance
+      options:
+        - Google Analytics (content engagement)
+        - Hotjar (engagement heatmaps)
+        - Social analytics (story resonance)
+      reason: Data on what stories resonate
+
+# ============================================================================
+# MCP TOOL CONFIGURATIONS
+# ============================================================================
+mcp_tools:
+  # Claude for Story Development
+  - name: story-development
+    description: AI-assisted story crafting
+    install: Built into Claude Code
+    capabilities:
+      - narrative-structure
+      - story-variation
+      - emotional-arc-design
+      - format-adaptation
+    example_usage: |
+      Use Claude for storytelling:
+      - Draft origin stories from bullet points
+      - Generate story variations for different audiences
+      - Adapt stories to different formats
+      - Review for story structure
+
+  # MCP Memory for Story Continuity
+  - name: mcp-memory
+    description: Track story bible and narrative consistency
+    install: "@modelcontextprotocol/server-memory"
+    config:
+      namespace: "brand-storytelling"
+    example_usage: |
+      # Store core narrative
+      await mcp.memory.store({
+        key: "brand-origin-story",
+        value: coreNarrative,
+        metadata: { type: "canonical", version: "1.0" }
+      });
+
+      # Check for consistency
+      const existing = await mcp.memory.retrieve("brand-origin-story");
+      if (hasConflicts(newStory, existing)) {
+        warn("Story conflicts with documented narrative");
+      }
+
+  # MCP Filesystem for Story Bible Management
+  - name: mcp-filesystem
+    description: Read/write story bible and customer stories
+    install: "@modelcontextprotocol/server-filesystem"
+    allowed_directories:
+      - "./content/stories"
+      - "./brand/story-bible"
+    example_usage: |
+      # Read story bible
+      const bible = await mcp.fs.readFile("./brand/story-bible/core.md");
+
+      # Save customer story
+      await mcp.fs.writeFile(
+        `./content/stories/${customerId}.md`,
+        customerStoryMarkdown
+      );
+
+  # MCP Brave Search for Story Research
+  - name: mcp-brave-search
+    description: Research similar brand stories and competitive narratives
+    install: "@modelcontextprotocol/server-brave-search"
+    example_usage: |
+      # Research competitor storytelling
+      const results = await mcp.search.query(
+        "[competitor] origin story OR brand narrative"
+      );
+
+      # Find story trends
+      const trends = await mcp.search.query(
+        "brand storytelling trends 2024"
+      );
+
+  # MCP Google Drive for Story Collaboration
+  - name: mcp-google-drive
+    description: Collaborate on stories with team in Google Docs
+    install: "@modelcontextprotocol/server-gdrive"
+    example_usage: |
+      # Fetch story drafts
+      const drafts = await mcp.drive.listFiles({
+        folder: "Brand Stories",
+        mimeType: "application/vnd.google-apps.document"
+      });
+
+      # Update story bible
+      await mcp.drive.updateFile(storyBibleId, {
+        content: updatedBible
+      });
+
+  # Notion API for Story Bible
+  - name: notion-story-bible
+    description: Manage story documentation
+    config:
+      notes: |
+        Notion API for story bible management:
+
+        # Create story entries
+        POST https://api.notion.com/v1/pages
+        Authorization: Bearer ${NOTION_API_KEY}
+
+        # Query story database
+        POST https://api.notion.com/v1/databases/{db_id}/query
+
+        SDK: @notionhq/client
+
+  # Interview/Research Tools
+  - name: research-integration
+    description: Connect to customer research
+    config:
+      notes: |
+        Integrate with research tools:
+
+        Dovetail API:
+        - Export insights and quotes
+        - Tag stories by theme
+        - Connect evidence to narratives
+
+        Grain:
+        - Extract video quotes
+        - Timestamp key moments
+        - Build story evidence library
+
+# ============================================================================
+# API INTEGRATIONS
+# ============================================================================
+api_integrations:
+  claude_storytelling:
+    usage: Built-in
+    example: |
+      # Story drafting with Claude
+
+      ORIGIN STORY PROMPT:
+      "Based on these facts about our founding:
+       - Founded in 2019 by Sarah Chen
+       - She was frustrated with X problem
+       - First customer was a small business
+       - Grew to 1000 customers in year one
+
+       Write an origin story following the Hero's Journey structure.
+       Make Sarah the initial hero, but transition to customers as heroes.
+       Include specific emotional moments.
+       Keep it under 500 words."
+
+      CUSTOMER STORY PROMPT:
+      "Transform this testimonial into a narrative:
+       [Raw testimonial]
+
+       Structure as:
+       1. Before: Their situation and pain
+       2. Discovery: How they found us
+       3. Journey: Implementation challenges
+       4. Transformation: Results and feelings
+
+       Add emotional texture while keeping facts accurate."
+
+      STORY VARIATION PROMPT:
+      "Adapt this story for:
+       1. 30-second social version (emotional hook)
+       2. 2-minute video script (full arc)
+       3. Single tweet (essence only)
+       4. Case study intro (professional tone)
+
+       Maintain core narrative across all versions."
+
+  notion_api:
+    base_url: https://api.notion.com/v1
+    auth_header: "Authorization: Bearer ${NOTION_API_KEY}"
+    example: |
+      import { Client } from "@notionhq/client";
+
+      const notion = new Client({ auth: process.env.NOTION_API_KEY });
+
+      // Create story entry
+      const storyEntry = await notion.pages.create({
+        parent: { database_id: storyBibleDbId },
+        properties: {
+          "Title": { title: [{ text: { content: storyTitle } }] },
+          "Type": { select: { name: "Origin Story" } },
+          "Status": { select: { name: "Draft" } },
+          "Audience": { multi_select: [{ name: "Investors" }] }
+        },
+        children: [
+          {
+            object: "block",
+            type: "heading_2",
+            heading_2: { rich_text: [{ text: { content: "Core Narrative" } }] }
+          },
+          {
+            object: "block",
+            type: "paragraph",
+            paragraph: { rich_text: [{ text: { content: storyContent } }] }
+          }
+        ]
+      });
+
+  typeform_stories:
+    base_url: https://api.typeform.com
+    auth_header: "Authorization: Bearer ${TYPEFORM_TOKEN}"
+    example: |
+      // Collect customer stories via Typeform
+      const responses = await fetch(
+        `https://api.typeform.com/forms/${formId}/responses`,
+        {
+          headers: {
+            "Authorization": `Bearer ${process.env.TYPEFORM_TOKEN}`
+          }
+        }
+      );
+
+      // Extract story material from responses
+      const stories = await responses.json();
+      const storyMaterial = stories.items.map(item => ({
+        customerName: extractField(item, "name"),
+        challenge: extractField(item, "challenge"),
+        journey: extractField(item, "journey"),
+        outcome: extractField(item, "outcome"),
+        quote: extractField(item, "testimonial")
+      }));
+
+# ============================================================================
+# DELEGATION TRIGGERS
+# ============================================================================
+delegation_triggers:
+  - trigger: "write|copy|execute"
+    delegate_to: copywriting
+    pattern: parallel
+    context: "Story framework defined, need written execution"
+    handoff_data:
+      - "Core narrative"
+      - "Target audience"
+      - "Tone and voice"
+      - "Format requirements"
+    receive: "Written story content"
+
+  - trigger: "script|video|film"
+    delegate_to: video-scriptwriting
+    pattern: sequential
+    context: "Story needs video script"
+    handoff_data:
+      - "Story structure"
+      - "Emotional arc"
+      - "Key scenes"
+      - "Duration target"
+    receive: "Video script"
+
+  - trigger: "produce|generate|video"
+    delegate_to: ai-video-generation
+    pattern: parallel
+    context: "Story script ready for production"
+    handoff_data:
+      - "Script"
+      - "Visual direction"
+      - "Style references"
+    receive: "Video content"
+
+  - trigger: "image|visual|illustration"
+    delegate_to: ai-image-generation
+    pattern: parallel
+    context: "Story needs visual elements"
+    handoff_data:
+      - "Story context"
+      - "Visual requirements"
+      - "Style direction"
+    receive: "Story visuals"
+
+  - trigger: "content plan|calendar|distribution"
+    delegate_to: content-strategy
+    pattern: sequential
+    context: "Story framework for content planning"
+    handoff_data:
+      - "Story assets"
+      - "Format variations"
+      - "Audience segments"
+    receive: "Content distribution plan"
+
+  - trigger: "brand strategy|positioning"
+    delegate_to: branding
+    pattern: sequential
+    context: "Story needs brand foundation"
+    handoff_data:
+      - "Current story concepts"
+      - "Audience insights"
+    receive: "Brand strategy foundation"
+
+  - trigger: "orchestrate|campaign|multi-channel"
+    delegate_to: ai-creative-director
+    pattern: sequential
+    context: "Story campaign needs orchestration"
+    handoff_data:
+      - "Core narrative"
+      - "Story variations"
+      - "Channel targets"
+    receive: "Campaign coordination"
+
+  - trigger: "ad|advertising|paid"
+    delegate_to: ai-ad-creative
+    pattern: parallel
+    context: "Story for advertising"
+    handoff_data:
+      - "Story elements"
+      - "Ad format requirements"
+      - "Performance goals"
+    receive: "Story-driven ads"
+
+# ============================================================================
+# CROSS-DOMAIN INSIGHTS
+# ============================================================================
+cross_domain_insights:
+  - domain: Screenwriting
+    insight: |
+      Screenwriters know story structure:
+      - Three-act structure (setup, confrontation, resolution)
+      - Character arc requirements
+      - Scene-level goals and obstacles
+      - "Show don't tell" as religion
+      Apply screenplay discipline to brand stories.
+    applies_when: "Structuring any brand narrative"
+
+  - domain: Journalism
+    insight: |
+      Journalists find stories everywhere:
+      - The human angle in any situation
+      - Five Ws (who, what, when, where, why)
+      - Lead with the most important thing
+      - Every fact needs attribution
+      Apply journalistic rigor to brand stories.
+    applies_when: "Mining customer stories and testimonials"
+
+  - domain: Psychology
+    insight: |
+      Psychologists understand narrative:
+      - Stories are how humans make meaning
+      - Emotional memory is stronger than factual
+      - People remember stories, forget facts
+      - Narrative creates identity
+      Understand why stories work on humans.
+    applies_when: "Designing for emotional impact"
+
+  - domain: Mythology
+    insight: |
+      Mythologists see universal patterns:
+      - Hero's Journey appears everywhere
+      - Archetypes resonate across cultures
+      - Transformation is the universal story
+      - Every culture has the same core stories
+      Tap into universal narrative patterns.
+    applies_when: "Creating resonant brand narratives"
+
+  - domain: Stand-up Comedy
+    insight: |
+      Comedians master story economy:
+      - Every word must earn its place
+      - Setup → Punch (expectation → surprise)
+      - Timing is everything
+      - Truth is the foundation of humor
+      Apply comedic economy to story telling.
+    applies_when: "Creating concise, punchy story versions"
+
+  - domain: Documentary Filmmaking
+    insight: |
+      Documentarians find truth in footage:
+      - 100 hours of interviews becomes 90 minutes of film
+      - The best moments are often unscripted
+      - B-roll (showing) beats talking heads (telling)
+      - Edit for emotional arc, not chronology
+      Apply documentary editing to story curation.
+    applies_when: "Extracting stories from customer interviews"
+
+  - domain: User Research
+    insight: |
+      Researchers uncover hidden narratives:
+      - Jobs-to-be-done framework reveals motivation
+      - "Five whys" digs past surface explanations
+      - Silence is where truth emerges
+      - Observe behavior, not just stated preferences
+      Apply research rigor to story discovery.
+    applies_when: "Mining authentic customer stories"
+
+  - domain: Improv Theater
+    insight: |
+      Improvisers build on "yes, and":
+      - Accept what your partner gives you (the truth)
+      - Add to it (the craft)
+      - Make your partner look good (customer as hero)
+      - The scene is greater than any individual
+      Apply improv principles to collaborative story development.
+    applies_when: "Co-creating stories with customers or team"
+
+  - domain: Data Journalism
+    insight: |
+      Data journalists marry numbers and narrative:
+      - Every data point represents a human
+      - Visualize patterns, narrate individuals
+      - Correlation sparks questions, causation needs proof
+      - Numbers validate story; story humanizes numbers
+      Apply data journalism to story-data integration.
+    applies_when: "Combining metrics with narrative"
+
+  - domain: Oral History
+    insight: |
+      Oral historians preserve authentic voice:
+      - Verbatim quotes capture personality
+      - Dialect and speech patterns reveal character
+      - Interruptions and corrections show emotion
+      - Memory gaps are part of the story
+      Apply oral history techniques to testimonial capture.
+    applies_when: "Recording and preserving customer voice"
+
+# ============================================================================
+# COMMON COMBINATIONS
+# ============================================================================
+common_combinations:
+  - name: Customer Story Development
+    skills:
+      - brand-storytelling
+      - copywriting
+      - ai-image-generation
+    workflow: |
+      1. Interview customer / collect testimonial
+      2. Structure as Hero's Journey (storytelling)
+      3. Write narrative versions (copywriting)
+      4. Create visual accompaniment (image-generation)
+      5. Adapt for multiple formats
+      6. Review for consistency
+
+  - name: Brand Film Production
+    skills:
+      - brand-storytelling
+      - video-scriptwriting
+      - ai-video-generation
+      - ai-audio-production
+    workflow: |
+      1. Develop story framework (storytelling)
+      2. Write video script (scriptwriting)
+      3. Produce visual content (video-generation)
+      4. Create soundtrack/VO (audio-production)
+      5. Final review and polish
+
+  - name: Campaign Storytelling
+    skills:
+      - brand-storytelling
+      - ai-creative-director
+      - content-strategy
+      - ai-ad-creative
+    workflow: |
+      1. Define core campaign story
+      2. Orchestrate multi-format production (creative-director)
+      3. Plan distribution (content-strategy)
+      4. Create ad variants (ad-creative)
+      5. Launch and measure
+
+  - name: Origin Story Suite
+    skills:
+      - brand-storytelling
+      - video-scriptwriting
+      - copywriting
+      - ai-image-generation
+    workflow: |
+      1. Develop origin story framework
+      2. Write long-form narrative version
+      3. Create video script
+      4. Generate visual assets
+      5. Produce multiple format versions
+
+# ============================================================================
+# STORY FRAMEWORKS
+# ============================================================================
+story_frameworks:
+  hero_journey:
+    stages:
+      - ordinary_world: "Hero's normal life"
+      - call_to_adventure: "Problem/opportunity emerges"
+      - refusal: "Initial hesitation"
+      - meeting_mentor: "Finding guide (brand)"
+      - crossing_threshold: "Committing to journey"
+      - tests_allies_enemies: "Challenges and learnings"
+      - ordeal: "Major challenge"
+      - reward: "Success achieved"
+      - return: "New normal established"
+
+  three_act_structure:
+    acts:
+      - setup: "Establish character, world, problem"
+      - confrontation: "Obstacles, attempts, escalation"
+      - resolution: "Climax and transformation"
+
+  before_after_bridge:
+    elements:
+      - before: "The world before transformation"
+      - after: "The world after transformation"
+      - bridge: "How we got from A to B"
+
+  story_spine:
+    template: |
+      Once upon a time, there was [hero].
+      Every day, [routine/status quo].
+      But one day, [inciting incident].
+      Because of that, [journey begins].
+      Because of that, [complications].
+      Until finally, [climax].
+      And ever since then, [new normal].
+
+# ============================================================================
+# ECOSYSTEM INTEGRATION
+# ============================================================================
+ecosystem_integration:
+  content_platforms:
+    - platform: HubSpot
+      integration: Story library in HubSpot CMS
+      benefit: Reuse story snippets across marketing assets
+      implementation: |
+        # Store stories as HubSpot modules
+        - Create "Customer Story" module type
+        - Include fields: hero_name, problem, transformation, proof
+        - Reuse in blog posts, landing pages, emails
+
+    - platform: Salesforce
+      integration: Customer story tracking in CRM
+      benefit: Sales team access to relevant customer stories
+      implementation: |
+        # Custom object: Customer_Story__c
+        - Link to Account and Opportunity
+        - Fields: story_stage, approval_status, use_cases
+        - Salesforce report: "Stories by Industry/Use Case"
+
+    - platform: Airtable
+      integration: Story production pipeline
+      benefit: Track stories from interview to publication
+      implementation: |
+        # Story Pipeline Base
+        - Table: Interviews (scheduled, completed, transcribed)
+        - Table: Story Drafts (writing, review, approved)
+        - Table: Published Stories (with metrics)
+        - Automation: Notify when story moves to next stage
+
+  ai_workflow_integration:
+    - tool: Make.com / Zapier
+      workflow: Automated story collection
+      trigger: New customer hits success milestone
+      actions:
+        - Send story request email
+        - Create Calendly link for interview
+        - Add to story pipeline in Airtable
+        - Notify content team in Slack
+
+    - tool: Grain.co
+      workflow: Interview to story extraction
+      trigger: Customer interview call ends
+      actions:
+        - Auto-transcribe recording
+        - AI extracts story elements (problem, stakes, transformation)
+        - Generate first draft in story framework
+        - Send to writer for refinement
+
+    - tool: Descript
+      workflow: Video testimonial to multi-format story
+      trigger: Customer records video testimonial
+      actions:
+        - Transcribe video
+        - Extract key quotes
+        - Generate short-form clips for social
+        - Create written case study from transcript
+
+  measurement_integration:
+    - metric: Story engagement rate
+      tools: ["Google Analytics", "HubSpot", "Mixpanel"]
+      what_to_track:
+        - Time on page for story content
+        - Scroll depth on case studies
+        - CTA clicks from story pages
+        - Story share rate on social
+
+    - metric: Story-influenced conversions
+      tools: ["HubSpot", "Salesforce", "Attribution tools"]
+      what_to_track:
+        - Leads who engaged with story content
+        - Deals with story touchpoints
+        - Revenue influenced by story campaigns
+
+    - metric: Story authenticity score
+      tools: ["Custom survey", "Hotjar", "User testing"]
+      what_to_track:
+        - "Does this feel authentic?" (1-5 scale)
+        - Qualitative feedback on believability
+        - Comparison to competitor stories
+
+  distribution_ecosystem:
+    - channel: Email marketing
+      story_format: 300-500 word narrative + CTA
+      platforms: ["HubSpot", "Mailchimp", "Customer.io"]
+      best_practices:
+        - Subject line with customer name or result number
+        - Story in first person when possible
+        - Single clear CTA related to transformation
+
+    - channel: Social media
+      story_format: Micro-stories (tweet threads, carousel posts)
+      platforms: ["Twitter", "LinkedIn", "Instagram"]
+      best_practices:
+        - Hook in first post/slide
+        - One story beat per post/slide
+        - End with transformation + proof
+
+    - channel: Sales enablement
+      story_format: One-page case study + talk track
+      platforms: ["Salesforce", "Gong", "Seismic"]
+      best_practices:
+        - Match story to prospect's use case
+        - Include objection handling from story
+        - Provide "tell this story" script for reps
+
+    - channel: Paid advertising
+      story_format: 6-second hook + landing page story
+      platforms: ["Facebook Ads", "Google Ads", "LinkedIn Ads"]
+      best_practices:
+        - Ad teases transformation or result number
+        - Landing page tells full story
+        - Retarget story engagers with related content
+
+# ============================================================================
+# VERSION COMPATIBILITY
+# ============================================================================
+version_compatibility:
+  ai_writing:
+    claude: "Opus, Sonnet for story work"
+    gpt4: "GPT-4, GPT-4o"
+    jasper: "Current"
+
+  documentation:
+    notion: "Current API"
+    confluence: "Cloud/Server"
+    gitbook: "Current"
+
+  research:
+    dovetail: "Current API"
+    grain: "Current"
+    typeform: "Current API"
+
+  notes: |
+    Storytelling is fundamentally human skill.
+    AI augments but doesn't replace story craft.
+
+    Key considerations:
+    - AI generates; humans curate
+    - Real customer stories beat invented ones
+    - Authenticity can't be automated
+    - Story structure is timeless
+
+    Current as of December 2024.

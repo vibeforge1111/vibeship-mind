@@ -1,0 +1,192 @@
+# Spawner Skills Registry
+# Defines skill packs and their contents
+
+version: "1.0.0"
+updated: "2025-12-27"
+
+# Categories in this repo
+categories:
+  - development
+  - data
+  - ai
+  - design
+  - frameworks
+  - marketing
+  - startup
+  - strategy
+  - communications
+  - integration
+  - product
+
+# Skill Packs
+# Each pack is a curated collection of skills for specific use cases
+
+packs:
+  # ============================================================================
+  # ESSENTIALS - Auto-installed on first use
+  # Core skills for building any app
+  # ============================================================================
+  essentials:
+    name: "Spawner Essentials"
+    description: "Core skills for building apps. Auto-installed on first use."
+    auto_install: true
+    skills:
+      # Core Development
+      - development/backend
+      - development/frontend
+      - development/api-designer
+      - development/auth-specialist
+      - development/devops
+      - development/security
+      - development/code-reviewer
+      - development/test-architect
+      - development/docs-engineer
+
+      # Data Essentials
+      - data/postgres-wizard
+
+      # AI Essentials
+      - ai/llm-architect
+
+      # Frameworks
+      - frameworks/nextjs-app-router
+      - frameworks/react-patterns
+      - frameworks/supabase-backend
+      - frameworks/tailwind-ui
+      - frameworks/typescript-strict
+
+      # Design
+      - design/ui-design
+      - design/ux-design
+
+      # Product
+      - product/product-management
+
+  # ============================================================================
+  # DATA - Database and data engineering
+  # ============================================================================
+  data:
+    name: "Data & Databases"
+    description: "Database, vector search, graphs, and data engineering."
+    skills:
+      - data/postgres-wizard
+      - data/redis-specialist
+      - data/vector-specialist
+      - data/data-engineer
+      - data/graph-engineer
+      - data/temporal-craftsman
+
+  # ============================================================================
+  # AI - Machine learning and LLM skills
+  # ============================================================================
+  ai:
+    name: "AI & Machine Learning"
+    description: "LLM architecture, ML systems, embeddings, causal inference."
+    skills:
+      - ai/llm-architect
+      - ai/ml-memory
+      - ai/causal-scientist
+      - development/ai-product
+
+  # ============================================================================
+  # STARTUP - Founder and fundraising
+  # ============================================================================
+  startup:
+    name: "Startup & Founder"
+    description: "YC playbook, fundraising, founder skills."
+    skills:
+      - startup/yc-playbook
+      - startup/founder-mode
+      - startup/burn-rate-management
+      - communications/investor-updates
+      - strategy/competitive-analysis
+      - strategy/market-research
+
+  # ============================================================================
+  # MARKETING - Growth and content
+  # ============================================================================
+  marketing:
+    name: "Marketing & Growth"
+    description: "Content, SEO, ads, growth strategies."
+    skills:
+      - marketing/marketing-fundamentals
+      - marketing/content-strategy
+      - marketing/seo
+      - marketing/copywriting
+      - marketing/blog-writing
+      - marketing/ad-copywriting
+      - marketing/viral-marketing
+      - marketing/brand-storytelling
+
+  # ============================================================================
+  # MARKETING-AI - AI-powered marketing tools
+  # ============================================================================
+  marketing-ai:
+    name: "AI Marketing Suite"
+    description: "AI-powered content creation, video, audio, and creative tools."
+    skills:
+      - marketing/ai-creative-director
+      - marketing/ai-image-generation
+      - marketing/ai-video-generation
+      - marketing/ai-audio-production
+      - marketing/ai-content-analytics
+      - marketing/ai-brand-kit
+      - marketing/ai-localization
+      - marketing/digital-humans
+      - marketing/voiceover
+      - marketing/video-production
+      - marketing/motion-graphics
+      - marketing/prompt-engineering-creative
+
+  # ============================================================================
+  # FRAMEWORKS - Framework-specific skills
+  # ============================================================================
+  frameworks:
+    name: "Frameworks"
+    description: "React, Next.js, Svelte, and more."
+    skills:
+      - frameworks/nextjs-app-router
+      - frameworks/react-patterns
+      - frameworks/supabase-backend
+      - frameworks/sveltekit
+      - frameworks/tailwind-ui
+      - frameworks/typescript-strict
+
+  # ============================================================================
+  # DESIGN - UI/UX and branding
+  # ============================================================================
+  design:
+    name: "Design & Branding"
+    description: "UI design, UX research, branding, landing pages."
+    skills:
+      - design/ui-design
+      - design/ux-design
+      - design/branding
+      - design/landing-page-design
+
+  # ============================================================================
+  # DEVOPS - Infrastructure and operations
+  # ============================================================================
+  devops:
+    name: "DevOps & Infrastructure"
+    description: "CI/CD, infrastructure, observability, chaos engineering."
+    skills:
+      - development/devops
+      - development/infra-architect
+      - development/observability-sre
+      - development/chaos-engineer
+      - development/performance-hunter
+
+  # ============================================================================
+  # COMPLETE - Everything
+  # ============================================================================
+  complete:
+    name: "Complete Collection"
+    description: "All 100+ skills. For power users."
+    includes_all: true
+
+# Install paths (cross-platform)
+install_paths:
+  windows: "%USERPROFILE%\\.spawner\\skills"
+  macos: "~/.spawner/skills"
+  linux: "~/.spawner/skills"

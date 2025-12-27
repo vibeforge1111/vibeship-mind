@@ -1,0 +1,507 @@
+id: marketing-fundamentals-collaboration
+skill: marketing-fundamentals
+version: 1.0.0
+
+# ============================================================================
+# PREREQUISITES
+# ============================================================================
+prerequisites:
+  required:
+    - name: Learning Resources
+      description: Marketing education materials
+      options:
+        - HubSpot Academy (free certifications)
+        - Google Digital Garage (free courses)
+        - Coursera marketing courses
+        - Marketing books and blogs
+      reason: Fundamentals require learning foundation
+
+    - name: Practice Environment
+      description: Where to apply learning
+      options:
+        - Personal project/brand
+        - Small business to help
+        - Side project
+        - Simulated campaigns
+      reason: Marketing is learned by doing
+
+  recommended:
+    - name: Community Access
+      options:
+        - Marketing communities (GrowthHackers, Indiehackers)
+        - LinkedIn marketing groups
+        - Twitter marketing community
+        - Local marketing meetups
+      reason: Learn from practitioners
+
+    - name: Case Study Access
+      options:
+        - Marketing case studies
+        - Brand teardowns
+        - Campaign retrospectives
+      reason: Learn from real examples
+
+# ============================================================================
+# MCP TOOL CONFIGURATIONS
+# ============================================================================
+mcp_tools:
+  - name: marketing-tutor
+    description: AI-assisted marketing education
+    install: Built into Claude Code
+    capabilities:
+      - concept-explanation
+      - framework-teaching
+      - example-generation
+      - practice-exercises
+    example_usage: |
+      Use Claude for marketing education:
+      - Explain marketing concepts
+      - Break down frameworks
+      - Generate practice scenarios
+      - Answer "why" questions
+      - Connect concepts to practice
+
+  - name: web-search
+    description: Research competitors, market trends, and best practices
+    install: Built into Claude Code (WebSearch tool)
+    capabilities:
+      - competitor-analysis
+      - market-research
+      - trend-identification
+      - example-discovery
+    example_usage: |
+      Marketing research workflows:
+      - "Search for [competitor] marketing strategy 2025"
+      - "Find best [industry] landing page examples"
+      - "Research [channel] marketing tactics that work"
+      - "Analyze [company] positioning approach"
+
+  - name: web-fetch
+    description: Analyze competitor websites and marketing materials
+    install: Built into Claude Code (WebFetch tool)
+    capabilities:
+      - landing-page-analysis
+      - messaging-extraction
+      - positioning-research
+      - copy-deconstruction
+    example_usage: |
+      Competitive intelligence:
+      - Fetch competitor homepage, analyze value prop structure
+      - Extract pricing page positioning and framing
+      - Analyze email marketing copy and CTAs
+      - Study onboarding flow and messaging
+
+  - name: filesystem
+    description: Create marketing documents, copy, and content
+    install: Built into Claude Code (Write/Read tools)
+    capabilities:
+      - copy-drafting
+      - content-planning
+      - messaging-documentation
+      - campaign-outlines
+    example_usage: |
+      Marketing artifact creation:
+      - Write positioning document with framework
+      - Draft landing page copy with A/B variants
+      - Create content calendar with themes
+      - Document messaging hierarchy
+
+# ============================================================================
+# API INTEGRATIONS
+# ============================================================================
+api_integrations:
+  claude_education:
+    usage: Built-in
+    example: |
+      # Marketing education prompts
+
+      CONCEPT EXPLANATION:
+      "Explain [marketing concept] like I'm new to marketing.
+
+       Include:
+       - What it is (simple definition)
+       - Why it matters (business impact)
+       - How it works (mechanics)
+       - Real example (famous or relatable)
+       - Common mistakes to avoid"
+
+      FRAMEWORK TEACHING:
+      "Teach me the [marketing framework].
+
+       Cover:
+       - Origin and purpose
+       - Step-by-step application
+       - When to use vs. not use
+       - Example walkthrough
+       - Practice exercise for me"
+
+      PRACTICE SCENARIO:
+      "Create a practice marketing scenario for:
+       Skill to practice: [skill]
+       Difficulty: [beginner/intermediate]
+
+       Include:
+       - Business context
+       - Specific challenge
+       - Available resources
+       - Success criteria
+       - Hints if stuck"
+
+  analytics_apis:
+    platforms:
+      - Google Analytics 4
+      - Mixpanel
+      - Amplitude
+      - Plausible
+    usage: Track marketing performance
+    example: |
+      # Marketing metrics to track via API
+
+      # Acquisition metrics
+      GET /analytics/traffic_sources
+      - Organic search volume and keywords
+      - Referral traffic sources
+      - Campaign UTM performance
+      - Channel-specific conversion rates
+
+      # Engagement metrics
+      GET /analytics/user_behavior
+      - Time on page by traffic source
+      - Bounce rates by channel
+      - Page flow and drop-offs
+      - Content engagement rates
+
+      # Conversion metrics
+      GET /analytics/conversions
+      - Conversion rate by source
+      - Funnel completion rates
+      - Goal completions by channel
+      - Revenue attribution by campaign
+
+  marketing_automation:
+    platforms:
+      - Mailchimp API
+      - ConvertKit API
+      - Customer.io
+      - Segment
+    usage: Automate campaigns and track email marketing
+    example: |
+      # Email marketing automation
+
+      # List management
+      POST /lists/{list_id}/members
+      - Add subscribers with metadata
+      - Tag based on behavior
+      - Segment by attributes
+
+      # Campaign tracking
+      GET /campaigns/{campaign_id}/reports
+      - Open rates by segment
+      - Click-through rates by link
+      - Unsubscribe patterns
+      - Conversion attribution
+
+      # Automation workflows
+      POST /automations
+      - Welcome sequences
+      - Nurture campaigns
+      - Re-engagement flows
+      - Behavioral triggers
+
+  social_apis:
+    platforms:
+      - Twitter/X API
+      - LinkedIn API
+      - Reddit API
+      - Product Hunt API
+    usage: Research, monitor, and engage
+    example: |
+      # Social listening and engagement
+
+      # Research phase
+      GET /search
+      - Find conversations about problems you solve
+      - Identify influencers in space
+      - Monitor competitor mentions
+      - Track industry trends
+
+      # Engagement phase
+      POST /mentions/reply
+      - Respond to questions (no pitch)
+      - Share helpful resources
+      - Build genuine relationships
+      - Establish thought leadership
+
+      # Performance tracking
+      GET /analytics
+      - Engagement rates by content type
+      - Follower growth by topic
+      - Best performing posts
+      - Audience demographics
+
+  seo_tools:
+    platforms:
+      - Ahrefs API
+      - SEMrush API
+      - Google Search Console
+      - Moz API
+    usage: Keyword research and ranking tracking
+    example: |
+      # SEO data for marketing decisions
+
+      # Keyword research
+      GET /keywords/difficulty
+      - Search volume by keyword
+      - Competition analysis
+      - Related keywords
+      - SERP features
+
+      # Competitor analysis
+      GET /competitor/keywords
+      - What competitors rank for
+      - Content gaps to exploit
+      - Backlink opportunities
+      - Traffic estimates
+
+      # Performance tracking
+      GET /rankings
+      - Position changes over time
+      - Click-through rates
+      - Organic traffic by page
+      - Featured snippet wins
+
+# ============================================================================
+# RECEIVES FROM (Integration Enhancement)
+# ============================================================================
+receives_from:
+  - skill: marketing
+    context: "User needs fundamentals before strategy"
+    receives:
+      - "Concept that's unclear"
+      - "Framework to learn"
+      - "Skill gap identified"
+    provides: "Foundation knowledge"
+
+  - skill: content-strategy
+    context: "User needs basics before planning"
+    receives:
+      - "Content concept to learn"
+      - "Strategy framework needed"
+    provides: "Foundational understanding"
+
+# ============================================================================
+# DELEGATION TRIGGERS
+# ============================================================================
+delegation_triggers:
+  - trigger: "strategy|plan|campaign"
+    delegate_to: marketing
+    pattern: sequential
+    context: "Fundamentals learned, ready for strategy"
+    handoff_data:
+      - "Concepts understood"
+      - "User skill level"
+      - "Goals"
+    receive: "Strategic guidance"
+
+  - trigger: "content|blog|writing"
+    delegate_to: content-strategy
+    pattern: sequential
+    context: "Ready for content work"
+    handoff_data:
+      - "Learning progress"
+      - "Practice completed"
+      - "Goals"
+    receive: "Content guidance"
+
+  - trigger: "copy|writing|messaging"
+    delegate_to: copywriting
+    pattern: sequential
+    context: "Ready to write copy"
+    handoff_data:
+      - "Fundamentals learned"
+      - "Practice level"
+      - "Goals"
+    receive: "Copy guidance"
+
+  - trigger: "SEO|search|keywords"
+    delegate_to: seo
+    pattern: sequential
+    context: "Ready for SEO work"
+    handoff_data:
+      - "SEO basics understood"
+      - "Current knowledge"
+      - "Goals"
+    receive: "SEO guidance"
+
+# ============================================================================
+# CROSS-DOMAIN INSIGHTS
+# ============================================================================
+cross_domain_insights:
+  - domain: Education
+    insight: |
+      Educators know learning:
+      - Scaffolding (build on prior knowledge)
+      - Active learning > passive
+      - Immediate application cements learning
+      - Mistakes are learning opportunities
+      - Spaced repetition for retention
+      Marketing education follows learning science.
+    applies_when: "Teaching marketing fundamentals"
+
+  - domain: Apprenticeship
+    insight: |
+      Trades know skill building:
+      - Watch, then do
+      - Start with fundamentals
+      - Practice with feedback
+      - Gradually increase complexity
+      - Mastery takes time
+      Marketing is a craft learned through practice.
+    applies_when: "Building marketing skills progressively"
+
+  - domain: Sports Coaching
+    insight: |
+      Coaches know development:
+      - Fundamentals before advanced
+      - Drills build muscle memory
+      - Game time applies learning
+      - Review film to improve
+      - Mental game matters
+      Marketing skill development is like athletic training.
+    applies_when: "Developing marketing capabilities"
+
+  - domain: Psychology
+    insight: |
+      Psychologists understand behavior change:
+      - People buy on emotion, justify with logic
+      - Loss aversion > gain motivation (2x stronger)
+      - Social proof reduces perceived risk
+      - Commitment and consistency drive follow-through
+      - Scarcity triggers urgency
+      Marketing is applied behavioral psychology.
+    applies_when: "Crafting messaging and positioning"
+
+  - domain: Storytelling
+    insight: |
+      Writers know narrative structure:
+      - Hero's journey (customer is hero, you're guide)
+      - Stakes create tension (what happens if they don't act)
+      - Show don't tell (case studies > feature lists)
+      - Specific details make it real
+      - Resolution demonstrates transformation
+      Best marketing tells a story, not a pitch.
+    applies_when: "Creating compelling marketing content"
+
+  - domain: Sales
+    insight: |
+      Sales pros know buying psychology:
+      - People buy when pain > effort
+      - Objections are buying signals
+      - Ask don't tell (discovery > presentation)
+      - Close on agreement, not pressure
+      - Follow-up persistence wins
+      Marketing is sales at scale.
+    applies_when: "Converting prospects to customers"
+
+  - domain: Economics
+    insight: |
+      Economists understand market dynamics:
+      - Elasticity (price sensitivity by segment)
+      - Network effects (value increases with users)
+      - Two-sided markets (platforms match buyers/sellers)
+      - Switching costs create moats
+      - Supply/demand equilibrium
+      Marketing strategy follows economic principles.
+    applies_when: "Pricing and market positioning"
+
+  - domain: Anthropology
+    insight: |
+      Anthropologists study culture and tribes:
+      - Identity drives behavior (people buy who they want to be)
+      - Rituals create meaning (onboarding is ritual)
+      - Status signals are powerful (early access, badges)
+      - Community bonds through shared values
+      - Language creates belonging
+      Best brands build tribes, not customer lists.
+    applies_when: "Building brand and community"
+
+  - domain: Game Design
+    insight: |
+      Game designers know engagement mechanics:
+      - Clear goals create direction
+      - Immediate feedback drives action
+      - Progressive difficulty maintains challenge
+      - Rewards reinforce behavior
+      - Social competition amplifies engagement
+      Marketing funnels use game mechanics.
+    applies_when: "Designing user journeys and growth loops"
+
+# ============================================================================
+# COMMON COMBINATIONS
+# ============================================================================
+common_combinations:
+  - name: Marketing Bootcamp
+    skills:
+      - marketing-fundamentals
+      - copywriting
+      - content-strategy
+      - marketing
+    workflow: |
+      1. Learn fundamentals (marketing-fundamentals)
+      2. Practice copywriting basics (copywriting)
+      3. Understand content strategy (content-strategy)
+      4. Apply to real marketing (marketing)
+
+  - name: SEO Learning Path
+    skills:
+      - marketing-fundamentals
+      - seo
+      - blog-writing
+    workflow: |
+      1. Marketing basics (marketing-fundamentals)
+      2. SEO fundamentals (seo)
+      3. Apply to blog content (blog-writing)
+
+# ============================================================================
+# FEEDBACK LOOPS (Integration Enhancement)
+# ============================================================================
+feedback_loops:
+  receives_feedback_from:
+    - skill: marketing
+      signal: "Skill gaps identified in practice"
+      action: "Address specific fundamentals"
+
+    - skill: copywriting
+      signal: "Writing fundamentals needed"
+      action: "Teach copywriting basics"
+
+  sends_feedback_to:
+    - skill: marketing
+      signal: "User ready for advanced concepts"
+      action: "Progress to strategy"
+
+    - skill: content-strategy
+      signal: "User understands basics"
+      action: "Progress to planning"
+
+# ============================================================================
+# VERSION COMPATIBILITY
+# ============================================================================
+version_compatibility:
+  learning_platforms:
+    hubspot_academy: "Current"
+    google_digital_garage: "Current"
+    coursera: "Current"
+
+  notes: |
+    Marketing fundamentals are relatively timeless.
+
+    Key considerations:
+    - Principles > tactics
+    - Frameworks > tools
+    - Understanding > memorization
+    - Practice > theory
+
+    Fundamentals rarely change; applications do.
+
+    Current as of December 2024.
